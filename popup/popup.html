@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Upwork Monitor</title>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css"> <!-- We'll create this later if needed -->
+  <style>
+    body { font-family: sans-serif; width: 300px; padding: 10px; }
+    h1 { font-size: 16px; }
+  </style>
+</head>
+<body>
+  <h1>Upwork Job Monitor</h1>
+  <p>Status: <span id="status">Initializing...</span></p>
+  <p>Last Check: <span id="lastCheckTime">N/A</span></p>
+  <p>New Jobs (Last): <span id="newJobsCount">N/A</span></p>
+  <button id="manualCheckButton">Check Now</button>
+  <script src="popup.js"></script>
+</body>
+</html>

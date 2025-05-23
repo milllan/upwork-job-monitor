@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Upwork Job Monitor",
+  "version": "0.1.0",
+  "description": "Monitors Upwork for new jobs and sends notifications.",
+  "permissions": [
+    "storage",      // To store seen job IDs and settings
+    "cookies",      // To read the Upwork bearer token
+    "notifications",// To show desktop notifications
+    "alarms"        // To schedule periodic checks
+  ],
+  "host_permissions": [
+    "*://*.upwork.com/*" // Essential for accessing Upwork cookies and APIs
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
