@@ -1,15 +1,11 @@
 {
   "manifest_version": 2,
-  "name": "Upwork Job Monitor (MV2)",
-  "version": "0.2.0",
+  "name": "Upwork Job Monitor (MV2 - Direct BG Attempt)",
+  "version": "0.3.0",
   "description": "Monitors Upwork for new jobs and sends notifications.",
   "browser_action": {
     "default_popup": "popup/popup.html",
-    "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
-    }
+    "default_icon": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
   },
   "background": {
     "scripts": ["background/service-worker.js"],
@@ -32,9 +28,5 @@
     "*://*.upwork.com/*",
     "tabs"
   ],
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
-  }
+  "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
 }
