@@ -3,18 +3,53 @@
 <head>
   <title>Upwork Monitor</title>
   <meta charset="utf-8">
-  <link rel="stylesheet" href="popup.css"> <!-- We'll create this later if needed -->
   <style>
-    body { font-family: sans-serif; width: 300px; padding: 10px; }
-    h1 { font-size: 16px; }
+    body { font-family: sans-serif; width: 400px; padding: 10px; font-size: 14px; }
+    h1 { font-size: 16px; margin-top: 0; }
+    p { margin: 5px 0; }
+    input[type="text"] { width: 95%; margin-bottom: 5px; padding: 4px; }
+    button { margin-top: 5px; padding: 5px 8px; }
+    .query-section { margin-bottom: 10px; }
+    .status-section p { margin-bottom: 8px; }
+    hr { margin: 10px 0; }
+    .recent-jobs-container { margin-top: 10px; max-height: 250px; overflow-y: auto; }
+    .job-item {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 8px;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    .job-item h3 { margin: 0 0 5px 0; font-size: 14px; }
+    .job-item a { text-decoration: none; color: #0073bb; }
+    .job-item a:hover { text-decoration: underline; }
+    .job-item p { margin: 3px 0; color: #555; }
+    .job-item .skills { font-style: italic; font-size: 12px; color: #777; }
+    .job-item .no-jobs { text-align: center; color: #777; padding: 10px;}
   </style>
 </head>
 <body>
-  <h1>Upwork Job Monitor</h1>
-  <p>Status: <span id="status">Initializing...</span></p>
-  <p>Last Check: <span id="lastCheckTime">N/A</span></p>
-  <p>New Jobs (Last): <span id="newJobsCount">N/A</span></p>
-  <button id="manualCheckButton">Check Now</button>
+  <h1>Upwork Job Monitor (MV2)</h1>
+
+  <div class="status-section">
+    <p>Status: <span id="status">Initializing...</span></p>
+    <p>Last Check: <span id="lastCheckTime">N/A</span></p>
+    <p>New Jobs (Last Run): <span id="newJobsCount">N/A</span></p>
+  </div>
+  <hr>
+  <div class="query-section">
+    <label for="userQueryInput">Search Query:</label>
+    <input type="text" id="userQueryInput" placeholder="Enter your Upwork search query">
+    <button id="saveQueryButton">Save & Check</button>
+  </div>
+  <button id="manualCheckButton">Check Now (with saved query)</button>
+  <hr>
+  <h2>Recently Found Jobs:</h2>
+  <div id="recentJobsList" class="recent-jobs-container">
+    <!-- Jobs will be injected here -->
+    <p class="no-jobs">No new jobs found in the last check.</p>
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>

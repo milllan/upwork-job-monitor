@@ -1,47 +1,155 @@
-console.log("Popup script loaded.");
-
-// popup/popup.js - ensure DOMContentLoaded and storage access are robust
-
+// popup.js
 document.addEventListener('DOMContentLoaded', () => {
   const statusEl = document.getElementById('status');
   const lastCheckTimeEl = document.getElementById('lastCheckTime');
   const newJobsCountEl = document.getElementById('newJobsCount');
   const manualCheckButton = document.getElementById('manualCheckButton');
+  const userQueryInput = document.getElementById('userQueryInput');
+  const saveQueryButton = document.getElementById('saveQueryButton');
+  const recentJobsListDiv = document.getElementById('recentJobsList');
 
-  function updatePopupInfo() {
-    chrome.storage.local.get(['monitorStatus', 'lastCheckTimestamp', 'newJobsInLastRun'], (result) => {
-      if (chrome.runtime.lastError) {
-        console.error("Popup: Error getting storage:", chrome.runtime.lastError.message);
-        statusEl.textContent = 'Error loading status';
+  const DEFAULT_QUERY = 'NOT "react" NOT "next.js" NOT "wix" "web vitals" OR "CLS" OR "INP" OR "LCP" OR "pagespeed" OR "Page speed" OR "Shopify speed" OR "Wordpress speed" OR "website speed"';
+
+  function timeAgo(dateInput) {
+    if (!dateInput) return 'N/A';
+    const date = (typeof dateInput === 'string' || typeof dateInput === 'number') ? new Date(dateInput) : dateInput;
+    if (isNaN(date.getTime())) return 'Invalid Date';
+
+    const now = new Date();
+    const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
+    const minutes = Math.round(seconds / 60);
+    const hours = Math.round(minutes / 60);
+    const days = Math.round(hours / 24);
+
+    if (seconds < 5) return 'just now';
+    if (seconds < 60) return `${seconds} sec ago`;
+    if (minutes < 60) return `${minutes} min ago`;
+    if (hours < 24) return `${hours} hr ago`;
+    if (days === 1) return `1 day ago`;
+    return `${days} days ago`;
+  }
+
+  function displayRecentJobs(jobs = []) {
+    console.log("Popup: displayRecentJobs called with:", jobs);
+    recentJobsListDiv.innerHTML = '';
+
+    if (!Array.isArray(jobs) || jobs.length === 0) {
+      console.log("Popup: No valid jobs array to display or jobs array is empty.");
+      recentJobsListDiv.innerHTML = '<p class="no-jobs">No new jobs found in the last check.</p>';
+      return;
+    }
+
+    console.log(`Popup: Displaying ${jobs.length} jobs.`);
+    jobs.forEach((job, index) => {
+      if (!job || !job.id) {
+        console.warn(`Popup: Skipping job at index ${index} due to missing job or job.id`, job);
         return;
       }
-      statusEl.textContent = result.monitorStatus || 'Idle';
-      if (result.lastCheckTimestamp) {
-        lastCheckTimeEl.textContent = new Date(result.lastCheckTimestamp).toLocaleString();
-      } else {
-        lastCheckTimeEl.textContent = 'N/A';
-      }
-      newJobsCountEl.textContent = result.newJobsInLastRun !== undefined ? result.newJobsInLastRun : 'N/A';
-    });
-  }
+      // console.log(`Popup: Rendering job ${index + 1}:`, job.title); // Can be noisy
 
-  if (manualCheckButton) {
-    manualCheckButton.addEventListener('click', () => {
-      console.log("Popup: Manual check requested.");
-      statusEl.textContent = 'Checking...';
-      chrome.runtime.sendMessage({ action: "manualCheck" }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.error("Popup: Error sending manual check message:", chrome.runtime.lastError.message);
-          statusEl.textContent = 'Error triggering check';
-        } else {
-          console.log("Popup: Manual check message sent, response:", response);
-          // Background script will update storage, an alarm will eventually run,
-          // or just re-fetch info after a short delay for immediate feedback.
-          setTimeout(updatePopupInfo, 1500); // Give time for background to process and update storage
+      const jobItem = document.createElement('div');
+      jobItem.classList.add('job-item');
+      const jobUrl = `https://www.upwork.com/jobs/${job.ciphertext || job.id}`;
+      let budgetDisplay = 'N/A';
+      if (job.budget && job.budget.amount != null) {
+        budgetDisplay = `${job.budget.amount} ${job.budget.currencyCode || ''}`;
+        if (job.budget.type && job.budget.type.toLowerCase() !== 'fixed') {
+          budgetDisplay += ` (${job.budget.type.toLowerCase().replace('_', '-')})`;
         }
-      });
+      }
+      let clientInfo = 'Client info N/A';
+      if(job.client) {
+        clientInfo = `Client: ${job.client.country || 'N/A'}`;
+        if(job.client.rating != null) clientInfo += ` | Rating: ${Number(job.client.rating).toFixed(2)}`;
+        if(job.client.totalSpent > 0) clientInfo += ` | Spent: $${Number(job.client.totalSpent).toFixed(0)}`;
+        if(job.client.paymentVerificationStatus === 'VERIFIED') clientInfo += ' (Verified)';
+      }
+      let skillsDisplay = '';
+      if (job.skills && job.skills.length > 0) {
+        skillsDisplay = `Skills: ${job.skills.map(s => s.name).slice(0, 3).join(', ')}${job.skills.length > 3 ? '...' : ''}`; // Show fewer skills
+      }
+
+      jobItem.innerHTML = `
+        <h3><a href="${jobUrl}" target="_blank" title="${job.title || 'No Title'}">${(job.title || 'No Title').substring(0,60)}${(job.title || '').length > 60 ? '...' : ''}</a></h3>
+        <p><strong>Budget:</strong> ${budgetDisplay}</p>
+        <p>${clientInfo}</p>
+        ${skillsDisplay ? `<p class="skills">${skillsDisplay}</p>` : ''}
+        <p><small>Posted: ${job.postedOn ? new Date(job.postedOn).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ', ' + new Date(job.postedOn).toLocaleDateString() : 'N/A'} <b>(${timeAgo(job.postedOn)})</b></small></p>
+      `;
+      recentJobsListDiv.appendChild(jobItem);
     });
   }
 
-  updatePopupInfo(); // Initial update
+  function loadStoredData() {
+    console.log("Popup: loadStoredData called.");
+    chrome.storage.local.get(
+      ['monitorStatus', 'lastCheckTimestamp', 'newJobsInLastRun', 'currentUserQuery', 'recentFoundJobs'],
+      (result) => {
+        if (chrome.runtime.lastError) {
+          console.error("Popup: Error getting storage:", chrome.runtime.lastError.message);
+          statusEl.textContent = 'Error loading status';
+          recentJobsListDiv.innerHTML = '<p class="no-jobs">Error loading job data.</p>';
+          return;
+        }
+        statusEl.textContent = result.monitorStatus || 'Idle';
+        if (result.lastCheckTimestamp) {
+          lastCheckTimeEl.textContent = new Date(result.lastCheckTimestamp).toLocaleString();
+        } else {
+          lastCheckTimeEl.textContent = 'N/A';
+        }
+        newJobsCountEl.textContent = result.newJobsInLastRun !== undefined ? result.newJobsInLastRun : 'N/A';
+        userQueryInput.value = result.currentUserQuery || DEFAULT_QUERY;
+        displayRecentJobs(result.recentFoundJobs || []);
+      }
+    );
+  }
+
+  function triggerCheck(queryToUse) {
+    statusEl.textContent = 'Checking...';
+    recentJobsListDiv.innerHTML = '<p class="no-jobs">Checking for new jobs...</p>';
+    console.log("Popup: Triggering check with query:", queryToUse);
+
+    chrome.runtime.sendMessage({ action: "manualCheck", userQuery: queryToUse }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error("Popup: Error sending manual check message:", chrome.runtime.lastError.message);
+        statusEl.textContent = 'Error triggering check';
+        loadStoredData(); // Attempt to refresh with current state on error
+      } else {
+        console.log("Popup: Manual check message sent, background responded:", response);
+        // Background will now send "updatePopupDisplay" when it's truly done.
+        // We can reflect the immediate response from background here if needed.
+        // if (response && response.status) statusEl.textContent = response.status;
+      }
+    });
+  }
+
+  saveQueryButton.addEventListener('click', () => {
+    const query = userQueryInput.value.trim();
+    if (query) {
+      chrome.storage.local.set({ currentUserQuery: query }, () => {
+        console.log("Popup: Query saved:", query);
+        triggerCheck(query);
+      });
+    } else {
+      alert("Please enter a search query.");
+      userQueryInput.value = DEFAULT_QUERY;
+    }
+  });
+
+  manualCheckButton.addEventListener('click', () => {
+    const currentQueryInInput = userQueryInput.value.trim();
+    triggerCheck(currentQueryInInput || DEFAULT_USER_QUERY);
+  });
+
+  // Listen for messages from background script to update the display
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "updatePopupDisplay") {
+      console.log("Popup: Received updatePopupDisplay message from background. Refreshing data.");
+      loadStoredData();
+      if (sendResponse) sendResponse({ status: "Popup display refreshed."});
+      return true; 
+    }
+  });
+
+  loadStoredData(); // Initial load
 });
