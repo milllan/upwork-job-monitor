@@ -1,45 +1,80 @@
-// background.js (Manifest V2 - Direct Background Fetch Attempt)
-console.log("Background Script MV2 loaded - Direct BG Fetch Attempt.");
+// background.js (Manifest V2 - Dynamic Token Attempt)
+console.log("Background Script MV2 loaded - Dynamic Token Attempt.");
 
 const UPWORK_DOMAIN = "https://www.upwork.com";
-const PREFERRED_TOKEN_COOKIE_NAME = "643e8096sb";
-const FALLBACK_TOKEN_COOKIE_NAME = "oauth2_global_js_token";
+// No longer relying on specific cookie names as primary here
 const UPWORK_GRAPHQL_ENDPOINT_BASE = "https://www.upwork.com/api/graphql/v1";
-const TARGET_GRAPHQL_URL_PATTERN = "*://*.upwork.com/api/graphql/v1*";
+const TARGET_GRAPHQL_URL_PATTERN = "*://*.upwork.com/api/graphql/v1*"; // For webRequest
 const X_UPWORK_API_TENANT_ID = "424307183201796097";
-const DEFAULT_USER_QUERY = 'NOT "react" NOT "next.js" NOT "wix" "web vitals" OR "CLS" OR "INP" OR "LCP" OR "pagespeed" OR "Page speed" OR "Shopify speed" OR "Wordpress speed" OR "website speed"';
+const DEFAULT_USER_QUERY = 'NOT "react" NOT "next.js" NOT "wix" NOT "HubSpot" NOT "Webflow Website" NOT "Webflow Page" NOT "Squarespace Website" NOT "Squarespace Blog" NOT "Content Marketing" NOT "Guest Post" "CLS" OR "INP" OR "LCP" OR "pagespeed" OR "Page speed" OR "Shopify speed" OR "Wordpress speed" OR "site speed" OR "web optimization" OR "web vitals" OR "WebPageTest" OR "GTmetrix" OR "Lighthouse scores" OR "Google Lighthouse" OR "page load" OR "performance expert" OR "performance specialist" OR "performance audit" ';
 
 
 // --- Token Retrieval ---
-async function getUpworkApiToken() {
-  return new Promise(async (resolve) => {
-    let token = null;
-    let preferredCookie = await new Promise(r => chrome.cookies.get({ url: UPWORK_DOMAIN, name: PREFERRED_TOKEN_COOKIE_NAME }, c => r(c)));
-    if (preferredCookie && preferredCookie.value) {
-      // console.log(`Token from PREFERRED cookie (${PREFERRED_TOKEN_COOKIE_NAME}):`, preferredCookie.value.substring(0, 20) + "...");
-      token = preferredCookie.value;
-    } else {
-      console.warn(`Preferred token cookie (${PREFERRED_TOKEN_COOKIE_NAME}) not found. Trying fallback.`);
-      let fallbackCookie = await new Promise(r => chrome.cookies.get({ url: UPWORK_DOMAIN, name: FALLBACK_TOKEN_COOKIE_NAME }, c => r(c)));
-      if (fallbackCookie && fallbackCookie.value) {
-        // console.log(`Token from FALLBACK cookie (${FALLBACK_TOKEN_COOKIE_NAME}):`, fallbackCookie.value.substring(0, 20) + "...");
-        token = fallbackCookie.value;
+async function getAllPotentialApiTokens() { // Renamed and modified to return an array
+  return new Promise((resolve) => {
+    chrome.cookies.getAll({ domain: "upwork.com" }, (cookies) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error getting all cookies:", chrome.runtime.lastError.message);
+        resolve([]); return;
       }
-    }
-    if (token) resolve(token);
-    else {
-      console.warn("No Upwork API token cookie found.");
-      chrome.storage.local.set({ monitorStatus: "Error: API Token not found." });
-      resolve(null);
-    }
+      if (!cookies || cookies.length === 0) {
+        console.warn("No cookies found for upwork.com domain.");
+        resolve([]); return;
+      }
+
+      let allOAuthTokens = [];
+      for (const cookie of cookies) {
+        if (cookie.value && cookie.value.startsWith("oauth2v2_")) {
+          allOAuthTokens.push({ name: cookie.name, value: cookie.value });
+        }
+      }
+
+      if (allOAuthTokens.length === 0) {
+        console.warn("No cookies matching 'oauth2v2_' prefix found.");
+        resolve([]); return;
+      }
+
+      // Prioritize tokens based on patterns or known good characteristics
+      let prioritizedTokens = [];
+
+      // 1. Tokens matching the "xxxxxxxxsb" pattern (and not known non-API tokens)
+      const sbPatternTokens = allOAuthTokens.filter(t =>
+        t.name.length === 10 && t.name.endsWith("sb") &&
+        t.name !== "forterToken" // Example of a known token that might fit pattern but isn't for API auth
+      );
+      sbPatternTokens.forEach(t => prioritizedTokens.push(t.value));
+
+      // 2. Other oauth2v2_ tokens, excluding known non-permissioned or general ones
+      const otherPotentials = allOAuthTokens.filter(t =>
+        !sbPatternTokens.some(sbt => sbt.name === t.name) && // Not already added
+        t.name !== "oauth2_global_js_token" &&
+        t.name !== "visitor_gql_token" &&
+        t.name !== "visitor_innova_gql_token" &&
+        !t.name.includes("master_access_token") &&
+        !t.name.includes("_vt") // Nuxt view tokens
+      );
+      otherPotentials.forEach(t => prioritizedTokens.push(t.value));
+
+      // 3. Fallback to oauth2_global_js_token if nothing else worked (least likely to have field perms)
+      const globalJsToken = allOAuthTokens.find(t => t.name === "oauth2_global_js_token");
+      if (globalJsToken && !prioritizedTokens.includes(globalJsToken.value)) {
+        prioritizedTokens.push(globalJsToken.value);
+      }
+      
+      // Remove duplicates that might have arisen if a token fit multiple categories
+      const uniquePrioritizedTokens = [...new Set(prioritizedTokens)];
+
+      console.log("Candidate API tokens (prioritized):", uniquePrioritizedTokens.map(t => t.substring(0,20) + "..."));
+      resolve(uniquePrioritizedTokens);
+    });
   });
 }
+
 
 // --- WebRequest Listener to Modify Headers ---
 chrome.webRequest.onBeforeSendHeaders.addListener(
   function(details) {
     if (details.url.startsWith(UPWORK_GRAPHQL_ENDPOINT_BASE) && details.method === "POST" && details.type === "xmlhttprequest") {
-      // console.log("webRequest: Intercepting GraphQL POST request:", details.url); // Can be noisy
       let newHeaders = details.requestHeaders.filter(header => {
         const nameLower = header.name.toLowerCase();
         return !nameLower.startsWith('sec-fetch-') && nameLower !== 'origin' && nameLower !== 'referer';
@@ -50,13 +85,11 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
       newHeaders.push({ name: "X-Upwork-Accept-Language", value: "en-US" });
       newHeaders.push({ name: "DNT", value: "1" });
       const uaIndex = newHeaders.findIndex(h => h.name.toLowerCase() === 'user-agent');
-      const targetUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"; // Example, ensure it matches a common UA
-      if (uaIndex > -1) newHeaders[uaIndex].value = targetUA;
-      else newHeaders.push({ name: "User-Agent", value: targetUA });
+      const targetUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36";
+      if (uaIndex > -1) newHeaders[uaIndex].value = targetUA; else newHeaders.push({ name: "User-Agent", value: targetUA });
       const targetAcceptLang = "en-US,en;q=0.9,hr;q=0.8,sr-Latn-RS;q=0.7,sr;q=0.6,sh;q=0.5,sr-Cyrl-RS;q=0.4,sr-Cyrl-BA;q=0.3,en-GB;q=0.2";
       const alIndex = newHeaders.findIndex(h => h.name.toLowerCase() === 'accept-language');
-      if (alIndex > -1) newHeaders[alIndex].value = targetAcceptLang;
-      else newHeaders.push({ name: "Accept-Language", value: targetAcceptLang });
+      if (alIndex > -1) newHeaders[alIndex].value = targetAcceptLang; else newHeaders.push({ name: "Accept-Language", value: targetAcceptLang });
       return { requestHeaders: newHeaders };
     }
     return { cancel: false };
@@ -65,8 +98,10 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
   ["blocking", "requestHeaders", "extraHeaders"]
 );
 
-// --- Fetching Jobs ---
-async function fetchUpworkJobsDirectly(bearerToken, userQuery) { // Added userQuery parameter
+// --- Fetching Jobs (fetchUpworkJobsDirectly - remains the same) ---
+async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
+  // ... (this function is the same as your last working version that takes bearerToken and userQuery)
+  // ... (it should return null on API/GraphQL error, or an array of jobs (possibly empty) on success)
   const endpoint = `${UPWORK_GRAPHQL_ENDPOINT_BASE}?alias=userJobSearch`;
   const fullRawQueryString = `
   query UserJobSearch($requestVariables: UserJobSearchV1Request!) {
@@ -75,7 +110,7 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) { // Added userQu
         userJobSearchV1(request: $requestVariables) {
           paging { total offset count }
           results {
-            id title description relevanceEncoded applied # Ensure 'applied' is requested
+            id title description relevanceEncoded applied
             ontologySkills { uid prefLabel prettyName: prefLabel }
             connectPrice
             upworkHistoryData { client { paymentVerificationStatus country totalSpent { amount } totalFeedback } }
@@ -87,10 +122,10 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) { // Added userQu
   }`;
   const variables = {
     requestVariables: {
-      userQuery: userQuery || DEFAULT_USER_QUERY, // Use passed query or default
-      contractorTier: ["IntermediateLevel", "ExpertLevel"], // You might want to make these configurable too
+      userQuery: userQuery || DEFAULT_USER_QUERY,
+      contractorTier: ["IntermediateLevel", "ExpertLevel"],
       sort: "recency",
-      highlight: false, // As per your previous code; can be true if preferred
+      highlight: false,
       paging: { offset: 0, count: 20 },
     },
   };
@@ -101,7 +136,7 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) { // Added userQu
     "Accept": "*/*",
   };
 
-  console.log(`DirectBG: Attempting fetch for query: "${userQuery}". Payload start:`, JSON.stringify(graphqlPayload).substring(0, 150) + "...");
+  // console.log(`DirectBG: Attempting fetch for query: "${userQuery}". Token: ${bearerToken.substring(0,20)}...`);
   try {
     const response = await fetch(endpoint, {
       method: "POST",
@@ -110,64 +145,43 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) { // Added userQu
     });
     if (!response.ok) {
       const responseBodyText = await response.text();
-      console.error(`DirectBG: API request failed. Status: ${response.status}`, responseBodyText.substring(0, 500));
-      await new Promise(resolve => chrome.storage.local.set({ monitorStatus: `Error: API Fail (${response.status})` }, resolve));
-      return null;
+      console.warn(`DirectBG: API request failed with token ${bearerToken.substring(0,10)}... Status: ${response.status}`, responseBodyText.substring(0, 300));
+      // Return a specific error object or null to indicate this token failed
+      return { error: true, status: response.status, body: responseBodyText.substring(0, 300) };
     }
     const data = await response.json();
     if (data.errors) {
-      console.error("DirectBG: GraphQL API errors:", data.errors);
-      await new Promise(resolve => chrome.storage.local.set({ monitorStatus: "Error: GraphQL API Err." }, resolve));
-      return null;
+      console.warn(`DirectBG: GraphQL API errors with token ${bearerToken.substring(0,10)}...:`, data.errors);
+      // Return a specific error object or null
+      return { error: true, graphqlErrors: data.errors };
     }
     if (data.data?.search?.universalSearchNuxt?.userJobSearchV1?.results) {
       let jobsData = data.data.search.universalSearchNuxt.userJobSearchV1.results;
-      console.log(`DirectBG: Successfully fetched ${jobsData.length} raw jobs.`);
-
-      // Filter out jobs where 'applied' is true
       const unappliedJobsData = jobsData.filter(job => job.applied !== true);
-      console.log(`DirectBG: Filtered out applied jobs. Remaining: ${unappliedJobsData.length} jobs.`);
-
-      return unappliedJobsData.map(job => ({
-        id: job.jobTile.job.ciphertext || job.jobTile.job.id,
-        ciphertext: job.jobTile.job.ciphertext,
-        title: job.title,
-        description: job.description,
-        postedOn: job.jobTile.job.publishTime || job.jobTile.job.createTime,
-        applied: job.applied, // Keep this info if needed for display, though we filter
-        budget: {
-            amount: job.jobTile.job.fixedPriceAmount?.amount || job.jobTile.job.hourlyBudgetMin || job.jobTile.job.hourlyBudgetMax,
-            currencyCode: job.jobTile.job.fixedPriceAmount?.isoCurrencyCode || 'USD',
-            type: job.jobTile.job.jobType
-        },
-        client: {
-            paymentVerificationStatus: job.upworkHistoryData?.client?.paymentVerificationStatus,
-            country: job.upworkHistoryData?.client?.country,
-            totalSpent: job.upworkHistoryData?.client?.totalSpent?.amount || 0,
-            rating: job.upworkHistoryData?.client?.totalFeedback,
-        },
+      // console.log(`DirectBG: Fetched ${jobsData.length} raw, ${unappliedJobsData.length} unapplied with token ${bearerToken.substring(0,10)}...`);
+      return unappliedJobsData.map(job => ({ /* ... your mapping ... */
+        id: job.jobTile.job.ciphertext || job.jobTile.job.id, ciphertext: job.jobTile.job.ciphertext, title: job.title, description: job.description, postedOn: job.jobTile.job.publishTime || job.jobTile.job.createTime, applied: job.applied,
+        budget: { amount: job.jobTile.job.fixedPriceAmount?.amount || job.jobTile.job.hourlyBudgetMin || job.jobTile.job.hourlyBudgetMax, currencyCode: job.jobTile.job.fixedPriceAmount?.isoCurrencyCode || 'USD', type: job.jobTile.job.jobType },
+        client: { paymentVerificationStatus: job.upworkHistoryData?.client?.paymentVerificationStatus, country: job.upworkHistoryData?.client?.country, totalSpent: job.upworkHistoryData?.client?.totalSpent?.amount || 0, rating: job.upworkHistoryData?.client?.totalFeedback, },
         skills: job.ontologySkills ? job.ontologySkills.map(skill => ({ name: skill.prettyName || skill.prefLabel })) : [],
         _fullJobData: job
       }));
-    } else {
-      console.warn("DirectBG: No jobs data in expected structure:", data);
-      return [];
-    }
-  } catch (error) {
-    console.error("DirectBG: Network error fetching jobs:", error);
-    await new Promise(resolve => chrome.storage.local.set({ monitorStatus: "Error: Network Fetch." }, resolve));
-    return null;
+    } else { return []; } // Success but no results
+  } catch (error) { 
+    console.error(`DirectBG: Network error with token ${bearerToken.substring(0,10)}...:`, error);
+    return { error: true, networkError: error.message };
   }
 }
 
-// --- Main Job Checking Logic ---
-async function runJobCheck(triggeredByUserQuery) { // Optional: query passed from manual check
-  console.log("MV2: Attempting runJobCheck (Direct Background)...");
+// --- Main Job Checking Logic (runJobCheck) ---
+async function runJobCheck(triggeredByUserQuery) {
+  console.log("MV2: Attempting runJobCheck (Direct Background with token loop)...");
   await new Promise(resolve => chrome.storage.local.set({ monitorStatus: "Checking...", lastCheckTimestamp: Date.now() }, resolve));
 
-  const token = await getUpworkApiToken();
-  if (!token) {
-    console.error("MV2: Cannot run job check, token missing.");
+  const candidateTokens = await getAllPotentialApiTokens();
+  if (!candidateTokens || candidateTokens.length === 0) {
+    console.error("MV2: Cannot run job check, no candidate tokens found.");
+    await new Promise(resolve => chrome.storage.local.set({ monitorStatus: "Error: No API Tokens." }, resolve));
     return;
   }
 
@@ -178,124 +192,101 @@ async function runJobCheck(triggeredByUserQuery) { // Optional: query passed fro
   }
   console.log("MV2: Using query for check:", userQueryToUse);
 
-
   let fetchedJobs = null;
-  try {
-    fetchedJobs = await fetchUpworkJobsDirectly(token, userQueryToUse); // Pass the query
-  } catch (error) {
-    console.error("MV2: Error in runJobCheck from fetchUpworkJobsDirectly:", error.message);
-    await new Promise(resolve => chrome.storage.local.set({ monitorStatus: "Error: Fetch call failed." }, resolve));
-    return;
+  let successfulToken = null;
+
+  for (const token of candidateTokens) {
+    console.log(`MV2: Trying token ${token.substring(0, 15)}...`);
+    try {
+      const result = await fetchUpworkJobsDirectly(token, userQueryToUse);
+      if (result && !result.error) { // Check if result is not an error object
+        fetchedJobs = result; // This is the array of job objects
+        successfulToken = token;
+        console.log(`MV2: Successfully fetched jobs with token ${successfulToken.substring(0,15)}...`);
+        break; // Exit loop on first successful fetch
+      } else {
+        // Log specific error from fetchUpworkJobsDirectly if an error object was returned
+        if (result && result.graphqlErrors) {
+          console.warn(`MV2: GraphQL error with token ${token.substring(0,15)}... - ${JSON.stringify(result.graphqlErrors)}`);
+          if (result.graphqlErrors[0]?.extensions?.classification === "ExecutionAborted") {
+             // This is the "OAuth2 client does not have permission" error, likely a bad token for fields
+             console.log(`Token ${token.substring(0,15)}... likely lacks field permissions. Trying next.`);
+          }
+        } else if (result && result.status) {
+          console.warn(`MV2: HTTP error ${result.status} with token ${token.substring(0,15)}... Trying next.`);
+        } else if (result && result.networkError) {
+           console.warn(`MV2: Network error with token ${token.substring(0,15)}... Trying next.`);
+        }
+      }
+    } catch (error) { // Should not happen if fetchUpworkJobsDirectly catches its own errors
+      console.error(`MV2: Unexpected error trying token ${token.substring(0,15)}...:`, error.message);
+    }
   }
 
-  if (fetchedJobs === null || !Array.isArray(fetchedJobs)) {
-    console.error("MV2: Job check failed or returned invalid data.");
+  if (!successfulToken || fetchedJobs === null) {
+    console.error("MV2: All candidate tokens failed or returned no valid job data.");
+    await new Promise(resolve => chrome.storage.local.set({ monitorStatus: "Error: All tokens failed." }, resolve));
+    chrome.runtime.sendMessage({ action: "updatePopupDisplay" }).catch(e => {}); // Update popup with error
     return;
   }
-
+  
+  // --- Deduplication and Notification (using fetchedJobs) ---
+  // (This part remains the same as your previous working version)
   const storageResult = await new Promise(resolve => chrome.storage.local.get(['seenJobIds'], r => resolve(r)));
   const historicalSeenJobIds = new Set(storageResult.seenJobIds || []);
   const trulyNewJobs = fetchedJobs.filter(job => job && job.id && !historicalSeenJobIds.has(job.id));
 
-  if (fetchedJobs.length > 0 || trulyNewJobs.length > 0) { // Log even if no new jobs but some were fetched
+  if (fetchedJobs.length > 0 || trulyNewJobs.length > 0) {
     const currentFetchJobIds = fetchedJobs.map(j => j.id).filter(id => id != null);
     const updatedSeenJobIds = new Set([...Array.from(historicalSeenJobIds), ...currentFetchJobIds]);
     const MAX_SEEN_IDS = 500;
     const prunedSeenJobIdsArray = Array.from(updatedSeenJobIds).slice(-MAX_SEEN_IDS);
     await new Promise(resolve => chrome.storage.local.set({ seenJobIds: prunedSeenJobIdsArray }, resolve));
-    // console.log(`MV2: Dedup. History: ${historicalSeenJobIds.size}, Fetched (unapplied): ${fetchedJobs.length}, New: ${trulyNewJobs.length}, Stored: ${prunedSeenJobIdsArray.length}`);
-  } else {
-    // console.log("MV2: No jobs fetched to update seenJobIds.");
   }
 
-
-  // ***** NEW: Store the 5 most recent "trulyNewJobs" for the popup *****
-  let recentJobsForPopup = [];
   if (trulyNewJobs.length > 0) {
-    console.log(`MV2 DirectBG: Found ${trulyNewJobs.length} truly new (and unapplied) jobs.`);
     trulyNewJobs.forEach(job => sendNotification(job));
-    // Store the actual job objects, limited to 5. These are already mapped.
-    recentJobsForPopup = trulyNewJobs.slice(0, 5);
-  } else {
-    console.log("MV2 DirectBG: No new unapplied jobs found after deduplication.");
   }
+  console.log(`MV2 DirectBG: Token Loop. Found ${trulyNewJobs.length} truly new jobs.`);
 
   await new Promise(resolve => chrome.storage.local.set({
     monitorStatus: `Checked. New: ${trulyNewJobs.length}`,
     newJobsInLastRun: trulyNewJobs.length,
     lastCheckTimestamp: Date.now(),
-    recentFoundJobs: recentJobsForPopup // ***** Store the jobs for popup *****
+    recentFoundJobs: trulyNewJobs.slice(0, 5)
   }, resolve));
-  //console.log("Background: Stored recentFoundJobs for popup:", JSON.stringify(recentJobsForPopup));
-
-  // ***** NEW: Send message to popup to update itself *****
-  chrome.runtime.sendMessage({ action: "updatePopupDisplay" }, response => {
-    if (chrome.runtime.lastError) {
-      // This error is common if the popup is not open. It's fine.
-      // console.log("Background: Popup not open to receive updateDisplay message, or other error:", chrome.runtime.lastError.message);
-    } else {
-      // console.log("Background: Sent updatePopupDisplay message, response:", response);
-    }
-  });
-
-
-  if (trulyNewJobs.length > 0) {
-    console.log(`MV2 DirectBG: Found ${trulyNewJobs.length} truly new (and unapplied) jobs.`);
-    trulyNewJobs.forEach(job => sendNotification(job));
-  } else {
-    console.log("MV2 DirectBG: No new unapplied jobs found after deduplication.");
-  }
-
-  await new Promise(resolve => chrome.storage.local.set({
-    monitorStatus: `Checked. New: ${trulyNewJobs.length}`,
-    newJobsInLastRun: trulyNewJobs.length,
-    lastCheckTimestamp: Date.now()
-  }, resolve));
+  chrome.runtime.sendMessage({ action: "updatePopupDisplay" }).catch(e => {});
 }
 
-// --- Test Function ---
-async function testFetchJobs() { // Test will use the currently stored or default query
+
+// --- Test Function, onInstalled, Alarms, Notifications, onMessage (remain the same) ---
+async function testFetchJobs() {
   console.log("MV2: Running testFetchJobs (Direct Background Attempt)...");
   await runJobCheck();
 }
-
-// --- Initial setup on extension installation ---
 chrome.runtime.onInstalled.addListener((details) => {
   console.log("MV2: Extension installed or updated:", details.reason);
   chrome.storage.local.set({
-    monitorStatus: "Initializing...",
-    lastCheckTimestamp: null,
-    newJobsInLastRun: 0,
-    seenJobIds: [],
-    currentUserQuery: DEFAULT_USER_QUERY // Set default query on install
+    monitorStatus: "Initializing...", lastCheckTimestamp: null, newJobsInLastRun: 0, seenJobIds: [],
+    currentUserQuery: DEFAULT_USER_QUERY
   }, () => {
     if (chrome.runtime.lastError) console.error("Error setting initial storage:", chrome.runtime.lastError);
-    console.log("MV2: Initial storage set. Default query:", DEFAULT_USER_QUERY);
     setupAlarms();
   });
 });
-
-// --- Alarms ---
 const FETCH_ALARM_NAME = "fetchUpworkJobsAlarm_MV2";
 function setupAlarms() {
   chrome.alarms.get(FETCH_ALARM_NAME, (alarm) => {
     if (!alarm) {
-      console.log("MV2: Creating fetch alarm (every 1 minute).");
-      chrome.alarms.create(FETCH_ALARM_NAME, {
-          delayInMinutes: 0.2,
-          periodInMinutes: 1
-      });
-    } else { console.log("MV2: Fetch alarm already exists."); }
+      chrome.alarms.create(FETCH_ALARM_NAME, { delayInMinutes: 0.2, periodInMinutes: 1 });
+    }
   });
 }
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === FETCH_ALARM_NAME) {
-    console.log("MV2: Alarm triggered:", alarm.name, new Date().toLocaleTimeString());
-    await runJobCheck(); // Will use stored query
+    await runJobCheck();
   }
 });
-
-// --- Notifications ---
 function sendNotification(job) {
   const jobUrl = `https://www.upwork.com/jobs/${job.ciphertext || job.id}`;
   const notificationOptions = {
@@ -303,27 +294,20 @@ function sendNotification(job) {
     message: `${job.title}\nBudget: ${(job.budget && job.budget.amount != null) ? job.budget.amount + ' ' + (job.budget.currencyCode || '') : 'N/A'}`,
     priority: 2
   };
-  chrome.notifications.create(jobUrl, notificationOptions, (notificationId) => {
-    if (chrome.runtime.lastError) console.error("Notification error:", chrome.runtime.lastError.message);
-  });
+  chrome.notifications.create(jobUrl, notificationOptions);
 }
 chrome.notifications.onClicked.addListener((notificationId) => {
   chrome.tabs.create({ url: notificationId });
   chrome.notifications.clear(notificationId);
 });
-
-// --- Message listener for popup ---
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "manualCheck") {
-    console.log("MV2: Received manualCheck request from popup with query:", request.userQuery);
-    // If a query is sent from popup, use it for this check and save it for future alarm checks
     const queryFromPopup = request.userQuery || DEFAULT_USER_QUERY;
     chrome.storage.local.set({ currentUserQuery: queryFromPopup }, async () => {
-        await runJobCheck(queryFromPopup); // Pass query to runJobCheck
-        sendResponse({ status: "Manual check initiated with specified query." });
+        await runJobCheck(queryFromPopup);
+        sendResponse({ status: "Manual check initiated." });
     });
     return true;
   }
 });
-
 setupAlarms();
