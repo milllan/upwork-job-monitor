@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const jobTitleEl = document.createElement('h3');
       const jobUrl = `https://www.upwork.com/jobs/${job.ciphertext || job.id}`;
-      jobTitleEl.innerHTML = `<a href="${jobUrl}" target="_blank" title="${job.title || 'No Title'}">${(job.title || 'No Title').substring(0,55)}${(job.title || '').length > 55 ? '...' : ''}</a>`; // Shortened title slightly
+      jobTitleEl.innerHTML = `<a href="${jobUrl}" target="_blank" title="${job.title || 'No Title'}" class="job-title-truncate-ellipsis">${(job.title || 'No Title').substring(0,59)}${(job.title || '').length > 55 ? '...' : ''}</a>`; // Shortened title slightly
 
       let budgetDisplay = 'N/A';
       if (job.budget && job.budget.amount != null) {
