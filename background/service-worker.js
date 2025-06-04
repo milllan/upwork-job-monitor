@@ -261,11 +261,14 @@ async function runJobCheck(triggeredByUserQuery) {
 
 
   // --- Deduplication and Notification (using fetchedJobs) ---
-  // (This part remains the same as your previous working version)
-  const storageResult = await new Promise(resolve => chrome.storage.local.get(['seenJobIds'], r => resolve(r)));
+  const storageResult = await new Promise(resolve => chrome.storage.local.get(['seenJobIds', 'deletedJobIds'], r => resolve(r)));
   const historicalSeenJobIds = new Set(storageResult.seenJobIds || []);
-  // Filter out jobs that are already seen
-  const allNewOrUpdatedJobs = fetchedJobs.filter(job => job && job.id && !historicalSeenJobIds.has(job.id));
+  const deletedJobIds = new Set(storageResult.deletedJobIds || []);
+
+  // Filter out jobs that are already seen OR have been explicitly deleted by the user
+  const allNewOrUpdatedJobs = fetchedJobs.filter(job =>
+    job && job.id && !historicalSeenJobIds.has(job.id) && !deletedJobIds.has(job.id)
+  );
   // From these, determine which are truly new AND notifiable (not excluded by title filter)
   const notifiableNewJobs = allNewOrUpdatedJobs.filter(job => !job.isExcludedByTitleFilter);
 
@@ -285,8 +288,9 @@ async function runJobCheck(triggeredByUserQuery) {
   await new Promise(resolve => chrome.storage.local.set({
     monitorStatus: `Checked. New (notifiable): ${notifiableNewJobs.length}`,
     newJobsInLastRun: notifiableNewJobs.length, // This count is for non-excluded new jobs
-    lastCheckTimestamp: Date.now(),
-    recentFoundJobs: fetchedJobs ? fetchedJobs.slice(0, 10) : [] // Store more, e.g., top 10, including marked ones
+    lastCheckTimestamp: Date.now(), // Update timestamp regardless of new jobs
+    // Store recent jobs, excluding those the user has deleted
+    recentFoundJobs: fetchedJobs ? fetchedJobs.filter(job => job && job.id && !deletedJobIds.has(job.id)).slice(0, 10) : []
   }, resolve));
   chrome.runtime.sendMessage({ action: "updatePopupDisplay" }).catch(e => {});
 }

@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const DEFAULT_QUERY = 'NOT "react" NOT "next.js" NOT "wix" "web vitals" OR "CLS" OR "INP" OR "LCP" OR "pagespeed" OR "Page speed" OR "Shopify speed" OR "Wordpress speed" OR "website speed"';
   
   let collapsedJobIds = new Set(); // In-memory store for collapsed job IDs
+  let deletedJobIds = new Set(); // In-memory store for explicitly deleted job IDs
 
   function timeAgo(dateInput) {
     if (!dateInput) return 'N/A';
@@ -35,6 +36,11 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.local.set({ collapsedJobIds: Array.from(collapsedJobIds) });
   }
 
+  function saveDeletedState() {
+    const MAX_DELETED_IDS = 200; // Keep the last 200 deleted IDs
+    chrome.storage.local.set({ deletedJobIds: Array.from(deletedJobIds).slice(-MAX_DELETED_IDS) });
+  }
+
   function displayRecentJobs(jobs = []) {
     console.log("Popup: displayRecentJobs called with:", jobs);
     recentJobsListDiv.innerHTML = '';
@@ -45,8 +51,11 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    console.log(`Popup: Displaying ${jobs.length} jobs.`);
-    jobs.forEach((job, index) => {
+    // Filter out jobs that have been explicitly deleted
+    const jobsToDisplay = jobs.filter(job => job && job.id && !deletedJobIds.has(job.id));
+
+    console.log(`Popup: Displaying ${jobsToDisplay.length} jobs (filtered from ${jobs.length} total recent).`);
+    jobsToDisplay.forEach((job, index) => {
       if (!job || !job.id) {
         console.warn(`Popup: Skipping job at index ${index} due to missing job or job.id`, job);
         return;
@@ -71,6 +80,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const jobUrl = `https://www.upwork.com/jobs/${job.ciphertext || job.id}`;
       jobTitleEl.innerHTML = `<a href="${jobUrl}" target="_blank" title="${job.title || 'No Title'}" class="job-title-truncate-ellipsis">${(job.title || 'No Title').substring(0,59)}${(job.title || '').length > 55 ? '...' : ''}</a>`; // Shortened title slightly
       
+      const deleteButton = document.createElement('span');
+      deleteButton.classList.add('delete-job-button');
+      deleteButton.textContent = '×'; // '×' is a common multiplication sign used for close/delete
+      deleteButton.title = 'Remove from list';
+
       if (isInitiallyCollapsed) {
         jobHeader.classList.add('job-title-collapsed');
       }
@@ -96,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       jobHeader.appendChild(toggleButton);
       jobHeader.appendChild(jobTitleEl);
+      jobHeader.appendChild(deleteButton); // Add delete button to header
 
       const jobDetailsContainer = document.createElement('div');
       jobDetailsContainer.classList.add('job-details');
@@ -128,13 +143,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         saveCollapsedState();
       });
+
+      deleteButton.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent toggle or link clicks
+        console.log(`Popup: Deleting job ID: ${job.id}`);
+        
+        // Remove the job item element from the DOM
+        jobItem.remove();
+
+        // Add job ID to the deleted list and save
+        deletedJobIds.add(job.id);
+        saveDeletedState();
+
+        // Optionally, also remove from recentFoundJobs in storage immediately
+        // This isn't strictly necessary as the display is filtered, but keeps storage cleaner
+        chrome.storage.local.get(['recentFoundJobs'], (result) => {
+          const updatedRecentJobs = (result.recentFoundJobs || []).filter(item => item.id !== job.id);
+          chrome.storage.local.set({
+            recentFoundJobs: updatedRecentJobs
+            // seenJobIds is handled by the background script
+          });
+        });
+      });
     });
   }
 
   function loadStoredData() {
     console.log("Popup: loadStoredData called.");
     chrome.storage.local.get(
-      ['monitorStatus', 'lastCheckTimestamp', 'newJobsInLastRun', 'currentUserQuery', 'recentFoundJobs', 'collapsedJobIds'],
+      ['monitorStatus', 'lastCheckTimestamp', 'newJobsInLastRun', 'currentUserQuery', 'recentFoundJobs', 'collapsedJobIds', 'deletedJobIds'],
       (result) => {
         if (chrome.runtime.lastError) {
           console.error("Popup: Error getting storage:", chrome.runtime.lastError.message);
@@ -150,6 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         newJobsCountEl.textContent = result.newJobsInLastRun !== undefined ? result.newJobsInLastRun : 'N/A';
         userQueryInput.value = result.currentUserQuery || DEFAULT_QUERY;
+        deletedJobIds = new Set(result.deletedJobIds || []); // Load deleted state
         collapsedJobIds = new Set(result.collapsedJobIds || []); // Load collapsed state
         displayRecentJobs(result.recentFoundJobs || []);
       }
