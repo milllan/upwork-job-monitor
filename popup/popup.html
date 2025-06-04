@@ -20,12 +20,48 @@
       margin-bottom: 8px;
       font-size: 13px;
     }
-    .job-item h3 { margin: 0; font-size: 14px; }
-    .job-item a { text-decoration: none; color: #0073bb; }
-    .job-item a:hover { text-decoration: underline; }
-    .job-item p { margin: 3px 0; color: #555; }
-    .job-item .skills { font-style: italic; font-size: 12px; color: #777; }
-    .no-jobs { text-align: center; color: #777; padding: 10px; font-size: 13px;} /* Slightly smaller font, moved out of .job-item */
+    .job-item h3  {
+     margin:  0;
+     font-size:  14px;
+    }
+    /* Truncate job title with ellipsis */
+    /*a.job-title-truncate-ellipsis { 
+        display: block;
+        width: 353px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }*/
+    .job-item h3 a { /* Style for the job title link */
+      display: block; /* Needed for text-overflow ellipsis */
+      width: 353px;
+      white-space: nowrap; /* Prevent wrapping */
+      overflow: hidden; /* Hide overflowing text */
+      text-overflow: ellipsis; /* Show ellipsis for truncated text */
+    }
+    .job-item a  {
+     text-decoration:  none;
+     color:  #0073bb;
+    }
+    .job-item a:hover  {
+     text-decoration:  underline;
+    }
+    .job-item p  {
+     margin:  3px 0;
+     color:  #555;
+    }
+    .job-item .skills  {
+     font-style:  italic;
+     font-size:  12px;
+     color:  #777;
+    }
+    /* Slightly smaller font,  moved out of .job-item */
+    .no-jobs  {
+     text-align:  center;
+     color:  #777;
+     padding:  10px;
+     font-size:  13px;
+    }
 
     .job-header {
       display: flex;
@@ -63,14 +99,6 @@
     }
     #manualCheckButton:hover { color: #0073bb; }
     #saveQueryButton { margin-left: 8px; }
-
-      a.job-title-truncate-ellipsis { /* Truncate job title with ellipsis */
-          display: block;
-          width: 353px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-      }
   </style>
 </head>
 <body>
