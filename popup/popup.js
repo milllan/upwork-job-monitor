@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function triggerCheck(queryToUse) {
     statusEl.textContent = 'Checking...';
-    recentJobsListDiv.innerHTML = '<p class="no-jobs">Checking for new jobs...</p>';
+    // Do not clear the list here; let it be updated by loadStoredData after the check completes.
     console.log("Popup: Triggering check with query:", queryToUse);
 
     chrome.runtime.sendMessage({ action: "manualCheck", userQuery: queryToUse }, (response) => {
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   manualCheckButton.addEventListener('click', () => {
     const currentQueryInInput = userQueryInput.value.trim();
-    triggerCheck(currentQueryInInput || DEFAULT_USER_QUERY);
+    triggerCheck(currentQueryInInput || DEFAULT_QUERY); // Use DEFAULT_QUERY defined in this file
   });
 
   // Listen for messages from background script to update the display

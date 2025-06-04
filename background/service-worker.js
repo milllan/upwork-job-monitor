@@ -253,7 +253,7 @@ async function runJobCheck(triggeredByUserQuery) {
     monitorStatus: `Checked. New: ${trulyNewJobs.length}`,
     newJobsInLastRun: trulyNewJobs.length,
     lastCheckTimestamp: Date.now(),
-    recentFoundJobs: trulyNewJobs.slice(0, 5)
+    recentFoundJobs: fetchedJobs ? fetchedJobs.slice(0, 5) : [] // Store the actual fetched jobs for recent display
   }, resolve));
   chrome.runtime.sendMessage({ action: "updatePopupDisplay" }).catch(e => {});
 }
