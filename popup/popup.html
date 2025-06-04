@@ -15,29 +15,31 @@
     .recent-jobs-container { margin-top: 10px; max-height: 250px; overflow-y: auto; }
     .job-item {
       border: 1px solid #eee; /* Lighter border */
+      border-left: 3px solid #ccc; /* Default left border for all items */
       border-radius: 4px;
       padding: 8px;
       margin-bottom: 8px;
+      background-color: #f9f9f9; /* Default background for all items */
       font-size: 13px;
     }
     .job-item h3  {
-     margin:  0;
-     font-size:  14px;
+      margin: 0;
+      font-size: 14px;
+      /* Flex properties for the title container */
+      /* font-weight will be controlled by a class now */
+      flex-grow: 1; /* Allow title to take up remaining space */
+      min-width: 0; /* IMPORTANT: Allows h3 to shrink and text-overflow on child <a> to work */
+      line-height: 1.3; /* Improves readability */
     }
-    /* Truncate job title with ellipsis */
-    /*a.job-title-truncate-ellipsis { 
-        display: block;
-        width: 353px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }*/
     .job-item h3 a { /* Style for the job title link */
       display: block; /* Needed for text-overflow ellipsis */
-      width: 353px;
+      /* width: 353px; /* REMOVE fixed width, let flexbox handle it */
       white-space: nowrap; /* Prevent wrapping */
       overflow: hidden; /* Hide overflowing text */
       text-overflow: ellipsis; /* Show ellipsis for truncated text */
+      color: #0073bb; /* Ensure default link color is set here if not inherited */
+      text-decoration: none; /* Ensure default link decoration is set here */
+
     }
     .job-item a  {
      text-decoration:  none;
@@ -62,6 +64,10 @@
      padding:  10px;
      font-size:  13px;
     }
+    /* New class for collapsed job titles */
+    .job-title-collapsed h3 {
+        font-weight: normal;
+    }
 
     .job-header {
       display: flex;
@@ -71,19 +77,23 @@
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
-      padding: 0 8px 0 0; /* Right padding to space from title */
       user-select: none; /* Prevent text selection */
-      min-width: 15px; /* Ensure it has some width for alignment */
       text-align: center;
       line-height: 1; /* Adjust for better vertical alignment with title */
+      flex-shrink: 0; /* Prevent toggle from shrinking */
+      width: 15px;    /* Fixed width for the toggle button */
+      margin-right: 8px; /* Space between toggle and title */
+      padding: 0; /* Reset padding, use margin for spacing */
     }
     .job-details {
       padding-left: 23px; /* Indent details under the toggle button's original space */
       padding-top: 8px; /* Space between header and details */
     }
     .job-item.excluded-by-filter {
-      background-color: #f8f8f8; /* Light grey background for the whole item */
-      border-left: 3px solid #aaa; /* A slightly more prominent left border */
+      padding: 4px 8px;
+      /* Now inherits base background and border-left */
+      /* Optionally, make it slightly different if needed, e.g., a darker border */
+      border-left-color: #eee; /* Make excluded items' left border slightly ligher */
     }
     .job-item.excluded-by-filter .job-header h3 a {
       color: #555; /* Slightly muted title color for excluded items */

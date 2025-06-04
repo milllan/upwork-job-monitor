@@ -12,6 +12,7 @@ const DEFAULT_USER_QUERY = 'NOT "react" NOT "next.js" NOT "wix" NOT "HubSpot" NO
 const TITLE_EXCLUSION_STRINGS = [
   "french speaking only", // Add strings to exclude, case-insensitive
   "SEO Optimization for",
+  "Prestashop Specialist",
   // e.g., "german required", "based in usa only"
 ].map(s => s.toLowerCase());
 
