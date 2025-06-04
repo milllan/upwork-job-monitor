@@ -6,13 +6,17 @@ const UPWORK_DOMAIN = "https://www.upwork.com";
 const UPWORK_GRAPHQL_ENDPOINT_BASE = "https://www.upwork.com/api/graphql/v1";
 const TARGET_GRAPHQL_URL_PATTERN = "*://*.upwork.com/api/graphql/v1*"; // For webRequest
 const X_UPWORK_API_TENANT_ID = "424307183201796097";
-const DEFAULT_USER_QUERY = 'NOT "react" NOT "next.js" NOT "wix" NOT "HubSpot" NOT "Webflow Website" NOT "Webflow Page" NOT "Squarespace Website" NOT "Squarespace Blog" NOT "Content Marketing" NOT "Guest Post" "CLS" OR "INP" OR "LCP" OR "pagespeed" OR "Page speed" OR "Shopify speed" OR "Wordpress speed" OR "site speed" OR "web optimization" OR "web vitals" OR "WebPageTest" OR "GTmetrix" OR "Lighthouse scores" OR "Google Lighthouse" OR "page load" OR "performance expert" OR "performance specialist" OR "performance audit" ';
+const DEFAULT_USER_QUERY = 'NOT "react" NOT "next.js" NOT "wix" NOT "HubSpot" NOT "Webflow Website" NOT "Webflow Page" NOT "Squarespace Website" NOT "Squarespace Blog" NOT "Squarespace Developer" NOT "Content Marketing" NOT "Guest Post" "CLS" OR "INP" OR "LCP" OR "pagespeed" OR "Page speed" OR "Shopify speed" OR "Wordpress speed" OR "site speed" OR "web optimization" OR "web vitals" OR "WebPageTest" OR "GTmetrix" OR "Lighthouse scores" OR "Google Lighthouse" OR "page load" OR "performance expert" OR "performance specialist" OR "performance audit" ';
 
 // New: Client-side title exclusion filter
 const TITLE_EXCLUSION_STRINGS = [
   "french speaking only", // Add strings to exclude, case-insensitive
   "SEO Optimization for",
   "Prestashop Specialist",
+  "Framer website",
+  "SEO Specialist Needed for Website Optimization",
+  "TikTok Shop",
+  "Virtual Assistant",
   // e.g., "german required", "based in usa only"
 ].map(s => s.toLowerCase());
 
@@ -134,7 +138,7 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
       contractorTier: ["IntermediateLevel", "ExpertLevel"],
       sort: "recency",
       highlight: false,
-      paging: { offset: 0, count: 8 },
+      paging: { offset: 0, count: 11 },
     },
   };
   const graphqlPayload = { query: fullRawQueryString, variables: variables };
