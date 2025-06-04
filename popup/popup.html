@@ -5,16 +5,16 @@
   <meta charset="utf-8">
   <style>
     body { font-family: sans-serif; width: 400px; padding: 10px; font-size: 14px; }
-    h1 { font-size: 16px; margin-top: 0; }
-    p { margin: 5px 0; }
-    input[type="text"] { width: 95%; margin-bottom: 5px; padding: 4px; }
-    button { margin-top: 5px; padding: 5px 8px; }
-    .query-section { margin-bottom: 10px; }
-    .status-section p { margin-bottom: 8px; }
-    hr { margin: 10px 0; }
+    h1 { font-size: 16px; margin: 0 0 8px 0; display: flex; align-items: center; justify-content: space-between; }
+    p { margin: 4px 0; } /* Slightly reduced paragraph margin */
+    input[type="text"] { width: 95%; margin-bottom: 4px; padding: 4px; box-sizing: border-box; } /* Reduced bottom margin, added box-sizing */
+    button { margin-top: 4px; padding: 5px 8px; } /* Reduced top margin */
+    .query-section { margin-bottom: 8px; display: flex; align-items: center; }
+    .status-section p { margin-bottom: 4px; } /* Reduced bottom margin for status lines */
+    hr { margin: 8px 0; border: 0; border-top: 1px solid #eee; } /* Reduced margin, styled HR */
     .recent-jobs-container { margin-top: 10px; max-height: 250px; overflow-y: auto; }
     .job-item {
-      border: 1px solid #ddd;
+      border: 1px solid #eee; /* Lighter border */
       border-radius: 4px;
       padding: 8px;
       margin-bottom: 8px;
@@ -25,11 +25,42 @@
     .job-item a:hover { text-decoration: underline; }
     .job-item p { margin: 3px 0; color: #555; }
     .job-item .skills { font-style: italic; font-size: 12px; color: #777; }
-    .job-item .no-jobs { text-align: center; color: #777; padding: 10px;}
+    .no-jobs { text-align: center; color: #777; padding: 10px; font-size: 13px;} /* Slightly smaller font, moved out of .job-item */
+
+    .job-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 3px; /* Space between header and details if expanded */
+    }
+    .toggle-details {
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      padding: 0 8px 0 0; /* Right padding to space from title */
+      user-select: none; /* Prevent text selection */
+      min-width: 15px; /* Ensure it has some width for alignment */
+      text-align: center;
+      line-height: 1; /* Adjust for better vertical alignment with title */
+    }
+    .job-details {
+      padding-left: 23px; /* Indent details under the toggle button's original space */
+    }
+    .job-item.excluded-by-filter .job-header h3 a { /* Optional: Style for auto-collapsed jobs */ }
+    #manualCheckButton {
+      background: none;
+      border: none;
+      font-size: 18px; /* Adjust size of icon */
+      padding: 0 5px;
+      margin: 0 0 0 10px; /* Margin to space it from title */
+      cursor: pointer;
+      color: #333;
+    }
+    #manualCheckButton:hover { color: #0073bb; }
+    #saveQueryButton { margin-left: 8px; }
   </style>
 </head>
 <body>
-  <h1>Upwork Job Monitor (MV2)</h1>
+  <h1>Upwork Job Monitor (MV2) <button id="manualCheckButton" title="Check Now (with saved query)">&#x21BB;</button></h1>
 
   <div class="status-section">
     <p>Status: <span id="status">Initializing...</span></p>
@@ -42,7 +73,6 @@
     <input type="text" id="userQueryInput" placeholder="Enter your Upwork search query">
     <button id="saveQueryButton">Save & Check</button>
   </div>
-  <button id="manualCheckButton">Check Now (with saved query)</button>
   <hr>
   <h2>Recently Found Jobs:</h2>
   <div id="recentJobsList" class="recent-jobs-container">

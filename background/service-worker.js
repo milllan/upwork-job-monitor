@@ -8,6 +8,13 @@ const TARGET_GRAPHQL_URL_PATTERN = "*://*.upwork.com/api/graphql/v1*"; // For we
 const X_UPWORK_API_TENANT_ID = "424307183201796097";
 const DEFAULT_USER_QUERY = 'NOT "react" NOT "next.js" NOT "wix" NOT "HubSpot" NOT "Webflow Website" NOT "Webflow Page" NOT "Squarespace Website" NOT "Squarespace Blog" NOT "Content Marketing" NOT "Guest Post" "CLS" OR "INP" OR "LCP" OR "pagespeed" OR "Page speed" OR "Shopify speed" OR "Wordpress speed" OR "site speed" OR "web optimization" OR "web vitals" OR "WebPageTest" OR "GTmetrix" OR "Lighthouse scores" OR "Google Lighthouse" OR "page load" OR "performance expert" OR "performance specialist" OR "performance audit" ';
 
+// New: Client-side title exclusion filter
+const TITLE_EXCLUSION_STRINGS = [
+  "french speaking only", // Add strings to exclude, case-insensitive
+  "SEO Optimization for",
+  // e.g., "german required", "based in usa only"
+].map(s => s.toLowerCase());
+
 
 // --- Token Retrieval ---
 async function getAllPotentialApiTokens() { // Renamed and modified to return an array
@@ -126,7 +133,7 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
       contractorTier: ["IntermediateLevel", "ExpertLevel"],
       sort: "recency",
       highlight: false,
-      paging: { offset: 0, count: 20 },
+      paging: { offset: 0, count: 8 },
     },
   };
   const graphqlPayload = { query: fullRawQueryString, variables: variables };
@@ -230,11 +237,32 @@ async function runJobCheck(triggeredByUserQuery) {
     return;
   }
   
+  // Apply client-side title exclusion filter (marking instead of removing)
+  if (fetchedJobs && fetchedJobs.length > 0 && TITLE_EXCLUSION_STRINGS.length > 0) {
+    const originalCount = fetchedJobs.length;
+    let excludedCount = 0;
+    fetchedJobs = fetchedJobs.map(job => {
+      const titleLower = (job.title || "").toLowerCase();
+      const isExcluded = TITLE_EXCLUSION_STRINGS.some(excludeString => titleLower.includes(excludeString));
+      if (isExcluded) {
+        excludedCount++;
+        // Add a flag to the job object instead of filtering it out
+        return { ...job, isExcludedByTitleFilter: true };
+      }
+      return job;
+    });
+    console.log(`MV2: Marked ${excludedCount} jobs based on title exclusion filter out of ${originalCount}.`);
+  }
+
+
   // --- Deduplication and Notification (using fetchedJobs) ---
   // (This part remains the same as your previous working version)
   const storageResult = await new Promise(resolve => chrome.storage.local.get(['seenJobIds'], r => resolve(r)));
   const historicalSeenJobIds = new Set(storageResult.seenJobIds || []);
-  const trulyNewJobs = fetchedJobs.filter(job => job && job.id && !historicalSeenJobIds.has(job.id));
+  // Filter out jobs that are already seen
+  const allNewOrUpdatedJobs = fetchedJobs.filter(job => job && job.id && !historicalSeenJobIds.has(job.id));
+  // From these, determine which are truly new AND notifiable (not excluded by title filter)
+  const notifiableNewJobs = allNewOrUpdatedJobs.filter(job => !job.isExcludedByTitleFilter);
 
   if (fetchedJobs.length > 0 || trulyNewJobs.length > 0) {
     const currentFetchJobIds = fetchedJobs.map(j => j.id).filter(id => id != null);
@@ -244,16 +272,16 @@ async function runJobCheck(triggeredByUserQuery) {
     await new Promise(resolve => chrome.storage.local.set({ seenJobIds: prunedSeenJobIdsArray }, resolve));
   }
 
-  if (trulyNewJobs.length > 0) {
-    trulyNewJobs.forEach(job => sendNotification(job));
+  if (notifiableNewJobs.length > 0) {
+    notifiableNewJobs.forEach(job => sendNotification(job));
   }
-  console.log(`MV2 DirectBG: Token Loop. Found ${trulyNewJobs.length} truly new jobs.`);
+  console.log(`MV2 DirectBG: Token Loop. Found ${allNewOrUpdatedJobs.length} new/updated jobs, ${notifiableNewJobs.length} are notifiable.`);
 
   await new Promise(resolve => chrome.storage.local.set({
-    monitorStatus: `Checked. New: ${trulyNewJobs.length}`,
-    newJobsInLastRun: trulyNewJobs.length,
+    monitorStatus: `Checked. New (notifiable): ${notifiableNewJobs.length}`,
+    newJobsInLastRun: notifiableNewJobs.length, // This count is for non-excluded new jobs
     lastCheckTimestamp: Date.now(),
-    recentFoundJobs: fetchedJobs ? fetchedJobs.slice(0, 5) : [] // Store the actual fetched jobs for recent display
+    recentFoundJobs: fetchedJobs ? fetchedJobs.slice(0, 10) : [] // Store more, e.g., top 10, including marked ones
   }, resolve));
   chrome.runtime.sendMessage({ action: "updatePopupDisplay" }).catch(e => {});
 }

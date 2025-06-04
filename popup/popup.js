@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const recentJobsListDiv = document.getElementById('recentJobsList');
 
   const DEFAULT_QUERY = 'NOT "react" NOT "next.js" NOT "wix" "web vitals" OR "CLS" OR "INP" OR "LCP" OR "pagespeed" OR "Page speed" OR "Shopify speed" OR "Wordpress speed" OR "website speed"';
+  
+  let collapsedJobIds = new Set(); // In-memory store for collapsed job IDs
 
   function timeAgo(dateInput) {
     if (!dateInput) return 'N/A';
@@ -29,6 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${days} days ago`;
   }
 
+  function saveCollapsedState() {
+    chrome.storage.local.set({ collapsedJobIds: Array.from(collapsedJobIds) });
+  }
+
   function displayRecentJobs(jobs = []) {
     console.log("Popup: displayRecentJobs called with:", jobs);
     recentJobsListDiv.innerHTML = '';
@@ -45,11 +51,26 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn(`Popup: Skipping job at index ${index} due to missing job or job.id`, job);
         return;
       }
-      // console.log(`Popup: Rendering job ${index + 1}:`, job.title); // Can be noisy
 
       const jobItem = document.createElement('div');
       jobItem.classList.add('job-item');
+      if (job.isExcludedByTitleFilter) {
+        jobItem.classList.add('excluded-by-filter');
+      }
+
+      const isInitiallyCollapsed = job.isExcludedByTitleFilter || collapsedJobIds.has(job.id);
+
+      const jobHeader = document.createElement('div');
+      jobHeader.classList.add('job-header');
+
+      const toggleButton = document.createElement('span');
+      toggleButton.classList.add('toggle-details');
+      toggleButton.textContent = isInitiallyCollapsed ? '+' : '-';
+
+      const jobTitleEl = document.createElement('h3');
       const jobUrl = `https://www.upwork.com/jobs/${job.ciphertext || job.id}`;
+      jobTitleEl.innerHTML = `<a href="${jobUrl}" target="_blank" title="${job.title || 'No Title'}">${(job.title || 'No Title').substring(0,55)}${(job.title || '').length > 55 ? '...' : ''}</a>`; // Shortened title slightly
+
       let budgetDisplay = 'N/A';
       if (job.budget && job.budget.amount != null) {
         budgetDisplay = `${job.budget.amount} ${job.budget.currencyCode || ''}`;
@@ -69,21 +90,45 @@ document.addEventListener('DOMContentLoaded', () => {
         skillsDisplay = `Skills: ${job.skills.map(s => s.name).slice(0, 3).join(', ')}${job.skills.length > 3 ? '...' : ''}`; // Show fewer skills
       }
 
-      jobItem.innerHTML = `
-        <h3><a href="${jobUrl}" target="_blank" title="${job.title || 'No Title'}">${(job.title || 'No Title').substring(0,60)}${(job.title || '').length > 60 ? '...' : ''}</a></h3>
+      jobHeader.appendChild(toggleButton);
+      jobHeader.appendChild(jobTitleEl);
+
+      const jobDetailsContainer = document.createElement('div');
+      jobDetailsContainer.classList.add('job-details');
+      jobDetailsContainer.style.display = isInitiallyCollapsed ? 'none' : 'block';
+
+      jobDetailsContainer.innerHTML = `
         <p><strong>Budget:</strong> ${budgetDisplay}</p>
         <p>${clientInfo}</p>
         ${skillsDisplay ? `<p class="skills">${skillsDisplay}</p>` : ''}
         <p><small>Posted: ${job.postedOn ? new Date(job.postedOn).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ', ' + new Date(job.postedOn).toLocaleDateString() : 'N/A'} <b>(${timeAgo(job.postedOn)})</b></small></p>
       `;
+
+      jobItem.appendChild(jobHeader);
+      jobItem.appendChild(jobDetailsContainer);
       recentJobsListDiv.appendChild(jobItem);
+
+      toggleButton.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent any parent click handlers if added later
+        const isCurrentlyCollapsed = jobDetailsContainer.style.display === 'none';
+        if (isCurrentlyCollapsed) {
+          jobDetailsContainer.style.display = 'block';
+          toggleButton.textContent = '-';
+          collapsedJobIds.delete(job.id);
+        } else {
+          jobDetailsContainer.style.display = 'none';
+          toggleButton.textContent = '+';
+          collapsedJobIds.add(job.id);
+        }
+        saveCollapsedState();
+      });
     });
   }
 
   function loadStoredData() {
     console.log("Popup: loadStoredData called.");
     chrome.storage.local.get(
-      ['monitorStatus', 'lastCheckTimestamp', 'newJobsInLastRun', 'currentUserQuery', 'recentFoundJobs'],
+      ['monitorStatus', 'lastCheckTimestamp', 'newJobsInLastRun', 'currentUserQuery', 'recentFoundJobs', 'collapsedJobIds'],
       (result) => {
         if (chrome.runtime.lastError) {
           console.error("Popup: Error getting storage:", chrome.runtime.lastError.message);
@@ -99,6 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         newJobsCountEl.textContent = result.newJobsInLastRun !== undefined ? result.newJobsInLastRun : 'N/A';
         userQueryInput.value = result.currentUserQuery || DEFAULT_QUERY;
+        collapsedJobIds = new Set(result.collapsedJobIds || []); // Load collapsed state
         displayRecentJobs(result.recentFoundJobs || []);
       }
     );
