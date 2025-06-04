@@ -45,7 +45,13 @@
       padding-left: 23px; /* Indent details under the toggle button's original space */
       padding-top: 8px; /* Space between header and details */
     }
-    .job-item.excluded-by-filter .job-header h3 a { /* Optional: Style for auto-collapsed jobs */ }
+    .job-item.excluded-by-filter {
+      background-color: #f8f8f8; /* Light grey background for the whole item */
+      border-left: 3px solid #aaa; /* A slightly more prominent left border */
+    }
+    .job-item.excluded-by-filter .job-header h3 a {
+      color: #555; /* Slightly muted title color for excluded items */
+    }
     #manualCheckButton {
       background: none;
       border: none;
