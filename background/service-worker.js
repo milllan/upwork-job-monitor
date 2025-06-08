@@ -17,6 +17,8 @@ const TITLE_EXCLUSION_STRINGS = [
   "SEO Specialist Needed for Website Optimization",
   "TikTok Shop",
   "Virtual Assistant",
+  "Funnel Expert",
+  "BigCommerce Developer ",
   // e.g., "german required", "based in usa only"
 ].map(s => s.toLowerCase());
 

@@ -7,10 +7,10 @@
     body { font-family: sans-serif; width: 400px; padding: 10px; font-size: 14px; }
     h1 { font-size: 16px; margin: 0 0 8px 0; display: flex; align-items: center; justify-content: space-between; }
     p { margin: 4px 0; } /* Slightly reduced paragraph margin */
-    input[type="text"] { width: 95%; margin-bottom: 4px; padding: 4px; box-sizing: border-box; } /* Reduced bottom margin, added box-sizing */
+    input[type="text"] { width: calc(100% - 85px); margin-bottom: 4px; padding: 4px; box-sizing: border-box; } /* Adjusted width for button */
     button { margin-top: 4px; padding: 5px 8px; } /* Reduced top margin */
     .query-section { margin-bottom: 8px; display: flex; align-items: center; }
-    .status-section p { margin-bottom: 4px; } /* Reduced bottom margin for status lines */
+    .status-section p { margin-bottom: 4px; font-size: 0.9em; color: #333; } /* Style for the consolidated status */
     hr { margin: 8px 0; border: 0; border-top: 1px solid #eee; } /* Reduced margin, styled HR */
     .recent-jobs-container { margin-top: 10px; max-height: 250px; overflow-y: auto; }
     .job-item {
@@ -125,9 +125,7 @@
   <h1>Upwork Job Monitor (MV2) <button id="manualCheckButton" title="Check Now (with saved query)">&#x21BB;</button></h1>
 
   <div class="status-section">
-    <p>Status: <span id="status">Initializing...</span></p>
-    <p>Last Check: <span id="lastCheckTime">N/A</span></p>
-    <p>New Jobs (Last Run): <span id="newJobsCount">N/A</span></p>
+    <p id="consolidatedStatus">Initializing status...</p>
   </div>
   <hr>
   <div class="query-section">

@@ -1,8 +1,6 @@
 // popup.js
 document.addEventListener('DOMContentLoaded', () => {
-  const statusEl = document.getElementById('status');
-  const lastCheckTimeEl = document.getElementById('lastCheckTime');
-  const newJobsCountEl = document.getElementById('newJobsCount');
+  const consolidatedStatusEl = document.getElementById('consolidatedStatus');
   const manualCheckButton = document.getElementById('manualCheckButton');
   const userQueryInput = document.getElementById('userQueryInput');
   const saveQueryButton = document.getElementById('saveQueryButton');
@@ -39,6 +37,36 @@ document.addEventListener('DOMContentLoaded', () => {
   function saveDeletedState() {
     const MAX_DELETED_IDS = 200; // Keep the last 200 deleted IDs
     chrome.storage.local.set({ deletedJobIds: Array.from(deletedJobIds).slice(-MAX_DELETED_IDS) });
+    // Update UI immediately for deleted count
+    updateConsolidatedStatusDisplay({ deletedJobsCount: deletedJobIds.size });
+  }
+
+  function updateConsolidatedStatusDisplay(data = {}) {
+    if (!consolidatedStatusEl) return;
+
+    // Preserve existing values if not provided in data, to allow partial updates
+    const currentStatusText = consolidatedStatusEl.querySelector('span[title^="Current monitor status"]')?.textContent || 'Idle';
+    const currentLastCheckText = consolidatedStatusEl.querySelector('span[title^="Last successful check time"]')?.textContent.replace('Last: ','') || 'N/A';
+    const currentDeletedText = consolidatedStatusEl.querySelector('span[title^="Jobs you\'ve deleted"]')?.textContent.replace('Del: ','') || deletedJobIds.size.toString();
+
+    const statusText = data.monitorStatusText !== undefined ? data.monitorStatusText : currentStatusText;
+    
+    let lastCheckDisplay = currentLastCheckText;
+    if (data.lastCheckTimestamp !== undefined) {
+      if (data.lastCheckTimestamp) {
+        const lastCheckDate = new Date(data.lastCheckTimestamp);
+        const timeString = lastCheckDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        lastCheckDisplay = `${timeString} (${timeAgo(lastCheckDate)})`;
+      } else {
+        lastCheckDisplay = 'N/A';
+      }
+    }
+    const deletedCount = data.deletedJobsCount !== undefined ? data.deletedJobsCount : parseInt(currentDeletedText, 10) || 0;
+
+    consolidatedStatusEl.innerHTML =
+      `<span title="Current monitor status">${statusText}</span> | ` +
+      `<span title="Last successful check time">Last: ${lastCheckDisplay}</span> | ` +
+      `<span title="Jobs you've deleted from the list">Del: ${deletedCount}</span>`;
   }
 
   function displayRecentJobs(jobs = []) {
@@ -175,34 +203,33 @@ document.addEventListener('DOMContentLoaded', () => {
       (result) => {
         if (chrome.runtime.lastError) {
           console.error("Popup: Error getting storage:", chrome.runtime.lastError.message);
-          statusEl.textContent = 'Error loading status';
+          updateConsolidatedStatusDisplay({ monitorStatusText: 'Error loading status' });
           recentJobsListDiv.innerHTML = '<p class="no-jobs">Error loading job data.</p>';
           return;
         }
-        statusEl.textContent = result.monitorStatus || 'Idle';
-        if (result.lastCheckTimestamp) {
-          lastCheckTimeEl.textContent = new Date(result.lastCheckTimestamp).toLocaleString();
-        } else {
-          lastCheckTimeEl.textContent = 'N/A';
-        }
-        newJobsCountEl.textContent = result.newJobsInLastRun !== undefined ? result.newJobsInLastRun : 'N/A';
         userQueryInput.value = result.currentUserQuery || DEFAULT_QUERY;
         deletedJobIds = new Set(result.deletedJobIds || []); // Load deleted state
         collapsedJobIds = new Set(result.collapsedJobIds || []); // Load collapsed state
+        
+        updateConsolidatedStatusDisplay({
+          monitorStatusText: result.monitorStatus || 'Idle', // This includes "New (notifiable): X"
+          lastCheckTimestamp: result.lastCheckTimestamp,
+          deletedJobsCount: deletedJobIds.size
+        });
+
         displayRecentJobs(result.recentFoundJobs || []);
       }
     );
   }
 
   function triggerCheck(queryToUse) {
-    statusEl.textContent = 'Checking...';
-    // Do not clear the list here; let it be updated by loadStoredData after the check completes.
+    updateConsolidatedStatusDisplay({ monitorStatusText: 'Checking...' });
     console.log("Popup: Triggering check with query:", queryToUse);
 
     chrome.runtime.sendMessage({ action: "manualCheck", userQuery: queryToUse }, (response) => {
       if (chrome.runtime.lastError) {
         console.error("Popup: Error sending manual check message:", chrome.runtime.lastError.message);
-        statusEl.textContent = 'Error triggering check';
+        // Rely on updatePopupDisplay message or next loadStoredData to update status from storage
         loadStoredData(); // Attempt to refresh with current state on error
       } else {
         console.log("Popup: Manual check message sent, background responded:", response);
