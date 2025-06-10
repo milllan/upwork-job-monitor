@@ -153,7 +153,9 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
         if(job.client.totalSpent > 0) clientInfo += ` | Spent: $${Number(job.client.totalSpent).toFixed(0)}`;
-        if(job.client.paymentVerificationStatus === 'VERIFIED') clientInfo += ' (Verified)';
+        if (job.client.paymentVerificationStatus !== 'VERIFIED') {
+          clientInfo += ' <span class="unverified-icon" title="Client payment not verified">⚠️</span>';
+        }
       }
       let skillsDisplay = '';
       if (job.skills && job.skills.length > 0) {
