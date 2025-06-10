@@ -1,66 +1,6 @@
 // background.js (Manifest V2 - Dynamic Token Attempt)
 console.log("Background Script MV2 loaded - Dynamic Token Attempt.");
-
-// --- Token Retrieval ---
-async function getAllPotentialApiTokens() { // Renamed and modified to return an array
-  return new Promise((resolve) => {
-    chrome.cookies.getAll({ domain: "upwork.com" }, (cookies) => {
-      if (chrome.runtime.lastError) {
-        console.error("Error getting all cookies:", chrome.runtime.lastError.message);
-        resolve([]); return;
-      }
-      if (!cookies || cookies.length === 0) {
-        console.warn("No cookies found for upwork.com domain.");
-        resolve([]); return;
-      }
-
-      let allOAuthTokens = [];
-      for (const cookie of cookies) {
-        if (cookie.value && cookie.value.startsWith("oauth2v2_")) {
-          allOAuthTokens.push({ name: cookie.name, value: cookie.value });
-        }
-      }
-
-      if (allOAuthTokens.length === 0) {
-        console.warn("No cookies matching 'oauth2v2_' prefix found.");
-        resolve([]); return;
-      }
-
-      // Prioritize tokens based on patterns or known good characteristics
-      let prioritizedTokens = [];
-
-      // 1. Tokens matching the "xxxxxxxxsb" pattern (and not known non-API tokens)
-      const sbPatternTokens = allOAuthTokens.filter(t =>
-        t.name.length === 10 && t.name.endsWith("sb") &&
-        t.name !== "forterToken" // Example of a known token that might fit pattern but isn't for API auth
-      );
-      sbPatternTokens.forEach(t => prioritizedTokens.push(t.value));
-
-      // 2. Other oauth2v2_ tokens, excluding known non-permissioned or general ones
-      const otherPotentials = allOAuthTokens.filter(t =>
-        !sbPatternTokens.some(sbt => sbt.name === t.name) && // Not already added
-        t.name !== "oauth2_global_js_token" &&
-        t.name !== "visitor_gql_token" &&
-        t.name !== "visitor_innova_gql_token" &&
-        !t.name.includes("master_access_token") &&
-        !t.name.includes("_vt") // Nuxt view tokens
-      );
-      otherPotentials.forEach(t => prioritizedTokens.push(t.value));
-
-      // 3. Fallback to oauth2_global_js_token if nothing else worked (least likely to have field perms)
-      const globalJsToken = allOAuthTokens.find(t => t.name === "oauth2_global_js_token");
-      if (globalJsToken && !prioritizedTokens.includes(globalJsToken.value)) {
-        prioritizedTokens.push(globalJsToken.value);
-      }
-      
-      // Remove duplicates that might have arisen if a token fit multiple categories
-      const uniquePrioritizedTokens = [...new Set(prioritizedTokens)];
-
-      console.log("Candidate API tokens (prioritized):", uniquePrioritizedTokens.map(t => t.substring(0,20) + "..."));
-      resolve(uniquePrioritizedTokens);
-    });
-  });
-}
+// UpworkAPI object is expected to be globally available from api/upwork-api.js
 
 // --- WebRequest Listener to Modify Headers ---
 chrome.webRequest.onBeforeSendHeaders.addListener(
@@ -89,93 +29,19 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
   ["blocking", "requestHeaders", "extraHeaders"]
 );
 
-// --- Fetching Jobs (fetchUpworkJobsDirectly - remains the same) ---
-async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
-  // ... (this function is the same as your last working version that takes bearerToken and userQuery)
-  const endpoint = `${config.UPWORK_GRAPHQL_ENDPOINT_BASE}?alias=userJobSearch`;
-  const fullRawQueryString = `
-  query UserJobSearch($requestVariables: UserJobSearchV1Request!) {
-    search {
-      universalSearchNuxt {
-        userJobSearchV1(request: $requestVariables) {
-          paging { total offset count }
-          results {
-            id title description relevanceEncoded applied
-            ontologySkills { uid prefLabel prettyName: prefLabel }
-            connectPrice
-            upworkHistoryData { client { paymentVerificationStatus country totalSpent { amount } totalFeedback } }
-            jobTile { job { id ciphertext: cipherText publishTime createTime jobType hourlyBudgetMin hourlyBudgetMax fixedPriceAmount { amount isoCurrencyCode } } }
-          }
-        }
-      }
-    }
-  }`;
-  const variables = {
-    requestVariables: {
-      userQuery: userQuery || config.DEFAULT_USER_QUERY,
-      contractorTier: config.DEFAULT_CONTRACTOR_TIERS_GQL, // Ensure config is used if DEFAULT_USER_QUERY was a placeholder
-      sort: config.DEFAULT_SORT_CRITERIA,
-      highlight: false,
-      paging: { offset: 0, count: 11 }, // Fetch 11 to ensure we get at least 10 if one is filtered/applied
-    },
-  };
-  const graphqlPayload = { query: fullRawQueryString, variables: variables };
-  const requestHeadersForFetch = {
-    "Authorization": `Bearer ${bearerToken}`,
-    "Content-Type": "application/json",
-    "Accept": "*/*",
-  };
-
-  // console.log(`DirectBG: Attempting fetch for query: "${userQuery}". Token: ${bearerToken.substring(0,20)}...`);
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: requestHeadersForFetch,
-      body: JSON.stringify(graphqlPayload),
-    });
-    if (!response.ok) {
-      const responseBodyText = await response.text();
-      console.warn(`DirectBG: API request failed with token ${bearerToken.substring(0,10)}... Status: ${response.status}`, responseBodyText.substring(0, 300));
-      // Return a specific error object or null to indicate this token failed
-      return { error: true, status: response.status, body: responseBodyText.substring(0, 300) };
-    }
-    const data = await response.json();
-    if (data.errors) {
-      console.warn(`DirectBG: GraphQL API errors with token ${bearerToken.substring(0,10)}...:`, data.errors);
-      // Return a specific error object or null
-      return { error: true, graphqlErrors: data.errors };
-    }
-    if (data.data?.search?.universalSearchNuxt?.userJobSearchV1?.results) {
-      let jobsData = data.data.search.universalSearchNuxt.userJobSearchV1.results;
-      const unappliedJobsData = jobsData.filter(job => job.applied !== true);
-      // console.log(`DirectBG: Fetched ${jobsData.length} raw, ${unappliedJobsData.length} unapplied with token ${bearerToken.substring(0,10)}...`);
-      return unappliedJobsData.map(job => ({ /* ... your mapping ... */
-        id: job.jobTile.job.ciphertext || job.jobTile.job.id, ciphertext: job.jobTile.job.ciphertext, title: job.title, description: job.description, postedOn: job.jobTile.job.publishTime || job.jobTile.job.createTime, applied: job.applied,
-        budget: { amount: job.jobTile.job.fixedPriceAmount?.amount || job.jobTile.job.hourlyBudgetMin || job.jobTile.job.hourlyBudgetMax, currencyCode: job.jobTile.job.fixedPriceAmount?.isoCurrencyCode || 'USD', type: job.jobTile.job.jobType },
-        client: { paymentVerificationStatus: job.upworkHistoryData?.client?.paymentVerificationStatus, country: job.upworkHistoryData?.client?.country, totalSpent: job.upworkHistoryData?.client?.totalSpent?.amount || 0, rating: job.upworkHistoryData?.client?.totalFeedback, },
-        skills: job.ontologySkills ? job.ontologySkills.map(skill => ({ name: skill.prettyName || skill.prefLabel })) : [],
-        _fullJobData: job
-      }));
-    } else { return []; } // Success but no results
-  } catch (error) { 
-    console.error(`DirectBG: Network error with token ${bearerToken.substring(0,10)}...:`, error);
-    return { error: true, networkError: error.message };
-  }
-}
-
 // --- Main Job Checking Logic (runJobCheck) ---
 async function runJobCheck(triggeredByUserQuery) {
   console.log("MV2: Attempting runJobCheck (Direct Background with token loop)...");
-  await new Promise(resolve => chrome.storage.local.set({ monitorStatus: "Checking...", lastCheckTimestamp: Date.now() }, resolve));
+  await StorageManager.setMonitorStatus("Checking...");
   
   // Use the passed query or get from storage
   const userQueryToUse = triggeredByUserQuery ||
-    (await new Promise(resolve => chrome.storage.local.get(['currentUserQuery'], r => resolve(r)))).currentUserQuery ||
+    await StorageManager.getCurrentUserQuery() || // Use StorageManager
     config.DEFAULT_USER_QUERY; // Use config object
     
   console.log("MV2: Using query for check:", userQueryToUse);
 
-  const candidateTokens = await getAllPotentialApiTokens();
+  const candidateTokens = await UpworkAPI.getAllPotentialApiTokens();
   if (!candidateTokens || candidateTokens.length === 0) {
     console.error("MV2: Cannot run job check, no candidate tokens found.");
     console.log("MV2: Using query for check:", userQueryToUse);
@@ -183,7 +49,7 @@ async function runJobCheck(triggeredByUserQuery) {
     // Open Upwork search page to help re-establish tokens
     const searchUrl = constructUpworkSearchURL(userQueryToUse, config.DEFAULT_CONTRACTOR_TIERS_GQL, config.DEFAULT_SORT_CRITERIA);
     chrome.tabs.create({ url: searchUrl });
-    await new Promise(resolve => chrome.storage.local.set({ monitorStatus: "Error: No API Tokens." }, resolve));
+    await StorageManager.setMonitorStatus("Error: No API Tokens.");
     return;
   }
   
@@ -193,7 +59,7 @@ async function runJobCheck(triggeredByUserQuery) {
   for (const token of candidateTokens) {
     console.log(`MV2: Trying token ${token.substring(0, 15)}...`);
     try {
-      const result = await fetchUpworkJobsDirectly(token, userQueryToUse);
+      const result = await UpworkAPI.fetchUpworkJobsDirectly(token, userQueryToUse);
       if (result && !result.error) { // Check if result is not an error object
         fetchedJobs = result; // This is the array of job objects
         successfulToken = token;
@@ -220,7 +86,7 @@ async function runJobCheck(triggeredByUserQuery) {
 
   if (!successfulToken || fetchedJobs === null) {
     console.error("MV2: All candidate tokens failed or returned no valid job data.");
-    await new Promise(resolve => chrome.storage.local.set({ monitorStatus: "Error: All tokens failed." }, resolve));
+    await StorageManager.setMonitorStatus("Error: All tokens failed.");
     // Open Upwork search page to help re-establish tokens (using config defaults)
     const searchUrl = constructUpworkSearchURL(userQueryToUse, config.DEFAULT_CONTRACTOR_TIERS_GQL, config.DEFAULT_SORT_CRITERIA);
     chrome.tabs.create({ url: searchUrl });
@@ -247,9 +113,8 @@ async function runJobCheck(triggeredByUserQuery) {
 
 
   // --- Deduplication and Notification (using fetchedJobs) ---
-  const storageResult = await new Promise(resolve => chrome.storage.local.get([config.STORAGE_KEYS.SEEN_JOB_IDS, config.STORAGE_KEYS.DELETED_JOB_IDS], r => resolve(r)));
-  const historicalSeenJobIds = new Set(storageResult.seenJobIds || []);
-  const deletedJobIds = new Set(storageResult.deletedJobIds || []);
+  const historicalSeenJobIds = await StorageManager.getSeenJobIds();
+  const deletedJobIds = await StorageManager.getDeletedJobIds();
 
   // Filter out jobs that are already seen OR have been explicitly deleted by the user from the *fetched* list
   const allNewOrUpdatedJobs = fetchedJobs.filter(job =>
@@ -260,10 +125,7 @@ async function runJobCheck(triggeredByUserQuery) {
 
   // Update seenJobIds if any jobs were fetched
   if (fetchedJobs && fetchedJobs.length > 0) {
-    // Add all fetched job IDs to the seen list (even excluded ones, so they don't notify next time)
-    const updatedSeenJobIds = new Set([...Array.from(historicalSeenJobIds), ...fetchedJobs.map(j => j.id).filter(id => id != null)]);
-    const prunedSeenJobIdsArray = Array.from(updatedSeenJobIds).slice(-config.MAX_SEEN_IDS); // Use config.MAX_SEEN_IDS
-    await new Promise(resolve => chrome.storage.local.set({ seenJobIds: prunedSeenJobIdsArray }, resolve));
+    await StorageManager.addSeenJobIds(fetchedJobs.map(j => j.id).filter(id => id != null));
   }
 
   if (notifiableNewJobs.length > 0) {
@@ -271,13 +133,15 @@ async function runJobCheck(triggeredByUserQuery) {
   }
   console.log(`MV2 DirectBG: Token Loop. Found ${allNewOrUpdatedJobs.length} new/updated jobs, ${notifiableNewJobs.length} are notifiable.`);
 
-  await new Promise(resolve => chrome.storage.local.set({
-    [config.STORAGE_KEYS.MONITOR_STATUS]: `Checked. New (notifiable): ${notifiableNewJobs.length}`,
-    [config.STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN]: notifiableNewJobs.length, // This count is for non-excluded new jobs
-    [config.STORAGE_KEYS.LAST_CHECK_TIMESTAMP]: Date.now(), // Update timestamp regardless of new jobs
-    [config.STORAGE_KEYS.RECENT_FOUND_JOBS]: fetchedJobs ? fetchedJobs.filter(job => job && job.id && !deletedJobIds.has(job.id)).slice(0, 10) : [] // Store filtered recent jobs
-  }, resolve));
-  chrome.runtime.sendMessage({ action: "updatePopupDisplay" }).catch(e => {});
+  // Update storage using StorageManager
+  await StorageManager.setMonitorStatus(`Checked. New (notifiable): ${notifiableNewJobs.length}`);
+  await StorageManager.setNewJobsInLastRun(notifiableNewJobs.length);
+  await StorageManager.setLastCheckTimestamp(Date.now());
+  await StorageManager.setRecentFoundJobs(fetchedJobs ? fetchedJobs.filter(job => job && job.id && !deletedJobIds.has(job.id)) : []);
+
+  // In MV2, chrome.runtime.sendMessage does NOT return a Promise.
+  // Remove the .catch() as it's not valid.
+  chrome.runtime.sendMessage({ action: "updatePopupDisplay" });
 }
 
 
@@ -289,10 +153,7 @@ async function testFetchJobs() {
 
 chrome.runtime.onInstalled.addListener((details) => {
   console.log("MV2: Extension installed or updated:", details.reason);
-  chrome.storage.local.set({
-    [config.STORAGE_KEYS.MONITOR_STATUS]: "Initializing...", [config.STORAGE_KEYS.LAST_CHECK_TIMESTAMP]: null, [config.STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN]: 0, [config.STORAGE_KEYS.SEEN_JOB_IDS]: [],
-    [config.STORAGE_KEYS.CURRENT_USER_QUERY]: config.DEFAULT_USER_QUERY
-  }, () => { if (chrome.runtime.lastError) console.error("Error setting initial storage:", chrome.runtime.lastError); });
+  StorageManager.initializeStorage(config.DEFAULT_USER_QUERY);
   setupAlarms(); // Always set up alarms on install/update
 });
 
@@ -325,23 +186,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "manualCheck") {
     const queryFromPopup = request.userQuery || config.DEFAULT_USER_QUERY; // Use config
 
-    chrome.storage.local.set({ [config.STORAGE_KEYS.CURRENT_USER_QUERY]: queryFromPopup }, () => {
-      if (chrome.runtime.lastError) {
-        console.error("Background: Error setting currentUserQuery for manual check:", chrome.runtime.lastError.message);
-        if (sendResponse) sendResponse({ error: "Failed to save query before manual check." });
-        return; // Exit if storage set fails
-      }
-
-      // runJobCheck is async, ensure its errors are caught.
-      runJobCheck(queryFromPopup)
-        .then(() => {
+    StorageManager.setCurrentUserQuery(queryFromPopup)
+      .then(async () => { // Added async here
+        // runJobCheck is async, ensure its errors are caught.
+        try {
+          await runJobCheck(queryFromPopup);
           if (sendResponse) sendResponse({ status: "Manual check initiated and processing." });
-        })
-        .catch(error => {
+        } catch (error) {
           console.error("Background: Error during manual runJobCheck:", error);
           if (sendResponse) sendResponse({ error: "Error during manual job check execution." });
-        });
-    });
+        }
+      })
+      .catch(error => { // Catch errors from setCurrentUserQuery itself
+        console.error("Background: Error setting currentUserQuery for manual check:", error.message);
+        if (sendResponse) sendResponse({ error: "Failed to save query before manual check." });
+      });
+
     return true; // Crucial: indicates that sendResponse will be called asynchronously.
   }
   // Return false or nothing for synchronous messages or unhandled actions.

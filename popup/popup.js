@@ -1,5 +1,6 @@
 // popup.js
 document.addEventListener('DOMContentLoaded', () => {
+  // Assuming StorageManager is loaded via popup.html
   const popupTitleLinkEl = document.getElementById('popupTitleLink'); // Link for the main title
   const consolidatedStatusEl = document.getElementById('consolidatedStatus');
   const manualCheckButton = document.getElementById('manualCheckButton');
@@ -10,10 +11,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // This DEFAULT_QUERY is used if no query is in storage.
   // For the link to match the service-worker's DEFAULT_USER_QUERY initially (if no user query is set),
   // ensure this string is identical to DEFAULT_USER_QUERY in service-worker.js.
+  // TODO: Get this default query from storage manager or config if possible
   const DEFAULT_QUERY = 'NOT "react" NOT "next.js" NOT "wix" NOT "HubSpot" NOT "Squarespace" NOT "Webflow Website" NOT "Webflow Page" NOT "Content Marketing" NOT "Guest Post" "CLS" OR "INP" OR "LCP" OR "pagespeed" OR "Page speed" OR "Shopify speed" OR "Wordpress speed" OR "site speed" OR "web vitals" OR "WebPageTest" OR "GTmetrix" OR "Lighthouse scores" OR "Google Lighthouse" OR "page load" OR "performance expert" OR "performance specialist" OR "performance audit"';
   const POPUP_DEFAULT_CONTRACTOR_TIERS_GQL = ["IntermediateLevel", "ExpertLevel"]; // Matches service worker
   const POPUP_DEFAULT_SORT_CRITERIA = "recency"; // Matches service worker
-  let collapsedJobIds = new Set(); // In-memory store for collapsed job IDs
+  let collapsedJobIds = new Set(); // In-memory store for collapsed job IDs, loaded from storage
   let deletedJobIds = new Set(); // In-memory store for explicitly deleted job IDs
 
   function timeAgo(dateInput) {
@@ -36,12 +38,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function saveCollapsedState() {
-    chrome.storage.local.set({ collapsedJobIds: Array.from(collapsedJobIds) });
+    StorageManager.setCollapsedJobIds(Array.from(collapsedJobIds));
   }
 
-  function saveDeletedState() {
-    const MAX_DELETED_IDS = 200; // Keep the last 200 deleted IDs
-    chrome.storage.local.set({ deletedJobIds: Array.from(deletedJobIds).slice(-MAX_DELETED_IDS) });
+  async function saveDeletedState() {
+    await StorageManager.addDeletedJobIds(Array.from(deletedJobIds)); // StorageManager handles the limit
     // Update UI immediately for deleted count
     updateConsolidatedStatusDisplay({ deletedJobsCount: deletedJobIds.size });
   }
@@ -209,14 +210,9 @@ document.addEventListener('DOMContentLoaded', () => {
         deletedJobIds.add(job.id);
         saveDeletedState();
 
-        // Optionally, also remove from recentFoundJobs in storage immediately
-        // This isn't strictly necessary as the display is filtered, but keeps storage cleaner
-        chrome.storage.local.get(['recentFoundJobs'], (result) => {
-          const updatedRecentJobs = (result.recentFoundJobs || []).filter(item => item.id !== job.id);
-          chrome.storage.local.set({
-            recentFoundJobs: updatedRecentJobs
-            // seenJobIds is handled by the background script
-          });
+        // Update recent jobs in storage via StorageManager (it will filter deleted)
+        StorageManager.getRecentFoundJobs().then(currentRecentJobs => {
+            StorageManager.setRecentFoundJobs(currentRecentJobs.filter(item => item.id !== job.id));
         });
       });
     });
@@ -224,30 +220,58 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function loadStoredData() {
     console.log("Popup: loadStoredData called.");
-    chrome.storage.local.get(
-      ['monitorStatus', 'lastCheckTimestamp', 'newJobsInLastRun', 'currentUserQuery', 'recentFoundJobs', 'collapsedJobIds', 'deletedJobIds'],
-      (result) => {
-        if (chrome.runtime.lastError) {
-          console.error("Popup: Error getting storage:", chrome.runtime.lastError.message);
-          updateConsolidatedStatusDisplay({ monitorStatusText: 'Error loading status' });
-          recentJobsListDiv.innerHTML = '<p class="no-jobs">Error loading job data.</p>';
-          return;
-        }
-        const currentQuery = result.currentUserQuery || DEFAULT_QUERY;
-        userQueryInput.value = currentQuery;
-        deletedJobIds = new Set(result.deletedJobIds || []); // Load deleted state
-        collapsedJobIds = new Set(result.collapsedJobIds || []); // Load collapsed state
-        
-        updateConsolidatedStatusDisplay({
-          monitorStatusText: result.monitorStatus || 'Idle', // This includes "New (notifiable): X"
-          lastCheckTimestamp: result.lastCheckTimestamp,
-          deletedJobsCount: deletedJobIds.size
-        });
+    // Use StorageManager to get all necessary data
+    Promise.all([
+      StorageManager.getMonitorStatus(),
+      StorageManager.getLastCheckTimestamp(),
+      StorageManager.getCurrentUserQuery(),
+      StorageManager.getRecentFoundJobs(),
+      StorageManager.getCollapsedJobIds(),
+      StorageManager.getDeletedJobIds()
+    ]).then(([monitorStatus, lastCheckTimestamp, currentUserQuery, recentFoundJobs, loadedCollapsedIds, loadedDeletedIds]) => {
+        const currentQuery = currentUserQuery || DEFAULT_QUERY; // Use local default if storage is empty
+        userQueryInput.value = currentQuery; // Set input value
+        deletedJobIds = loadedDeletedIds; // Update in-memory sets
+        collapsedJobIds = loadedCollapsedIds;
+
+        // Update UI elements
+        updateConsolidatedStatusDisplay({ monitorStatusText: monitorStatus, lastCheckTimestamp: lastCheckTimestamp, deletedJobsCount: deletedIds.size });
         updatePopupTitleLink(currentQuery); // Update title link
 
         displayRecentJobs(result.recentFoundJobs || []);
       }
     );
+  }
+
+  // Refactored loadStoredData to use StorageManager
+  async function loadStoredData() {
+    console.log("Popup: loadStoredData called.");
+    try {
+      const [monitorStatus, lastCheckTimestamp, currentUserQuery, recentFoundJobs, loadedCollapsedIds, loadedDeletedIds] = await Promise.all([
+        StorageManager.getMonitorStatus(),
+        StorageManager.getLastCheckTimestamp(),
+        StorageManager.getCurrentUserQuery(),
+        StorageManager.getRecentFoundJobs(),
+        StorageManager.getCollapsedJobIds(),
+        StorageManager.getDeletedJobIds()
+      ]);
+
+      const currentQuery = currentUserQuery || DEFAULT_QUERY; // Use local default if storage is empty
+      userQueryInput.value = currentQuery; // Set input value
+      deletedJobIds = loadedDeletedIds; // Update in-memory sets
+      collapsedJobIds = loadedCollapsedIds;
+
+      // Update UI elements
+      updateConsolidatedStatusDisplay({ monitorStatusText: monitorStatus, lastCheckTimestamp: lastCheckTimestamp, deletedJobsCount: deletedJobIds.size });
+      updatePopupTitleLink(currentQuery); // Update title link
+
+      displayRecentJobs(recentFoundJobs); // Display jobs
+
+    } catch (error) {
+      console.error("Popup: Error loading storage data:", error);
+      updateConsolidatedStatusDisplay({ monitorStatusText: 'Error loading status' });
+      recentJobsListDiv.innerHTML = '<p class="no-jobs">Error loading job data.</p>';
+    }
   }
 
   function triggerCheck(queryToUse) {
@@ -270,13 +294,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   saveQueryButton.addEventListener('click', () => {
     const query = userQueryInput.value.trim();
-    if (query) {
-      chrome.storage.local.set({ currentUserQuery: query }, () => {
+    if (query) { // Use StorageManager
+      StorageManager.setCurrentUserQuery(query).then(() => {
         updatePopupTitleLink(query); // Update title link
         console.log("Popup: Query saved:", query);
         triggerCheck(query);
       });
-    } else {
+    } else { // Handle empty query case
       alert("Please enter a search query.");
       userQueryInput.value = DEFAULT_QUERY;
     }

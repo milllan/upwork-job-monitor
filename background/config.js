@@ -25,6 +25,7 @@ const config = {
     "Funnel Expert",
     "BigCommerce Developer",
     "Webflow Developer",
+    "Webflow Expert",
     "Squarespace Website",
     "Squarespace Blog",
     "Squarespace Developer",
