@@ -31,3 +31,27 @@ function constructUpworkSearchURL(userQuery, contractorTiersGraphQL, sortBy) {
   }
   return finalURL;
 }
+
+/**
+ * Converts a date to a string like "x minutes ago".
+ * @param {string|Date|number} dateInput The date to convert.
+ * @returns {string} A string representing the time ago.
+ */
+function timeAgo(dateInput) {
+  if (!dateInput) return 'N/A';
+  const date = (typeof dateInput === 'string' || typeof dateInput === 'number') ? new Date(dateInput) : dateInput;
+  if (isNaN(date.getTime())) return 'Invalid Date';
+
+  const now = new Date();
+  const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
+  const minutes = Math.round(seconds / 60);
+  const hours = Math.round(minutes / 60);
+  const days = Math.round(hours / 24);
+
+  if (seconds < 5) return 'just now';
+  if (seconds < 60) return `${seconds} sec ago`;
+  if (minutes < 60) return `${minutes} min ago`;
+  if (hours < 24) return `${hours} hr ago`;
+  if (days === 1) return `1 day ago`;
+  return `${days} days ago`;
+}

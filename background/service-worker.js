@@ -41,53 +41,18 @@ async function runJobCheck(triggeredByUserQuery) {
     
   console.log("MV2: Using query for check:", userQueryToUse);
 
-  const candidateTokens = await UpworkAPI.getAllPotentialApiTokens();
-  if (!candidateTokens || candidateTokens.length === 0) {
-    console.error("MV2: Cannot run job check, no candidate tokens found.");
-    console.log("MV2: Using query for check:", userQueryToUse);
-    
-    // Open Upwork search page to help re-establish tokens
-    const searchUrl = constructUpworkSearchURL(userQueryToUse, config.DEFAULT_CONTRACTOR_TIERS_GQL, config.DEFAULT_SORT_CRITERIA);
-    chrome.tabs.create({ url: searchUrl });
-    await StorageManager.setMonitorStatus("Error: No API Tokens.");
-    return;
-  }
-  
+  const apiResult = await UpworkAPI.fetchJobsWithTokenRotation(userQueryToUse);
+
   let fetchedJobs = null;
   let successfulToken = null;
 
-  for (const token of candidateTokens) {
-    console.log(`MV2: Trying token ${token.substring(0, 15)}...`);
-    try {
-      const result = await UpworkAPI.fetchUpworkJobsDirectly(token, userQueryToUse);
-      if (result && !result.error) { // Check if result is not an error object
-        fetchedJobs = result; // This is the array of job objects
-        successfulToken = token;
-        console.log(`MV2: Successfully fetched jobs with token ${successfulToken.substring(0,15)}...`);
-        break; // Exit loop on first successful fetch
-      } else {
-        // Log specific error from fetchUpworkJobsDirectly if an error object was returned
-        if (result && result.graphqlErrors) {
-          console.warn(`MV2: GraphQL error with token ${token.substring(0,15)}... - ${JSON.stringify(result.graphqlErrors)}`);
-          if (result.graphqlErrors[0]?.extensions?.classification === "ExecutionAborted") {
-             // This is the "OAuth2 client does not have permission" error, likely a bad token for fields
-             console.log(`Token ${token.substring(0,15)}... likely lacks field permissions. Trying next.`);
-          }
-        } else if (result && result.status) {
-          console.warn(`MV2: HTTP error ${result.status} with token ${token.substring(0,15)}... Trying next.`);
-        } else if (result && result.networkError) {
-           console.warn(`MV2: Network error with token ${token.substring(0,15)}... Trying next.`);
-        }
-      }
-    } catch (error) { // Should not happen if fetchUpworkJobsDirectly catches its own errors
-      console.error(`MV2: Unexpected error trying token ${token.substring(0,15)}...:`, error.message);
-    }
-  }
-
-  if (!successfulToken || fetchedJobs === null) {
-    console.error("MV2: All candidate tokens failed or returned no valid job data.");
+  if (apiResult && !apiResult.error) {
+    fetchedJobs = apiResult.jobs;
+    successfulToken = apiResult.token;
+  } else {
+    console.error("MV2: Failed to fetch jobs after trying all tokens.", apiResult?.message);
     await StorageManager.setMonitorStatus("Error: All tokens failed.");
-    // Open Upwork search page to help re-establish tokens (using config defaults)
+    // Open Upwork search page to help re-establish tokens
     const searchUrl = constructUpworkSearchURL(userQueryToUse, config.DEFAULT_CONTRACTOR_TIERS_GQL, config.DEFAULT_SORT_CRITERIA);
     chrome.tabs.create({ url: searchUrl });
     chrome.runtime.sendMessage({ action: "updatePopupDisplay" }).catch(e => {}); // Update popup with error
@@ -121,7 +86,9 @@ async function runJobCheck(triggeredByUserQuery) {
     job && job.id && !historicalSeenJobIds.has(job.id) && !deletedJobIds.has(job.id)
   );
   // From these, determine which are truly new AND notifiable (not excluded by title filter)
-  const notifiableNewJobs = allNewOrUpdatedJobs.filter(job => !job.isExcludedByTitleFilter);
+  const notifiableNewJobs = allNewOrUpdatedJobs.filter(job =>
+    !job.isExcludedByTitleFilter && job.applied !== true
+  );
 
   // Update seenJobIds if any jobs were fetched
   if (fetchedJobs && fetchedJobs.length > 0) {

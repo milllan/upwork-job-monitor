@@ -37,7 +37,7 @@ Configure your job search in `manifest.json`:
 ],
 ```
 
-Default search query can be modified in [`background/service-worker.js`](background/service-worker.js:9):
+Default search query can be modified in [`background/config.js`](background/config.js:1):
 ```javascript
 const DEFAULT_USER_QUERY = 'NOT "react" NOT "next.js" ...';
 ```
@@ -52,12 +52,6 @@ const DEFAULT_USER_QUERY = 'NOT "react" NOT "next.js" ...';
      - API requests
      - Notifications
      - Storage coordination
-
-2. **Content Script**
-   - Location: [`content/content_script.js`](content/content_script.js)
-   - Responsibilities:
-     - Intercept Upwork GraphQL requests
-     - Handle API communications
 
 3. **Popup Interface**
    - HTML: [`popup/popup.html`](popup/popup.html)

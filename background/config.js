@@ -9,7 +9,7 @@ const config = {
   X_UPWORK_API_TENANT_ID: "424307183201796097", // This might need dynamic discovery or confirmation
 
   // Default search parameters
-  DEFAULT_USER_QUERY: 'NOT "react" NOT "next.js" NOT "wix" NOT "HubSpot" NOT "Squarespace" NOT "Webflow Website" NOT "Webflow Page" NOT "Content Marketing" NOT "Guest Post" "CLS" OR "INP" OR "LCP" OR "pagespeed" OR "Page speed" OR "Shopify speed" OR "Wordpress speed" OR "site speed" OR "web vitals" OR "WebPageTest" OR "GTmetrix" OR "Lighthouse scores" OR "Google Lighthouse" OR "page load" OR "performance expert" OR "performance specialist" OR "performance audit"',
+  DEFAULT_USER_QUERY: 'NOT "react" NOT "next.js" NOT "wix" NOT "HubSpot" NOT "Squarespace" NOT "Webflow Website" NOT "Webflow Page" NOT "Content Marketing" NOT "Guest Post" "CLS" OR "INP" OR "LCP" OR "pagespeed" OR "Page speed" OR "Shopify speed" OR "Wordpress speed" OR "site speed" OR "web vitals" OR "WebPageTest" OR "GTmetrix" OR "Lighthouse scores" OR "Google Lighthouse" OR "page load" OR "performance expert" OR "performance specialist" OR "performance audit"', // Centralized default query
   DEFAULT_CONTRACTOR_TIERS_GQL: ["IntermediateLevel", "ExpertLevel"],
   DEFAULT_SORT_CRITERIA: "recency",
 

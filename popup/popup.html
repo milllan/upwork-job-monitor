@@ -23,23 +23,26 @@
       font-size: 13px;
     }
     .job-item h3  {
-      margin: 0;
-      font-size: 14px;
-      /* Flex properties for the title container */
-      /* font-weight will be controlled by a class now */
+      margin: 0; /* Reset margin for h3 */
+      font-size: 14px; /* Keep font size */
+      /* font-weight will be controlled by .job-title-collapsed h3 */
       flex-grow: 1; /* Allow title to take up remaining space */
       min-width: 0; /* IMPORTANT: Allows h3 to shrink and text-overflow on child <a> to work */
       line-height: 1.3; /* Improves readability */
+      /* Make h3 a flex container for the link and the applied icon */
+      display: flex;
+      align-items: center;
     }
     .job-item h3 a { /* Style for the job title link */
-      display: block; /* Needed for text-overflow ellipsis */
+      /* display: block; /* No longer needed if h3 is flex and 'a' is a flex item */
       /* width: 353px; /* REMOVE fixed width, let flexbox handle it */
       white-space: nowrap; /* Prevent wrapping */
       overflow: hidden; /* Hide overflowing text */
       text-overflow: ellipsis; /* Show ellipsis for truncated text */
       color: #0073bb; /* Ensure default link color is set here if not inherited */
       text-decoration: none; /* Ensure default link decoration is set here */
-
+      /* For ellipsis to work when 'a' is a flex item inside an h3 (which is also a flex item) */
+      min-width: 0; /* Allow the link to shrink and show ellipsis */
     }
     .job-item a  {
      text-decoration:  none;
@@ -95,6 +98,16 @@
       padding: 0 0 0 8px; /* Left padding for spacing */
       padding: 0; /* Reset padding, use margin for spacing */
     }
+    .applied-job-icon {
+      margin: 3px 8px 0 0; /* Space between title and icon */
+      display: inline-flex; /* To align SVG properly */
+      align-items: center;
+    }
+    .applied-job-icon .air3-icon svg {
+      width: 16px; /* Adjust size as needed */
+      height: 16px; /* Adjust size as needed */
+      --icon-color: #0073bb; /* Upwork blue, or your preferred color */
+    }
     .job-details {
       padding-left: 23px; /* Indent details under the toggle button's original space */
       padding-top: 8px; /* Space between header and details */
@@ -123,6 +136,11 @@
       border-left-color: #4CAF50 !important;
       background-color: #e8f5e9 !important;
     }
+    .job-item.job-applied {
+      border-left-color: #0073bb !important; /* Example: Upwork blue */
+      background-color: #e0f7fa !important; /* Example: Light cyan */
+      opacity: 0.7; /* Make them slightly faded */
+    }
 
     .unverified-icon {
       color: #ff9800; /* orange color for warning */
@@ -145,7 +163,7 @@
     <button id="saveQueryButton">Save & Check</button>
   </div>
   <hr>
-  <h2>Recently Found Jobs:</h2>
+  <h2 style="font-size: medium">Recently Found Jobs:</h2>
   <div id="recentJobsList" class="recent-jobs-container">
     <!-- Jobs will be injected here -->
     <p class="no-jobs">No new jobs found in the last check.</p>
