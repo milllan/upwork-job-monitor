@@ -1,35 +1,6 @@
 // background.js (Manifest V2 - Dynamic Token Attempt)
 console.log("Background Script MV2 loaded - Dynamic Token Attempt.");
 
-const UPWORK_DOMAIN = "https://www.upwork.com";
-// No longer relying on specific cookie names as primary here
-const UPWORK_GRAPHQL_ENDPOINT_BASE = "https://www.upwork.com/api/graphql/v1";
-const TARGET_GRAPHQL_URL_PATTERN = "*://*.upwork.com/api/graphql/v1*"; // For webRequest
-const X_UPWORK_API_TENANT_ID = "424307183201796097";
-const DEFAULT_USER_QUERY = 'NOT "react" NOT "next.js" NOT "wix" NOT "HubSpot" NOT "Squarespace" NOT "Webflow Website" NOT "Webflow Page" NOT "Content Marketing" NOT "Guest Post" "CLS" OR "INP" OR "LCP" OR "pagespeed" OR "Page speed" OR "Shopify speed" OR "Wordpress speed" OR "site speed" OR "web vitals" OR "WebPageTest" OR "GTmetrix" OR "Lighthouse scores" OR "Google Lighthouse" OR "page load" OR "performance expert" OR "performance specialist" OR "performance audit"';
-const DEFAULT_CONTRACTOR_TIERS_GQL = ["IntermediateLevel", "ExpertLevel"];
-const DEFAULT_SORT_CRITERIA = "recency";
-
-// New: Client-side title exclusion filter
-const TITLE_EXCLUSION_STRINGS = [
-  "french speaking only", // Add strings to exclude, case-insensitive
-  "SEO Optimization for",
-  "Prestashop Specialist",
-  "Framer website",
-  "SEO Specialist Needed for Website Optimization",
-  "TikTok Shop",
-  "Virtual Assistant",
-  "Funnel Expert",
-  "BigCommerce Developer",
-  "Webflow Developer",
-  "Squarespace Website",
-  "Squarespace Blog",
-  "Squarespace Developer",
-  "Brand Strategist",
-  // e.g., "german required", "based in usa only"
-].map(s => s.toLowerCase());
-
-
 // --- Token Retrieval ---
 async function getAllPotentialApiTokens() { // Renamed and modified to return an array
   return new Promise((resolve) => {
@@ -94,17 +65,17 @@ async function getAllPotentialApiTokens() { // Renamed and modified to return an
 // --- WebRequest Listener to Modify Headers ---
 chrome.webRequest.onBeforeSendHeaders.addListener(
   function(details) {
-    if (details.url.startsWith(UPWORK_GRAPHQL_ENDPOINT_BASE) && details.method === "POST" && details.type === "xmlhttprequest") {
+    if (details.url.startsWith(config.UPWORK_GRAPHQL_ENDPOINT_BASE) && details.method === "POST" && details.type === "xmlhttprequest") {
       let newHeaders = details.requestHeaders.filter(header => {
-        const nameLower = header.name.toLowerCase();
-        return !nameLower.startsWith('sec-fetch-') && nameLower !== 'origin' && nameLower !== 'referer';
+        const nameLower = header.name.toLowerCase(); // Ensure case-insensitive comparison
+        return !nameLower.startsWith('sec-fetch-') && nameLower !== 'origin' && nameLower !== 'referer' && nameLower !== 'x-upwork-api-tenantid' && nameLower !== 'x-upwork-accept-language' && nameLower !== 'dnt';
       });
-      newHeaders.push({ name: "Origin", value: UPWORK_DOMAIN });
-      newHeaders.push({ name: "Referer", value: `${UPWORK_DOMAIN}/nx/search/jobs/` });
-      newHeaders.push({ name: "X-Upwork-API-TenantId", value: X_UPWORK_API_TENANT_ID });
+      newHeaders.push({ name: "Origin", value: config.UPWORK_DOMAIN });
+      newHeaders.push({ name: "Referer", value: `${config.UPWORK_DOMAIN}/nx/search/jobs/` });
+      newHeaders.push({ name: "X-Upwork-API-TenantId", value: config.X_UPWORK_API_TENANT_ID });
       newHeaders.push({ name: "X-Upwork-Accept-Language", value: "en-US" });
       newHeaders.push({ name: "DNT", value: "1" });
-      const uaIndex = newHeaders.findIndex(h => h.name.toLowerCase() === 'user-agent');
+      const uaIndex = newHeaders.findIndex(h => h.name.toLowerCase() === 'user-agent'); // Find existing User-Agent
       const targetUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36";
       if (uaIndex > -1) newHeaders[uaIndex].value = targetUA; else newHeaders.push({ name: "User-Agent", value: targetUA });
       const targetAcceptLang = "en-US,en;q=0.9,hr;q=0.8,sr-Latn-RS;q=0.7,sr;q=0.6,sh;q=0.5,sr-Cyrl-RS;q=0.4,sr-Cyrl-BA;q=0.3,en-GB;q=0.2";
@@ -112,17 +83,16 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
       if (alIndex > -1) newHeaders[alIndex].value = targetAcceptLang; else newHeaders.push({ name: "Accept-Language", value: targetAcceptLang });
       return { requestHeaders: newHeaders };
     }
-    return { cancel: false };
+    return { cancel: false }; // Don't block other requests
   },
-  { urls: [TARGET_GRAPHQL_URL_PATTERN] },
+  { urls: [config.TARGET_GRAPHQL_URL_PATTERN] },
   ["blocking", "requestHeaders", "extraHeaders"]
 );
 
 // --- Fetching Jobs (fetchUpworkJobsDirectly - remains the same) ---
 async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
   // ... (this function is the same as your last working version that takes bearerToken and userQuery)
-  // ... (it should return null on API/GraphQL error, or an array of jobs (possibly empty) on success)
-  const endpoint = `${UPWORK_GRAPHQL_ENDPOINT_BASE}?alias=userJobSearch`;
+  const endpoint = `${config.UPWORK_GRAPHQL_ENDPOINT_BASE}?alias=userJobSearch`;
   const fullRawQueryString = `
   query UserJobSearch($requestVariables: UserJobSearchV1Request!) {
     search {
@@ -142,11 +112,11 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
   }`;
   const variables = {
     requestVariables: {
-      userQuery: userQuery || DEFAULT_USER_QUERY,
-      contractorTier: DEFAULT_CONTRACTOR_TIERS_GQL,
-      sort: DEFAULT_SORT_CRITERIA,
+      userQuery: userQuery || config.DEFAULT_USER_QUERY,
+      contractorTier: config.DEFAULT_CONTRACTOR_TIERS_GQL, // Ensure config is used if DEFAULT_USER_QUERY was a placeholder
+      sort: config.DEFAULT_SORT_CRITERIA,
       highlight: false,
-      paging: { offset: 0, count: 11 },
+      paging: { offset: 0, count: 11 }, // Fetch 11 to ensure we get at least 10 if one is filtered/applied
     },
   };
   const graphqlPayload = { query: fullRawQueryString, variables: variables };
@@ -197,11 +167,11 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
 async function runJobCheck(triggeredByUserQuery) {
   console.log("MV2: Attempting runJobCheck (Direct Background with token loop)...");
   await new Promise(resolve => chrome.storage.local.set({ monitorStatus: "Checking...", lastCheckTimestamp: Date.now() }, resolve));
-
+  
   // Use the passed query or get from storage
   const userQueryToUse = triggeredByUserQuery ||
     (await new Promise(resolve => chrome.storage.local.get(['currentUserQuery'], r => resolve(r)))).currentUserQuery ||
-    DEFAULT_USER_QUERY;
+    config.DEFAULT_USER_QUERY; // Use config object
     
   console.log("MV2: Using query for check:", userQueryToUse);
 
@@ -211,7 +181,7 @@ async function runJobCheck(triggeredByUserQuery) {
     console.log("MV2: Using query for check:", userQueryToUse);
     
     // Open Upwork search page to help re-establish tokens
-    const searchUrl = constructUpworkSearchURL(userQueryToUse, DEFAULT_CONTRACTOR_TIERS_GQL, DEFAULT_SORT_CRITERIA);
+    const searchUrl = constructUpworkSearchURL(userQueryToUse, config.DEFAULT_CONTRACTOR_TIERS_GQL, config.DEFAULT_SORT_CRITERIA);
     chrome.tabs.create({ url: searchUrl });
     await new Promise(resolve => chrome.storage.local.set({ monitorStatus: "Error: No API Tokens." }, resolve));
     return;
@@ -251,20 +221,20 @@ async function runJobCheck(triggeredByUserQuery) {
   if (!successfulToken || fetchedJobs === null) {
     console.error("MV2: All candidate tokens failed or returned no valid job data.");
     await new Promise(resolve => chrome.storage.local.set({ monitorStatus: "Error: All tokens failed." }, resolve));
-    // Open Upwork search page to help re-establish tokens
-    const searchUrl = constructUpworkSearchURL(userQueryToUse, DEFAULT_CONTRACTOR_TIERS_GQL, DEFAULT_SORT_CRITERIA);
+    // Open Upwork search page to help re-establish tokens (using config defaults)
+    const searchUrl = constructUpworkSearchURL(userQueryToUse, config.DEFAULT_CONTRACTOR_TIERS_GQL, config.DEFAULT_SORT_CRITERIA);
     chrome.tabs.create({ url: searchUrl });
     chrome.runtime.sendMessage({ action: "updatePopupDisplay" }).catch(e => {}); // Update popup with error
     return;
   }
   
   // Apply client-side title exclusion filter (marking instead of removing)
-  if (fetchedJobs && fetchedJobs.length > 0 && TITLE_EXCLUSION_STRINGS.length > 0) {
+  if (fetchedJobs && fetchedJobs.length > 0 && config.TITLE_EXCLUSION_STRINGS.length > 0) {
     const originalCount = fetchedJobs.length;
     let excludedCount = 0;
     fetchedJobs = fetchedJobs.map(job => {
-      const titleLower = (job.title || "").toLowerCase();
-      const isExcluded = TITLE_EXCLUSION_STRINGS.some(excludeString => titleLower.includes(excludeString));
+      const titleLower = (job.title || "").toLowerCase(); // Ensure title is lowercase for comparison
+      const isExcluded = config.TITLE_EXCLUSION_STRINGS.some(excludeString => titleLower.includes(excludeString));
       if (isExcluded) {
         excludedCount++;
         // Add a flag to the job object instead of filtering it out
@@ -277,22 +247,22 @@ async function runJobCheck(triggeredByUserQuery) {
 
 
   // --- Deduplication and Notification (using fetchedJobs) ---
-  const storageResult = await new Promise(resolve => chrome.storage.local.get(['seenJobIds', 'deletedJobIds'], r => resolve(r)));
+  const storageResult = await new Promise(resolve => chrome.storage.local.get([config.STORAGE_KEYS.SEEN_JOB_IDS, config.STORAGE_KEYS.DELETED_JOB_IDS], r => resolve(r)));
   const historicalSeenJobIds = new Set(storageResult.seenJobIds || []);
   const deletedJobIds = new Set(storageResult.deletedJobIds || []);
 
-  // Filter out jobs that are already seen OR have been explicitly deleted by the user
+  // Filter out jobs that are already seen OR have been explicitly deleted by the user from the *fetched* list
   const allNewOrUpdatedJobs = fetchedJobs.filter(job =>
     job && job.id && !historicalSeenJobIds.has(job.id) && !deletedJobIds.has(job.id)
   );
   // From these, determine which are truly new AND notifiable (not excluded by title filter)
   const notifiableNewJobs = allNewOrUpdatedJobs.filter(job => !job.isExcludedByTitleFilter);
 
-  if (fetchedJobs.length > 0 || trulyNewJobs.length > 0) {
-    const currentFetchJobIds = fetchedJobs.map(j => j.id).filter(id => id != null);
-    const updatedSeenJobIds = new Set([...Array.from(historicalSeenJobIds), ...currentFetchJobIds]);
-    const MAX_SEEN_IDS = 500;
-    const prunedSeenJobIdsArray = Array.from(updatedSeenJobIds).slice(-MAX_SEEN_IDS);
+  // Update seenJobIds if any jobs were fetched
+  if (fetchedJobs && fetchedJobs.length > 0) {
+    // Add all fetched job IDs to the seen list (even excluded ones, so they don't notify next time)
+    const updatedSeenJobIds = new Set([...Array.from(historicalSeenJobIds), ...fetchedJobs.map(j => j.id).filter(id => id != null)]);
+    const prunedSeenJobIdsArray = Array.from(updatedSeenJobIds).slice(-config.MAX_SEEN_IDS); // Use config.MAX_SEEN_IDS
     await new Promise(resolve => chrome.storage.local.set({ seenJobIds: prunedSeenJobIdsArray }, resolve));
   }
 
@@ -302,11 +272,10 @@ async function runJobCheck(triggeredByUserQuery) {
   console.log(`MV2 DirectBG: Token Loop. Found ${allNewOrUpdatedJobs.length} new/updated jobs, ${notifiableNewJobs.length} are notifiable.`);
 
   await new Promise(resolve => chrome.storage.local.set({
-    monitorStatus: `Checked. New (notifiable): ${notifiableNewJobs.length}`,
-    newJobsInLastRun: notifiableNewJobs.length, // This count is for non-excluded new jobs
-    lastCheckTimestamp: Date.now(), // Update timestamp regardless of new jobs
-    // Store recent jobs, excluding those the user has deleted
-    recentFoundJobs: fetchedJobs ? fetchedJobs.filter(job => job && job.id && !deletedJobIds.has(job.id)).slice(0, 10) : []
+    [config.STORAGE_KEYS.MONITOR_STATUS]: `Checked. New (notifiable): ${notifiableNewJobs.length}`,
+    [config.STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN]: notifiableNewJobs.length, // This count is for non-excluded new jobs
+    [config.STORAGE_KEYS.LAST_CHECK_TIMESTAMP]: Date.now(), // Update timestamp regardless of new jobs
+    [config.STORAGE_KEYS.RECENT_FOUND_JOBS]: fetchedJobs ? fetchedJobs.filter(job => job && job.id && !deletedJobIds.has(job.id)).slice(0, 10) : [] // Store filtered recent jobs
   }, resolve));
   chrome.runtime.sendMessage({ action: "updatePopupDisplay" }).catch(e => {});
 }
@@ -317,26 +286,25 @@ async function testFetchJobs() {
   console.log("MV2: Running testFetchJobs (Direct Background Attempt)...");
   await runJobCheck();
 }
+
 chrome.runtime.onInstalled.addListener((details) => {
   console.log("MV2: Extension installed or updated:", details.reason);
   chrome.storage.local.set({
-    monitorStatus: "Initializing...", lastCheckTimestamp: null, newJobsInLastRun: 0, seenJobIds: [],
-    currentUserQuery: DEFAULT_USER_QUERY
-  }, () => {
-    if (chrome.runtime.lastError) console.error("Error setting initial storage:", chrome.runtime.lastError);
-    setupAlarms();
-  });
+    [config.STORAGE_KEYS.MONITOR_STATUS]: "Initializing...", [config.STORAGE_KEYS.LAST_CHECK_TIMESTAMP]: null, [config.STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN]: 0, [config.STORAGE_KEYS.SEEN_JOB_IDS]: [],
+    [config.STORAGE_KEYS.CURRENT_USER_QUERY]: config.DEFAULT_USER_QUERY
+  }, () => { if (chrome.runtime.lastError) console.error("Error setting initial storage:", chrome.runtime.lastError); });
+  setupAlarms(); // Always set up alarms on install/update
 });
-const FETCH_ALARM_NAME = "fetchUpworkJobsAlarm_MV2";
+
 function setupAlarms() {
-  chrome.alarms.get(FETCH_ALARM_NAME, (alarm) => {
+  chrome.alarms.get(config.FETCH_ALARM_NAME, (alarm) => { // Use config.FETCH_ALARM_NAME
     if (!alarm) {
-      chrome.alarms.create(FETCH_ALARM_NAME, { delayInMinutes: 0.2, periodInMinutes: 1 });
+      chrome.alarms.create(config.FETCH_ALARM_NAME, { delayInMinutes: 0.2, periodInMinutes: config.FETCH_INTERVAL_MINUTES }); // Use config for interval too
     }
   });
 }
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === FETCH_ALARM_NAME) {
+  if (alarm.name === config.FETCH_ALARM_NAME) { // Use config.FETCH_ALARM_NAME
     await runJobCheck();
   }
 });
@@ -355,12 +323,27 @@ chrome.notifications.onClicked.addListener((notificationId) => {
 });
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "manualCheck") {
-    const queryFromPopup = request.userQuery || DEFAULT_USER_QUERY;
-    chrome.storage.local.set({ currentUserQuery: queryFromPopup }, async () => {
-        await runJobCheck(queryFromPopup);
-        sendResponse({ status: "Manual check initiated." });
+    const queryFromPopup = request.userQuery || config.DEFAULT_USER_QUERY; // Use config
+
+    chrome.storage.local.set({ [config.STORAGE_KEYS.CURRENT_USER_QUERY]: queryFromPopup }, () => {
+      if (chrome.runtime.lastError) {
+        console.error("Background: Error setting currentUserQuery for manual check:", chrome.runtime.lastError.message);
+        if (sendResponse) sendResponse({ error: "Failed to save query before manual check." });
+        return; // Exit if storage set fails
+      }
+
+      // runJobCheck is async, ensure its errors are caught.
+      runJobCheck(queryFromPopup)
+        .then(() => {
+          if (sendResponse) sendResponse({ status: "Manual check initiated and processing." });
+        })
+        .catch(error => {
+          console.error("Background: Error during manual runJobCheck:", error);
+          if (sendResponse) sendResponse({ error: "Error during manual job check execution." });
+        });
     });
-    return true;
+    return true; // Crucial: indicates that sendResponse will be called asynchronously.
   }
+  // Return false or nothing for synchronous messages or unhandled actions.
 });
 setupAlarms();
