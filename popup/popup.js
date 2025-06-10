@@ -1,13 +1,18 @@
 // popup.js
 document.addEventListener('DOMContentLoaded', () => {
+  const popupTitleLinkEl = document.getElementById('popupTitleLink'); // Link for the main title
   const consolidatedStatusEl = document.getElementById('consolidatedStatus');
   const manualCheckButton = document.getElementById('manualCheckButton');
   const userQueryInput = document.getElementById('userQueryInput');
   const saveQueryButton = document.getElementById('saveQueryButton');
   const recentJobsListDiv = document.getElementById('recentJobsList');
 
-  const DEFAULT_QUERY = 'NOT "react" NOT "next.js" NOT "wix" "web vitals" OR "CLS" OR "INP" OR "LCP" OR "pagespeed" OR "Page speed" OR "Shopify speed" OR "Wordpress speed" OR "website speed"';
-  
+  // This DEFAULT_QUERY is used if no query is in storage.
+  // For the link to match the service-worker's DEFAULT_USER_QUERY initially (if no user query is set),
+  // ensure this string is identical to DEFAULT_USER_QUERY in service-worker.js.
+  const DEFAULT_QUERY = 'NOT "react" NOT "next.js" NOT "wix" NOT "HubSpot" NOT "Squarespace" NOT "Webflow Website" NOT "Webflow Page" NOT "Content Marketing" NOT "Guest Post" "CLS" OR "INP" OR "LCP" OR "pagespeed" OR "Page speed" OR "Shopify speed" OR "Wordpress speed" OR "site speed" OR "web vitals" OR "WebPageTest" OR "GTmetrix" OR "Lighthouse scores" OR "Google Lighthouse" OR "page load" OR "performance expert" OR "performance specialist" OR "performance audit"';
+  const POPUP_DEFAULT_CONTRACTOR_TIERS_GQL = ["IntermediateLevel", "ExpertLevel"]; // Matches service worker
+  const POPUP_DEFAULT_SORT_CRITERIA = "recency"; // Matches service worker
   let collapsedJobIds = new Set(); // In-memory store for collapsed job IDs
   let deletedJobIds = new Set(); // In-memory store for explicitly deleted job IDs
 
@@ -39,6 +44,17 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.local.set({ deletedJobIds: Array.from(deletedJobIds).slice(-MAX_DELETED_IDS) });
     // Update UI immediately for deleted count
     updateConsolidatedStatusDisplay({ deletedJobsCount: deletedJobIds.size });
+  }
+
+  function updatePopupTitleLink(currentQuery) {
+    if (popupTitleLinkEl) {
+      const url = constructUpworkSearchURL(
+        currentQuery,
+        POPUP_DEFAULT_CONTRACTOR_TIERS_GQL,
+        POPUP_DEFAULT_SORT_CRITERIA
+      );
+      popupTitleLinkEl.href = url;
+    }
   }
 
   function updateConsolidatedStatusDisplay(data = {}) {
@@ -125,9 +141,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       let clientInfo = 'Client info N/A';
+      let isHighRating = false;
       if(job.client) {
         clientInfo = `Client: ${job.client.country || 'N/A'}`;
-        if(job.client.rating != null) clientInfo += ` | Rating: ${Number(job.client.rating).toFixed(2)}`;
+        if(job.client.rating != null) {
+          const rating = parseFloat(job.client.rating);
+          clientInfo += ` | Rating: ${rating.toFixed(2)}`;
+          if (rating > 4.9) {
+            isHighRating = true;
+            jobHeader.classList.add('high-rating');
+          }
+        }
         if(job.client.totalSpent > 0) clientInfo += ` | Spent: $${Number(job.client.totalSpent).toFixed(0)}`;
         if(job.client.paymentVerificationStatus === 'VERIFIED') clientInfo += ' (Verified)';
       }
@@ -207,7 +231,8 @@ document.addEventListener('DOMContentLoaded', () => {
           recentJobsListDiv.innerHTML = '<p class="no-jobs">Error loading job data.</p>';
           return;
         }
-        userQueryInput.value = result.currentUserQuery || DEFAULT_QUERY;
+        const currentQuery = result.currentUserQuery || DEFAULT_QUERY;
+        userQueryInput.value = currentQuery;
         deletedJobIds = new Set(result.deletedJobIds || []); // Load deleted state
         collapsedJobIds = new Set(result.collapsedJobIds || []); // Load collapsed state
         
@@ -216,6 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
           lastCheckTimestamp: result.lastCheckTimestamp,
           deletedJobsCount: deletedJobIds.size
         });
+        updatePopupTitleLink(currentQuery); // Update title link
 
         displayRecentJobs(result.recentFoundJobs || []);
       }
@@ -244,6 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const query = userQueryInput.value.trim();
     if (query) {
       chrome.storage.local.set({ currentUserQuery: query }, () => {
+        updatePopupTitleLink(query); // Update title link
         console.log("Popup: Query saved:", query);
         triggerCheck(query);
       });
@@ -252,10 +279,18 @@ document.addEventListener('DOMContentLoaded', () => {
       userQueryInput.value = DEFAULT_QUERY;
     }
   });
+// Add Enter key support for search input
+  userQueryInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      saveQueryButton.click(); // Trigger save & check
+    }
+  });
 
   manualCheckButton.addEventListener('click', () => {
     const currentQueryInInput = userQueryInput.value.trim();
-    triggerCheck(currentQueryInInput || DEFAULT_QUERY); // Use DEFAULT_QUERY defined in this file
+    const queryToUse = currentQueryInInput || DEFAULT_QUERY;
+    updatePopupTitleLink(queryToUse); // Update title link
+    triggerCheck(queryToUse);
   });
 
   // Listen for messages from background script to update the display

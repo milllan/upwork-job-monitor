@@ -6,7 +6,9 @@ const UPWORK_DOMAIN = "https://www.upwork.com";
 const UPWORK_GRAPHQL_ENDPOINT_BASE = "https://www.upwork.com/api/graphql/v1";
 const TARGET_GRAPHQL_URL_PATTERN = "*://*.upwork.com/api/graphql/v1*"; // For webRequest
 const X_UPWORK_API_TENANT_ID = "424307183201796097";
-const DEFAULT_USER_QUERY = 'NOT "react" NOT "next.js" NOT "wix" NOT "HubSpot" NOT "Webflow Website" NOT "Webflow Page" NOT "Squarespace Website" NOT "Squarespace Blog" NOT "Squarespace Developer" NOT "Content Marketing" NOT "Guest Post" "CLS" OR "INP" OR "LCP" OR "pagespeed" OR "Page speed" OR "Shopify speed" OR "Wordpress speed" OR "site speed" OR "web optimization" OR "web vitals" OR "WebPageTest" OR "GTmetrix" OR "Lighthouse scores" OR "Google Lighthouse" OR "page load" OR "performance expert" OR "performance specialist" OR "performance audit" ';
+const DEFAULT_USER_QUERY = 'NOT "react" NOT "next.js" NOT "wix" NOT "HubSpot" NOT "Squarespace" NOT "Webflow Website" NOT "Webflow Page" NOT "Content Marketing" NOT "Guest Post" "CLS" OR "INP" OR "LCP" OR "pagespeed" OR "Page speed" OR "Shopify speed" OR "Wordpress speed" OR "site speed" OR "web vitals" OR "WebPageTest" OR "GTmetrix" OR "Lighthouse scores" OR "Google Lighthouse" OR "page load" OR "performance expert" OR "performance specialist" OR "performance audit"';
+const DEFAULT_CONTRACTOR_TIERS_GQL = ["IntermediateLevel", "ExpertLevel"];
+const DEFAULT_SORT_CRITERIA = "recency";
 
 // New: Client-side title exclusion filter
 const TITLE_EXCLUSION_STRINGS = [
@@ -18,7 +20,12 @@ const TITLE_EXCLUSION_STRINGS = [
   "TikTok Shop",
   "Virtual Assistant",
   "Funnel Expert",
-  "BigCommerce Developer ",
+  "BigCommerce Developer",
+  "Webflow Developer",
+  "Squarespace Website",
+  "Squarespace Blog",
+  "Squarespace Developer",
+  "Brand Strategist",
   // e.g., "german required", "based in usa only"
 ].map(s => s.toLowerCase());
 
@@ -84,7 +91,6 @@ async function getAllPotentialApiTokens() { // Renamed and modified to return an
   });
 }
 
-
 // --- WebRequest Listener to Modify Headers ---
 chrome.webRequest.onBeforeSendHeaders.addListener(
   function(details) {
@@ -137,8 +143,8 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
   const variables = {
     requestVariables: {
       userQuery: userQuery || DEFAULT_USER_QUERY,
-      contractorTier: ["IntermediateLevel", "ExpertLevel"],
-      sort: "recency",
+      contractorTier: DEFAULT_CONTRACTOR_TIERS_GQL,
+      sort: DEFAULT_SORT_CRITERIA,
       highlight: false,
       paging: { offset: 0, count: 11 },
     },
@@ -192,20 +198,25 @@ async function runJobCheck(triggeredByUserQuery) {
   console.log("MV2: Attempting runJobCheck (Direct Background with token loop)...");
   await new Promise(resolve => chrome.storage.local.set({ monitorStatus: "Checking...", lastCheckTimestamp: Date.now() }, resolve));
 
+  // Use the passed query or get from storage
+  const userQueryToUse = triggeredByUserQuery ||
+    (await new Promise(resolve => chrome.storage.local.get(['currentUserQuery'], r => resolve(r)))).currentUserQuery ||
+    DEFAULT_USER_QUERY;
+    
+  console.log("MV2: Using query for check:", userQueryToUse);
+
   const candidateTokens = await getAllPotentialApiTokens();
   if (!candidateTokens || candidateTokens.length === 0) {
     console.error("MV2: Cannot run job check, no candidate tokens found.");
+    console.log("MV2: Using query for check:", userQueryToUse);
+    
+    // Open Upwork search page to help re-establish tokens
+    const searchUrl = constructUpworkSearchURL(userQueryToUse, DEFAULT_CONTRACTOR_TIERS_GQL, DEFAULT_SORT_CRITERIA);
+    chrome.tabs.create({ url: searchUrl });
     await new Promise(resolve => chrome.storage.local.set({ monitorStatus: "Error: No API Tokens." }, resolve));
     return;
   }
-
-  let userQueryToUse = triggeredByUserQuery;
-  if (!userQueryToUse) {
-    const storage = await new Promise(resolve => chrome.storage.local.get(['currentUserQuery'], r => resolve(r)));
-    userQueryToUse = storage.currentUserQuery || DEFAULT_USER_QUERY;
-  }
-  console.log("MV2: Using query for check:", userQueryToUse);
-
+  
   let fetchedJobs = null;
   let successfulToken = null;
 
@@ -240,6 +251,9 @@ async function runJobCheck(triggeredByUserQuery) {
   if (!successfulToken || fetchedJobs === null) {
     console.error("MV2: All candidate tokens failed or returned no valid job data.");
     await new Promise(resolve => chrome.storage.local.set({ monitorStatus: "Error: All tokens failed." }, resolve));
+    // Open Upwork search page to help re-establish tokens
+    const searchUrl = constructUpworkSearchURL(userQueryToUse, DEFAULT_CONTRACTOR_TIERS_GQL, DEFAULT_SORT_CRITERIA);
+    chrome.tabs.create({ url: searchUrl });
     chrome.runtime.sendMessage({ action: "updatePopupDisplay" }).catch(e => {}); // Update popup with error
     return;
   }
