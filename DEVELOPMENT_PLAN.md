@@ -22,8 +22,6 @@ upwork-job-monitor/
 │   ├── service-worker.js
 │   └── job-monitor.js
 ├── content/
-│   ├── content-script.js
-│   └── page-parser.js
 ├── popup/
 │   ├── popup.html
 │   ├── popup.js
@@ -38,44 +36,38 @@ upwork-job-monitor/
 ### 1.2 Core Components
 
 #### Background Service Worker
-- **Purpose**: Handles scheduling, API calls, and data management
-- **Key Functions**:
-  - Periodic job checking (5-10 minutes)
-  - Bearer token management
-  - Data storage coordination
-  - Notification triggering
+- **Purpose**: Orchestrates job fetching, notifications, and communication.
+  - Manages alarms for periodic job checks.
+  - Calls `UpworkAPI` module for job fetching and token management.
+  - Uses `StorageManager` for all data persistence.
+  - Sends browser notifications.
+  - Responds to messages from `popup.js`.
 
-#### Content Script
-- **Purpose**: Interact with Upwork pages when needed
+#### API Module (`api/upwork-api.js`)
+- **Purpose**: Encapsulates all Upwork API interaction logic.
 - **Key Functions**:
-  - Extract bearer token from cookies/localStorage
-  - Parse job data from DOM if API fails
-  - Monitor page changes
-  - Inject monitoring indicators
+  - Retrieves API tokens from cookies.
+  - Constructs and executes GraphQL queries.
+  - Implements token rotation.
+
+#### Storage Manager (`storage/storage-manager.js`)
+- **Purpose**: Centralizes all `chrome.storage.local` interactions.
+- **Key Functions**:
+  - Provides getters/setters for specific data (seen jobs, user query, etc.).
+  - Handles data pruning (e.g., `MAX_SEEN_IDS`).
+  - Initializes storage.
+
+#### Configuration (`background/config.js`)
+- **Purpose**: Stores all global constants and configuration settings.
 
 #### Popup Interface
-- **Purpose**: Quick status and controls
-- **Features**:
   - Current monitoring status
   - Recent jobs found
-  - Quick start/stop toggle
-  - Settings shortcut
+  - Manual job check trigger
+  - User query input and saving
 
-### 1.3 Authentication Strategy
-```javascript
-// Extract bearer token from cookies
-async function getBearerToken() {
-    const cookies = await chrome.cookies.getAll({
-        domain: ".upwork.com"
-    });
-    
-    const oauthToken = cookies.find(cookie => 
-        cookie.name === "oauth2_global_js_token"
-    );
-    
-    return oauthToken?.value;
-}
-```
+### 1.3 Authentication Strategy (Handled by `api/upwork-api.js`)
+The `UpworkAPI.getAllPotentialApiTokens()` function is responsible for extracting and prioritizing potential OAuth tokens from browser cookies.
 
 ### 1.4 Job Fetching Implementation
 ```javascript
@@ -108,18 +100,6 @@ async function fetchJobsFromAPI(bearerToken) {
     return response.json();
 }
 
-// Fallback method: DOM parsing via content script
-async function fetchJobsFromDOM() {
-    const [tab] = await chrome.tabs.query({
-        url: "*://*.upwork.com/nx/search/jobs*"
-    });
-    
-    if (tab) {
-        return chrome.tabs.sendMessage(tab.id, {
-            action: "parseJobs"
-        });
-    }
-}
 ```
 
 ### 1.5 Data Storage
@@ -265,6 +245,7 @@ ${job.description.substring(0, 300)}...
 - [ ] Basic job comparison/deduplication
 - [ ] Periodic checking scheduler
 
+
 ### Week 3: Content Script Integration
 - [ ] DOM parsing fallback
 - [ ] Page interaction capabilities
@@ -310,10 +291,6 @@ ${job.description.substring(0, 300)}...
     "background": {
         "service_worker": "background/service-worker.js"
     },
-    "content_scripts": [{
-        "matches": ["*://*.upwork.com/*"],
-        "js": ["content/content-script.js"]
-    }]
 }
 ```
 
@@ -351,7 +328,6 @@ ${job.description.substring(0, 300)}...
 ## Risk Mitigation
 
 ### API Changes
-- Fallback to DOM parsing
 - Version compatibility checks
 - Update notification system
 

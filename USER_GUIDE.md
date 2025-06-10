@@ -21,37 +21,36 @@ The Upwork Job Monitor is a Chrome Extension that automatically monitors Upwork 
 4. Click "Load unpacked" and select the extension directory
 5. Pin the extension to your toolbar for easy access
 
-## Configuration
-Configure your job search in `manifest.json`:
+## Configuration & Key Constants
+Most core settings, API endpoints, default queries, and storage keys are centralized in:
+- `background/config.js`
 
-```json
-"permissions": [
-  "storage",
-  "cookies",
-  "notifications",
-  "alarms",
-  "webRequest",
-  "webRequestBlocking",
-  "*://*.upwork.com/*",
-  "tabs"
-],
-```
-
-Default search query can be modified in [`background/config.js`](background/config.js:1):
+For example, the default search query can be modified here:
 ```javascript
-const DEFAULT_USER_QUERY = 'NOT "react" NOT "next.js" ...';
+// In background/config.js, within the 'config' object:
+  DEFAULT_USER_QUERY: 'NOT "react" NOT "next.js" ...',
 ```
+This value is part of the `config` object exported by `background/config.js`.
 
 ## Architecture
+
+The extension is structured for clarity and maintainability, with all configuration and core logic centralized. There is no content script; all monitoring and API interaction is handled in the background context.
+
 ### Components
+
 1. **Background Service Worker**
    - Location: [`background/service-worker.js`](background/service-worker.js)
    - Responsibilities:
      - Periodic job checks
-     - Token management
-     - API requests
+     - Token management and selection (see [`UpworkAPI`](api/upwork-api.js))
+     - API requests using prioritized tokens
      - Notifications
-     - Storage coordination
+     - Storage coordination (via [`StorageManager`](storage/storage-manager.js))
+     - Loads configuration from [`background/config.js`](background/config.js)
+
+2. **Configuration**
+   - Location: [`background/config.js`](background/config.js)
+   - Centralizes all key constants, including `DEFAULT_USER_QUERY`, API endpoints, and storage keys.
 
 3. **Popup Interface**
    - HTML: [`popup/popup.html`](popup/popup.html)
@@ -68,6 +67,15 @@ const DEFAULT_USER_QUERY = 'NOT "react" NOT "next.js" ...';
      - Seen job IDs
      - Deleted job IDs
      - User preferences
+
+5. **UpworkAPI**
+   - Location: [`api/upwork-api.js`](api/upwork-api.js)
+   - Handles:
+     - Token retrieval and prioritization
+     - API requests to Upwork
+     - Error handling for token permissions
+
+**Note:** The extension previously used a content script for DOM parsing, but this is no longer required. All job monitoring is performed via API calls in the background script.
 
 ### Key Algorithms
 **Token Retrieval** ([`background/service-worker.js:26`](background/service-worker.js:26)):

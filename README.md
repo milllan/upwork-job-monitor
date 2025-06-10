@@ -5,6 +5,9 @@
 ## Overview
 The Upwork Job Monitor is a Chrome Extension that automatically monitors Upwork for new job postings matching your criteria. It runs in the background, sends notifications for new jobs, and provides a dashboard to view recent opportunities.
 
+**Architecture Note:**
+All monitoring and API interaction is handled in the background script using configuration from [`background/config.js`](background/config.js). There is no content script; all job fetching is performed via API calls. See [User Guide](USER_GUIDE.md#architecture) for details.
+
 ![Popup Interface](Screenshot%202025-06-04%20151441.png)
 
 ## Key Features

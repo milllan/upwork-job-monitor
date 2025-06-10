@@ -4,6 +4,34 @@
   <title>Upwork Monitor</title>
   <meta charset="utf-8">
   <style>
+    :root {
+      /* Upwork Core Colors */
+      --up-green: #14a800;
+      --up-blue: #086add; /* Primary link color */
+      --up-black: #181818; /* Primary text color */
+      --up-white: #fff;
+
+      /* Grays */
+      --up-gray-10: #1a1a1a; /* Darker text */
+      --up-gray-50: #8d8c8c; /* Muted text */
+      --up-gray-70: #d9d9d9; /* Borders, lines */
+      --up-gray-80: #e9e9e9; /* Light borders, dividers */
+      --up-gray-95: #f9f9f9; /* Light backgrounds */
+
+      /* Typography */
+      --up-font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; /* Common stack, Upwork uses "Neue Montreal" which may need import */
+      --up-font-weight-normal: 400;
+      --up-font-weight-medium: 500;
+      --up-font-weight-bold: 700;
+
+      /* UI Elements */
+      --up-button-bg: var(--up-green);
+      --up-button-text: var(--up-white);
+      --up-link-color: var(--up-blue);
+      --up-light-green-bg: hsl(113, 70%, 97%); /* Very light green for page background */
+      --up-link-color-hover: hsl(212, 95%, 43%); /* Darken blue slightly for hover */
+    }
+
     body { font-family: sans-serif; width: 400px; padding: 10px; font-size: 14px; }
     h1 { font-size: 16px; margin: 0 0 8px 0; display: flex; align-items: center; justify-content: space-between; }
     p { margin: 4px 0; } /* Slightly reduced paragraph margin */
@@ -11,15 +39,25 @@
     button { margin-top: 4px; padding: 5px 8px; } /* Reduced top margin */
     .query-section { margin-bottom: 8px; display: flex; align-items: center; }
     .status-section p { margin-bottom: 4px; font-size: 0.9em; color: #333; } /* Style for the consolidated status */
-    hr { margin: 8px 0; border: 0; border-top: 1px solid #eee; } /* Reduced margin, styled HR */
+    hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); } /* Reduced margin, styled HR */
     .recent-jobs-container { margin-top: 10px; max-height: 250px; overflow-y: auto; }
+
+    body {
+      font-family: var(--up-font-family);
+      color: var(--up-black);
+      background-color: var(--up-light-green-bg);
+    }
+    h1, h2, h3, h4, h5, h6 {
+      font-weight: var(--up-font-weight-medium);
+    }
+
     .job-item {
-      border: 1px solid #eee; /* Lighter border */
-      border-left: 3px solid #ccc; /* Default left border for all items */
+      border: 1px solid var(--up-gray-70); /* Adjusted for more contrast */
+      border-left: 3px solid var(--up-gray-70); /* Default left border for all items */
       border-radius: 4px;
       padding: 8px;
       margin-bottom: 8px;
-      background-color: #f9f9f9; /* Default background for all items */
+      background-color: var(--up-gray-95); /* Default background for all items */
       font-size: 13px;
     }
     .job-item h3  {
@@ -39,26 +77,27 @@
       white-space: nowrap; /* Prevent wrapping */
       overflow: hidden; /* Hide overflowing text */
       text-overflow: ellipsis; /* Show ellipsis for truncated text */
-      color: #0073bb; /* Ensure default link color is set here if not inherited */
+      color: var(--up-link-color);
       text-decoration: none; /* Ensure default link decoration is set here */
       /* For ellipsis to work when 'a' is a flex item inside an h3 (which is also a flex item) */
       min-width: 0; /* Allow the link to shrink and show ellipsis */
     }
     .job-item a  {
      text-decoration:  none;
-     color:  #0073bb;
+     color:  var(--up-link-color);
     }
     .job-item a:hover  {
      text-decoration:  underline;
+     color: var(--up-link-color-hover);
     }
     .job-item p  {
      margin:  3px 0;
-     color:  #555;
+     color:  var(--up-gray-10); /* Darker gray for paragraph text */
     }
     .job-item .skills  {
      font-style:  italic;
      font-size:  12px;
-     color:  #777;
+     color:  var(--up-gray-50); /* Muted gray for skills */
     }
     /* Slightly smaller font,  moved out of .job-item */
     .no-jobs  {
@@ -69,7 +108,7 @@
     }
     /* New class for collapsed job titles */
     .job-title-collapsed h3 {
-        font-weight: normal;
+        font-weight: var(--up-font-weight-normal);
     }
 
     .job-header {
@@ -93,7 +132,7 @@
     .delete-job-button {
       font-size: 14px; /* Smaller size than toggle */
       cursor: pointer;
-      color: #aaa; /* Muted color */
+      color: var(--up-gray-50); /* Muted color */
       margin-left: auto; /* Push button to the right */
       padding: 0 0 0 8px; /* Left padding for spacing */
       padding: 0; /* Reset padding, use margin for spacing */
@@ -106,7 +145,7 @@
     .applied-job-icon .air3-icon svg {
       width: 16px; /* Adjust size as needed */
       height: 16px; /* Adjust size as needed */
-      --icon-color: #0073bb; /* Upwork blue, or your preferred color */
+      --icon-color: var(--up-blue); /* Use Upwork blue variable */
     }
     .job-details {
       padding-left: 23px; /* Indent details under the toggle button's original space */
@@ -116,10 +155,10 @@
       padding: 4px 8px;
       /* Now inherits base background and border-left */
       /* Optionally, make it slightly different if needed, e.g., a darker border */
-      border-left-color: #eee; /* Make excluded items' left border slightly ligher */
+      border-left-color: var(--up-gray-80); /* Make excluded items' left border slightly ligher */
     }
     .job-item.excluded-by-filter .job-header h3 a {
-      color: #555; /* Slightly muted title color for excluded items */
+      color: var(--up-gray-50); /* Slightly muted title color for excluded items */
     }
     #manualCheckButton {
       background: none;
@@ -128,22 +167,29 @@
       padding: 0 5px;
       margin: 0 0 0 10px; /* Margin to space it from title */
       cursor: pointer;
-      color: #333;
+      color: var(--up-gray-10);
     }
-    #manualCheckButton:hover { color: #0073bb; }
-    #saveQueryButton { margin-left: 8px; }
+    #manualCheckButton:hover { color: var(--up-link-color); }
+    #saveQueryButton {
+      margin-left: 8px;
+      background-color: var(--up-button-bg);
+      color: var(--up-button-text);
+      border: 1px solid var(--up-green);
+      border-radius: 4px; /* Example radius */
+      font-weight: var(--up-font-weight-medium);
+    }
     .high-rating {
-      border-left-color: #4CAF50 !important;
-      background-color: #e8f5e9 !important;
+      border-left-color: var(--up-green) !important;
+      background-color: hsl(113, 70%, 95%) !important; /* Lighter green */
     }
     .job-item.job-applied {
-      border-left-color: #0073bb !important; /* Example: Upwork blue */
-      background-color: #e0f7fa !important; /* Example: Light cyan */
+      border-left-color: var(--up-blue) !important;
+      background-color: hsl(212, 90%, 95%) !important; /* Lighter blue */
       opacity: 0.7; /* Make them slightly faded */
     }
 
     .unverified-icon {
-      color: #ff9800; /* orange color for warning */
+      color: var(--orange-light, #cc9b66); /* Using a color from your list, or fallback */
       margin-left: 4px;
       cursor: help;
       font-size: 1.1em;
