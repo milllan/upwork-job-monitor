@@ -32,6 +32,7 @@ const config = {
     "Brand Strategist",
     "Product Page Designer",
     "Site Completion and Optimization",
+    "Landing Page Developer",
     // Add more strings to exclude as needed
   ].map(s => s.toLowerCase()),
 

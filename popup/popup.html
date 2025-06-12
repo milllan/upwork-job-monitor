@@ -35,9 +35,18 @@
     body { font-family: sans-serif; width: 400px; padding: 10px; font-size: 14px; }
     h1 { font-size: 16px; margin: 0 0 8px 0; display: flex; align-items: center; justify-content: space-between; }
     p { margin: 4px 0; } /* Slightly reduced paragraph margin */
-    input[type="text"]#userQueryInput { width: calc(100% - 45px); margin-bottom: 4px; padding: 4px 6px; box-sizing: border-box; } /* Adjusted width for icon button */
+    input[type="text"]#userQueryInput {
+      flex-grow: 1; /* Allow input to take available space */
+      padding: 4px 6px; /* Standard padding */
+      margin-bottom: 0; /* Handled by query-section */
+      box-sizing: border-box;
+    }
     button { margin-top: 4px; padding: 5px 8px; } /* Reduced top margin */
-    .query-section { margin-bottom: 8px; display: flex; align-items: center; }
+    .query-section {
+      margin-bottom: 8px;
+      display: flex; /* Align input and button side-by-side */
+      align-items: center; /* Vertically align items in the middle */
+    }
     .status-section p { margin-bottom: 4px; font-size: 0.9em; color: #333; } /* Style for the consolidated status */
     hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); } /* Reduced margin, styled HR */
     .recent-jobs-container { margin-top: 10px; max-height: 250px; overflow-y: auto; }
@@ -186,17 +195,20 @@
     }
     #manualCheckButton:hover { color: var(--up-link-color); }
     #saveQueryButton {
-      margin-left: 8px;
-      background-color: var(--up-button-bg);
-      color: var(--up-button-text);
-      border: 1px solid var(--up-green);
-      border-radius: 4px; /* Example radius */
-      font-weight: var(--up-font-weight-medium);
-      /* Adjustments for icon button */
-      padding: 5px 8px; /* Adjust padding if icon looks too cramped/spaced */
-      font-size: 16px; /* Make icon larger if needed */
+      background: transparent;
+      border: none;
+      color: var(--up-gray-50); /* Muted icon color */
+      padding: 0 0 0 2px; /* Minimal padding for click target */
+      font-size: 18px; /* Slightly larger icon for better clickability */
       line-height: 1; /* Helps align icon vertically */
+      cursor: pointer;
+      margin-left: 0; /* Space between input and button */
+      margin-top: 0; /* Reset default button margin-top */
+      /* Ensure vertical alignment if line-height isn't enough */
+      display: inline-flex;
+      align-items: center;
     }
+    #saveQueryButton:hover { color: var(--up-black); /* Darken icon on hover */ }
     .high-rating {
       border-left-color: var(--up-green) !important;
       background-color: hsl(113, 70%, 95%) !important; /* Lighter green */
