@@ -102,12 +102,36 @@ document.addEventListener('DOMContentLoaded', () => {
         <img src="icons/applied-icon.svg" alt="Applied to job" class="air3-icon sm" data-test="UpCIcon" />
       </span>` : '';
 
+    let titlePrefix = '';
+    if (job.isLowPriorityByClientCountry && job.client && job.client.country) {
+      // Capitalize the first letter of the country for display
+      const countryName = job.client.country.charAt(0).toUpperCase() + job.client.country.slice(1).toLowerCase();
+      titlePrefix = `<span class="low-priority-prefix">${countryName}</span> `;
+    } else if (job.isLowPriorityBySkill) {
+      titlePrefix = '<span class="low-priority-prefix">Skill</span> ';
+    }
+
+    const isLowPriority = job.isLowPriorityBySkill || job.isLowPriorityByClientCountry;
+    let jobItemClasses = 'job-item';
+    if (isLowPriority) {
+      jobItemClasses += ' low-priority';
+    }
+    if (job.isExcludedByTitleFilter) {
+      jobItemClasses += ' excluded-by-filter';
+    }
+    if (job.applied) {
+      jobItemClasses += ' job-applied';
+    }
+    if (clientClasses.length > 0) {
+      jobItemClasses += ' ' + clientClasses.join(' ');
+    }
+
     return `
-      <div class="job-item ${job.isExcludedByTitleFilter ? 'excluded-by-filter' : ''} ${job.applied ? 'job-applied' : ''} ${clientClasses.join(' ')}" data-job-id="${job.id}">
+      <div class="${jobItemClasses}" data-job-id="${job.id}">
         <div class="job-header ${isInitiallyCollapsed ? 'job-title-collapsed' : ''}">
           <span class="toggle-details" data-job-id="${job.id}">${isInitiallyCollapsed ? '+' : '-'}</span>
           <h3>
-            <a href="${jobUrl}" target="_blank" title="${job.title || 'No Title'}">${job.title || 'No Title'}</a>
+            ${titlePrefix}<a href="${jobUrl}" target="_blank" title="${job.title || 'No Title'}">${job.title || 'No Title'}</a>
             ${appliedIconHTML}
           </h3>
           <span class="delete-job-button" data-job-id="${job.id}" title="Remove from list">×</span>

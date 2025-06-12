@@ -35,7 +35,7 @@
     body { font-family: sans-serif; width: 400px; padding: 10px; font-size: 14px; }
     h1 { font-size: 16px; margin: 0 0 8px 0; display: flex; align-items: center; justify-content: space-between; }
     p { margin: 4px 0; } /* Slightly reduced paragraph margin */
-    input[type="text"] { width: calc(100% - 85px); margin-bottom: 4px; padding: 4px; box-sizing: border-box; } /* Adjusted width for button */
+    input[type="text"]#userQueryInput { width: calc(100% - 45px); margin-bottom: 4px; padding: 4px 6px; box-sizing: border-box; } /* Adjusted width for icon button */
     button { margin-top: 4px; padding: 5px 8px; } /* Reduced top margin */
     .query-section { margin-bottom: 8px; display: flex; align-items: center; }
     .status-section p { margin-bottom: 4px; font-size: 0.9em; color: #333; } /* Style for the consolidated status */
@@ -111,6 +111,21 @@
         font-weight: var(--up-font-weight-normal);
     }
 
+    .low-priority-prefix {
+      display: inline-block; /* Important for padding and background to work well */
+      background-color: var(--up-gray-80); /* A light gray background, adjust as needed */
+      color: var(--up-gray-10); /* Darker text for contrast */
+      padding: 2px 6px;      /* Small padding around the text */
+      border-radius: 4px;    /* Rounded corners */
+      font-size: 0.9em;     /* Slightly smaller font size */
+      font-style: normal;    /* Remove italics if previously set, or keep if preferred */
+      font-weight: var(--up-font-weight-normal); /* Ensure it's not bold */
+      margin-right: 6px;     /* Space between the tag and the job title */
+      line-height: 1.2;      /* Adjust line-height for better vertical alignment if needed */
+      vertical-align: middle; /* Helps align with the text if font sizes differ significantly */
+    }
+
+
     .job-header {
       display: flex;
       align-items: center;
@@ -124,7 +139,7 @@
       line-height: 1; /* Adjust for better vertical alignment with title */
       flex-shrink: 0; /* Prevent toggle from shrinking */
       width: 15px;    /* Fixed width for the toggle button */
-      margin-right: 8px; /* Space between toggle and title */
+      margin-right: 5px; /* Space between toggle and title */
       /* Align toggle and delete button vertically */
       align-self: flex-start;
       margin-top: 2px; /* Small adjustment for vertical alignment */
@@ -148,8 +163,8 @@
       --icon-color: var(--up-blue); /* Use Upwork blue variable */
     }
     .job-details {
-      padding-left: 23px; /* Indent details under the toggle button's original space */
-      padding-top: 8px; /* Space between header and details */
+      padding-left: 20px; /* Indent details under the toggle button's original space */
+      padding-top: 5px; /* Space between header and details */
     }
     .job-item.excluded-by-filter {
       padding: 4px 8px;
@@ -177,6 +192,10 @@
       border: 1px solid var(--up-green);
       border-radius: 4px; /* Example radius */
       font-weight: var(--up-font-weight-medium);
+      /* Adjustments for icon button */
+      padding: 5px 8px; /* Adjust padding if icon looks too cramped/spaced */
+      font-size: 16px; /* Make icon larger if needed */
+      line-height: 1; /* Helps align icon vertically */
     }
     .high-rating {
       border-left-color: var(--up-green) !important;
@@ -187,6 +206,23 @@
       background-color: hsl(212, 90%, 95%) !important; /* Lighter blue */
       opacity: 0.7; /* Make them slightly faded */
     }
+    .job-item.low-priority {
+      /* Reduce vertical padding to take less space, especially when collapsed */
+      padding-top: 4px;
+      padding-bottom: 4px;
+    }
+    .job-item.low-priority h3 {
+      font-size: 0.85em;     /* Slightly smaller font size */
+    }
+    .job-item.low-priority h3 a {
+      color: var(--up-black); /* Neutral text color */
+      text-decoration: none;  /* Remove underline */
+    }
+    .job-item.low-priority h3 a:hover {
+      text-decoration: none;  /* Ensure no underline on hover */
+      color: var(--up-gray-10); /* Slightly different neutral for hover */
+    }
+    
 
     .unverified-icon {
       color: var(--orange-light, #cc9b66); /* Using a color from your list, or fallback */
@@ -204,12 +240,11 @@
   </div>
   <hr>
   <div class="query-section">
-    <label for="userQueryInput">Search Query:</label>
-    <input type="text" id="userQueryInput" placeholder="Enter your Upwork search query">
-    <button id="saveQueryButton">Save & Check</button>
+    <input type="text" id="userQueryInput" placeholder="Enter Upwork search query...">
+    <button id="saveQueryButton" title="Save & Check" aria-label="Save and Check">&#x1F50D;</button> <!-- Search icon -->
   </div>
   <hr>
-  <h2 style="font-size: medium">Recently Found Jobs:</h2>
+  <!--h2 style="font-size: medium">Recently Found Jobs:</!--h2 -->
   <div id="recentJobsList" class="recent-jobs-container">
     <!-- Jobs will be injected here -->
     <p class="no-jobs">No new jobs found in the last check.</p>
