@@ -67,6 +67,61 @@ document.addEventListener('DOMContentLoaded', () => {
       `<span title="Jobs you've deleted from the list">Del: ${deletedCount}</span>`;
   }
 
+  function createJobItemHTML(job, isInitiallyCollapsed) {
+    const jobUrl = `https://www.upwork.com/jobs/${job.ciphertext || job.id}`;
+    let budgetDisplay = 'N/A';
+    if (job.budget && job.budget.amount != null) {
+      budgetDisplay = `${job.budget.amount} ${job.budget.currencyCode || ''}`;
+      if (job.budget.type && job.budget.type.toLowerCase() !== 'fixed') {
+        budgetDisplay += ` (${job.budget.type.toLowerCase().replace('_', '-')})`;
+      }
+    }
+
+    let clientInfo = 'Client info N/A';
+    let clientClasses = [];
+    if (job.client) {
+      clientInfo = `Client: ${job.client.country || 'N/A'}`;
+      if (job.client.rating != null) {
+        const rating = parseFloat(job.client.rating);
+        clientInfo += ` | Rating: ${rating.toFixed(2)}`;
+        if (rating > 4.9) clientClasses.push('high-rating');
+      }
+      if (job.client.totalSpent > 0) clientInfo += ` | Spent: $${Number(job.client.totalSpent).toFixed(0)}`;
+      if (job.client.paymentVerificationStatus !== 'VERIFIED') {
+        clientInfo += ' <span class="unverified-icon" title="Client payment not verified">⚠️</span>';
+      }
+    }
+
+    let skillsDisplay = '';
+    if (job.skills && job.skills.length > 0) {
+      skillsDisplay = `Skills: ${job.skills.map(s => s.name).slice(0, 3).join(', ')}${job.skills.length > 3 ? '...' : ''}`;
+    }
+
+    const appliedIconHTML = job.applied ? `
+      <span class="applied-job-icon" title="You applied to this job">
+        <img src="icons/applied-icon.svg" alt="Applied to job" class="air3-icon sm" data-test="UpCIcon" />
+      </span>` : '';
+
+    return `
+      <div class="job-item ${job.isExcludedByTitleFilter ? 'excluded-by-filter' : ''} ${job.applied ? 'job-applied' : ''} ${clientClasses.join(' ')}" data-job-id="${job.id}">
+        <div class="job-header ${isInitiallyCollapsed ? 'job-title-collapsed' : ''}">
+          <span class="toggle-details" data-job-id="${job.id}">${isInitiallyCollapsed ? '+' : '-'}</span>
+          <h3>
+            <a href="${jobUrl}" target="_blank" title="${job.title || 'No Title'}">${job.title || 'No Title'}</a>
+            ${appliedIconHTML}
+          </h3>
+          <span class="delete-job-button" data-job-id="${job.id}" title="Remove from list">×</span>
+        </div>
+        <div class="job-details" style="display: ${isInitiallyCollapsed ? 'none' : 'block'};">
+          <p><strong>Budget:</strong> ${budgetDisplay}</p>
+          <p>${clientInfo}</p>
+          ${skillsDisplay ? `<p class="skills">${skillsDisplay}</p>` : ''}
+          <p><small>Posted: ${job.postedOn ? new Date(job.postedOn).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ', ' + new Date(job.postedOn).toLocaleDateString() : 'N/A'} <b>(${timeAgo(job.postedOn)})</b></small></p>
+        </div>
+      </div>
+    `;
+  }
+
   function displayRecentJobs(jobs = []) {
     console.log("Popup: displayRecentJobs called with:", jobs);
     recentJobsListDiv.innerHTML = '';
@@ -87,136 +142,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const jobItem = document.createElement('div');
-      jobItem.classList.add('job-item');
-      if (job.isExcludedByTitleFilter) {
-        jobItem.classList.add('excluded-by-filter');
-      }
-
       const isInitiallyCollapsed = job.isExcludedByTitleFilter || collapsedJobIds.has(job.id);
-
-      const jobHeader = document.createElement('div');
-      jobHeader.classList.add('job-header');
-
-      const toggleButton = document.createElement('span');
-      toggleButton.classList.add('toggle-details');
-      toggleButton.textContent = isInitiallyCollapsed ? '+' : '-';
-
-      // Create the H3 element that will contain the link and potentially the icon
-      const jobTitleEl = document.createElement('h3');
-      const jobUrl = `https://www.upwork.com/jobs/${job.ciphertext || job.id}`;
-
-      // Create the actual link element
-      const jobLink = document.createElement('a');
-      jobLink.href = jobUrl;
-      jobLink.target = '_blank';
-      jobLink.title = job.title || 'No Title'; // Full title for hover
-      jobLink.textContent = job.title || 'No Title'; // Full title, CSS will handle ellipsis
-      // The class 'job-title-truncate-ellipsis' might be redundant if .job-item h3 a handles ellipsis
-      // jobLink.classList.add('job-title-truncate-ellipsis');
-
-      jobTitleEl.appendChild(jobLink); // Add the link to the H3
-
-      const deleteButton = document.createElement('span');
-      deleteButton.classList.add('delete-job-button');
-      deleteButton.textContent = '×'; // '×' is a common multiplication sign used for close/delete
-      deleteButton.title = 'Remove from list';
-      
-      if (job.applied === true) {
-        jobItem.classList.add('job-applied'); // Keep this for overall item styling (like opacity)
-        const appliedIconContainer = document.createElement('span');
-        appliedIconContainer.classList.add('applied-job-icon');
-        appliedIconContainer.title = 'You applied to this job';
-        // Directly using the SVG string. Ensure it's safe and properly formatted.
-        appliedIconContainer.innerHTML = `<div class="air3-icon sm" data-test="UpCIcon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" aria-hidden="true" viewBox="0 0 24 24" role="img"><path vector-effect="non-scaling-stroke" stroke="var(--icon-color, #001e00)" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 17.47H5.71A2.71 2.71 0 013 14.76v-9A2.71 2.71 0 015.71 3H12a2.71 2.71 0 012.72 2.71v2M5.71 6.62h6.33M5.71 9.33h2.88"></path><path vector-effect="non-scaling-stroke" stroke="var(--icon-color, #001e00)" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.57 21a5.43 5.43 0 100-10.86 5.43 5.43 0 000 10.86z"></path><path vector-effect="non-scaling-stroke" stroke="var(--icon-color, #001e00)" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 13.85l-3.46 3.45-1.39-1.4"></path></svg></div>`;
-        jobTitleEl.appendChild(appliedIconContainer); // Append icon to H3, after the link
-      }
-  
-      if (isInitiallyCollapsed) {
-        jobHeader.classList.add('job-title-collapsed');
-      }
-
-      let budgetDisplay = 'N/A';
-      if (job.budget && job.budget.amount != null) {
-        budgetDisplay = `${job.budget.amount} ${job.budget.currencyCode || ''}`;
-        if (job.budget.type && job.budget.type.toLowerCase() !== 'fixed') {
-          budgetDisplay += ` (${job.budget.type.toLowerCase().replace('_', '-')})`;
-        }
-      }
-      let clientInfo = 'Client info N/A';
-      let isHighRating = false;
-      if(job.client) {
-        clientInfo = `Client: ${job.client.country || 'N/A'}`;
-        if(job.client.rating != null) {
-          const rating = parseFloat(job.client.rating);
-          clientInfo += ` | Rating: ${rating.toFixed(2)}`;
-          if (rating > 4.9) {
-            isHighRating = true; // Keep the flag if needed for other logic
-            jobItem.classList.add('high-rating'); // Apply to jobItem instead of jobHeader
-          }
-        }
-        if(job.client.totalSpent > 0) clientInfo += ` | Spent: $${Number(job.client.totalSpent).toFixed(0)}`;
-        if (job.client.paymentVerificationStatus !== 'VERIFIED') {
-          clientInfo += ' <span class="unverified-icon" title="Client payment not verified">⚠️</span>';
-        }
-      }
-      let skillsDisplay = '';
-      if (job.skills && job.skills.length > 0) {
-        skillsDisplay = `Skills: ${job.skills.map(s => s.name).slice(0, 3).join(', ')}${job.skills.length > 3 ? '...' : ''}`; // Show fewer skills
-      }
-
-      jobHeader.appendChild(toggleButton);
-      jobHeader.appendChild(jobTitleEl);
-      jobHeader.appendChild(deleteButton); // Add delete button to header, after the H3 (jobTitleEl)
-
-      const jobDetailsContainer = document.createElement('div');
-      jobDetailsContainer.classList.add('job-details');
-      jobDetailsContainer.style.display = isInitiallyCollapsed ? 'none' : 'block';
-
-      jobDetailsContainer.innerHTML = `
-        <p><strong>Budget:</strong> ${budgetDisplay}</p>
-        <p>${clientInfo}</p>
-        ${skillsDisplay ? `<p class="skills">${skillsDisplay}</p>` : ''} <!-- Only add skills paragraph if skills exist -->
-        <p><small>Posted: ${job.postedOn ? new Date(job.postedOn).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ', ' + new Date(job.postedOn).toLocaleDateString() : 'N/A'} <b>(${timeAgo(job.postedOn)})</b></small></p>
-      `;
-
-      jobItem.appendChild(jobHeader);
-      jobItem.appendChild(jobDetailsContainer);
-      recentJobsListDiv.appendChild(jobItem);
-
-      toggleButton.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent any parent click handlers if added later
-        const isCurrentlyCollapsed = jobDetailsContainer.style.display === 'none';
-        if (isCurrentlyCollapsed) {
-          jobDetailsContainer.style.display = 'block';
-          toggleButton.textContent = '-';
-          jobHeader.classList.remove('job-title-collapsed');
-          collapsedJobIds.delete(job.id);
-        } else {
-          jobDetailsContainer.style.display = 'none';
-          toggleButton.textContent = '+';
-          jobHeader.classList.add('job-title-collapsed');
-          collapsedJobIds.add(job.id);
-        }
-        saveCollapsedState();
-      });
-
-      deleteButton.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent toggle or link clicks
-        console.log(`Popup: Deleting job ID: ${job.id}`);
-        
-        // Remove the job item element from the DOM
-        jobItem.remove();
-
-        // Add job ID to the deleted list and save
-        deletedJobIds.add(job.id);
-        saveDeletedState();
-
-        // Update recent jobs in storage via StorageManager (it will filter deleted)
-        StorageManager.getRecentFoundJobs().then(currentRecentJobs => {
-            StorageManager.setRecentFoundJobs(currentRecentJobs.filter(item => item.id !== job.id));
-        });
-      });
+      const jobItemHTML = createJobItemHTML(job, isInitiallyCollapsed);
+      recentJobsListDiv.insertAdjacentHTML('beforeend', jobItemHTML);
     });
   }
 
@@ -316,6 +244,47 @@ document.addEventListener('DOMContentLoaded', () => {
       if (hasRelevantChange) {
         loadStoredData();
       }
+    }
+  });
+
+  // Event delegation for job items
+  recentJobsListDiv.addEventListener('click', (event) => {
+    const toggleButton = event.target.closest('.toggle-details');
+    const deleteButton = event.target.closest('.delete-job-button');
+    const jobItemElement = event.target.closest('.job-item');
+
+    if (!jobItemElement) return;
+    const jobId = jobItemElement.dataset.jobId;
+
+    if (toggleButton && jobId) {
+      event.stopPropagation();
+      const jobDetailsContainer = jobItemElement.querySelector('.job-details');
+      const jobHeader = jobItemElement.querySelector('.job-header');
+      if (!jobDetailsContainer || !jobHeader) return;
+
+      const isCurrentlyCollapsed = jobDetailsContainer.style.display === 'none';
+      if (isCurrentlyCollapsed) {
+        jobDetailsContainer.style.display = 'block';
+        toggleButton.textContent = '-';
+        jobHeader.classList.remove('job-title-collapsed');
+        collapsedJobIds.delete(jobId);
+      } else {
+        jobDetailsContainer.style.display = 'none';
+        toggleButton.textContent = '+';
+        jobHeader.classList.add('job-title-collapsed');
+        collapsedJobIds.add(jobId);
+      }
+      saveCollapsedState();
+    } else if (deleteButton && jobId) {
+      event.stopPropagation();
+      console.log(`Popup: Deleting job ID: ${jobId}`);
+      jobItemElement.remove();
+      deletedJobIds.add(jobId);
+      saveDeletedState();
+
+      StorageManager.getRecentFoundJobs().then(currentRecentJobs => {
+        StorageManager.setRecentFoundJobs(currentRecentJobs.filter(item => item.id !== jobId));
+      });
     }
   });
 

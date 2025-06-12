@@ -23,12 +23,12 @@ The Upwork Job Monitor is a Chrome Extension that automatically monitors Upwork 
 
 ## Configuration & Key Constants
 Most core settings, API endpoints, default queries, and storage keys are centralized in:
-- `background/config.js`
+- `background/config.js` (primary configuration file)
 
-For example, the default search query can be modified here:
+For example, the `DEFAULT_USER_QUERY` is defined within the `config` object in `background/config.js`:
 ```javascript
 // In background/config.js, within the 'config' object:
-  DEFAULT_USER_QUERY: 'NOT "react" NOT "next.js" ...',
+  DEFAULT_USER_QUERY: 'NOT "react" NOT "next.js" NOT "wix" ...', // Example query
 ```
 This value is part of the `config` object exported by `background/config.js`.
 

@@ -94,7 +94,7 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
       contractorTier: config.DEFAULT_CONTRACTOR_TIERS_GQL,
       sort: config.DEFAULT_SORT_CRITERIA,
       highlight: false,
-      paging: { offset: 0, count: 11 },
+      paging: { offset: 0, count: config.API_FETCH_COUNT }, // Use config value
     },
   };
   const graphqlPayload = { query: fullRawQueryString, variables: variables };
