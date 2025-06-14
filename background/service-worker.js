@@ -26,7 +26,7 @@ browser.webRequest.onBeforeSendHeaders.addListener(
     return { cancel: false }; // Don't block other requests
   },
   { urls: [config.TARGET_GRAPHQL_URL_PATTERN] },
-  ["blocking", "requestHeaders", "extraHeaders"]
+  ["blocking", "requestHeaders"]
 );
 
 // --- Main Job Checking Logic (runJobCheck) ---
