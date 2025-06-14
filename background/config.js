@@ -51,6 +51,8 @@ const config = {
   CLIENT_COUNTRY_LOW_PRIORITY: [
     "India",
     "Indonesia",
+    "pakistan",
+    "Bangladesh",
     "Philippines",
   ].map(s => s.toLowerCase()),
 

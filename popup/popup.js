@@ -103,7 +103,9 @@ document.addEventListener('DOMContentLoaded', () => {
       </span>` : '';
 
     let titlePrefix = '';
-    if (job.isLowPriorityByClientCountry && job.client && job.client.country) {
+    if (job.isExcludedByTitleFilter) { // Highest precedence for the tag
+      titlePrefix = '<span class="low-priority-prefix">Filtered</span> ';
+    } else if (job.isLowPriorityByClientCountry && job.client && job.client.country) {
       // Capitalize the first letter of the country for display
       const countryName = job.client.country.charAt(0).toUpperCase() + job.client.country.slice(1).toLowerCase();
       titlePrefix = `<span class="low-priority-prefix">${countryName}</span> `;
@@ -153,23 +155,31 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!Array.isArray(jobs) || jobs.length === 0) {
       console.log("Popup: No valid jobs array to display or jobs array is empty.");
       recentJobsListDiv.innerHTML = '<p class="no-jobs">No new jobs found in the last check.</p>';
+      recentJobsListDiv.classList.add('empty-list');
       return;
     }
 
     // Filter out jobs that have been explicitly deleted
     const jobsToDisplay = jobs.filter(job => job && job.id && !deletedJobIds.has(job.id));
 
-    console.log(`Popup: Displaying ${jobsToDisplay.length} jobs (filtered from ${jobs.length} total recent).`);
-    jobsToDisplay.forEach((job, index) => {
-      if (!job || !job.id) {
-        console.warn(`Popup: Skipping job at index ${index} due to missing job or job.id`, job);
-        return;
-      }
+    if (jobsToDisplay.length === 0) {
+      console.log("Popup: No jobs to display after filtering deleted items.");
+      recentJobsListDiv.innerHTML = '<p class="no-jobs">No new jobs found (all previously seen or deleted).</p>';
+      recentJobsListDiv.classList.add('empty-list');
+    } else {
+      console.log(`Popup: Displaying ${jobsToDisplay.length} jobs (filtered from ${jobs.length} total recent).`);
+      jobsToDisplay.forEach((job, index) => {
+        if (!job || !job.id) {
+          console.warn(`Popup: Skipping job at index ${index} due to missing job or job.id`, job);
+          return;
+        }
 
-      const isInitiallyCollapsed = job.isExcludedByTitleFilter || collapsedJobIds.has(job.id);
-      const jobItemHTML = createJobItemHTML(job, isInitiallyCollapsed);
-      recentJobsListDiv.insertAdjacentHTML('beforeend', jobItemHTML);
-    });
+        const isInitiallyCollapsed = job.isExcludedByTitleFilter || collapsedJobIds.has(job.id);
+        const jobItemHTML = createJobItemHTML(job, isInitiallyCollapsed);
+        recentJobsListDiv.insertAdjacentHTML('beforeend', jobItemHTML);
+      });
+      recentJobsListDiv.classList.remove('empty-list');
+    }
   }
 
   // Refactored loadStoredData to use StorageManager
