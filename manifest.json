@@ -8,7 +8,9 @@
     "default_icon": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
   },
   "background": {
-    "scripts": ["background/config.js", "utils.js", "storage/storage-manager.js", "api/upwork-api.js", "background/service-worker.js"],
+    "scripts": [
+      "lib/browser-polyfill.min.js",
+      "background/config.js", "utils.js", "storage/storage-manager.js", "api/upwork-api.js", "background/service-worker.js"],
     "persistent": true
   },
   "permissions": [
@@ -21,5 +23,10 @@
     "*://*.upwork.com/*",
     "tabs"
   ],
-  "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+  "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "your-addon-id@wpspeedopt.net"
+    }
+  }
 }

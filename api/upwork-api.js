@@ -9,56 +9,54 @@ console.log("Upwork API module loaded.");
  * @returns {Promise<string[]>} A promise that resolves with an array of token strings.
  */
 async function getAllPotentialApiTokens() {
-  return new Promise((resolve) => {
-    chrome.cookies.getAll({ domain: "upwork.com" }, (cookies) => {
-      if (chrome.runtime.lastError) {
-        console.error("API: Error getting all cookies:", chrome.runtime.lastError.message);
-        resolve([]); return;
-      }
-      if (!cookies || cookies.length === 0) {
-        console.warn("API: No cookies found for upwork.com domain.");
-        resolve([]); return;
-      }
+  try {
+    const cookies = await browser.cookies.getAll({ domain: "upwork.com" });
+    if (!cookies || cookies.length === 0) {
+      console.warn("API: No cookies found for upwork.com domain.");
+      return [];
+    }
 
-      let allOAuthTokens = [];
-      for (const cookie of cookies) {
-        if (cookie.value && cookie.value.startsWith("oauth2v2_")) {
-          allOAuthTokens.push({ name: cookie.name, value: cookie.value });
-        }
+    let allOAuthTokens = [];
+    for (const cookie of cookies) {
+      if (cookie.value && cookie.value.startsWith("oauth2v2_")) {
+        allOAuthTokens.push({ name: cookie.name, value: cookie.value });
       }
+    }
 
-      if (allOAuthTokens.length === 0) {
-        console.warn("API: No cookies matching 'oauth2v2_' prefix found.");
-        resolve([]); return;
-      }
+    if (allOAuthTokens.length === 0) {
+      console.warn("API: No cookies matching 'oauth2v2_' prefix found.");
+      return [];
+    }
 
-      let prioritizedTokens = [];
-      const sbPatternTokens = allOAuthTokens.filter(t =>
-        t.name.length === 10 && t.name.endsWith("sb") &&
-        t.name !== "forterToken"
-      );
-      sbPatternTokens.forEach(t => prioritizedTokens.push(t.value));
+    let prioritizedTokens = [];
+    const sbPatternTokens = allOAuthTokens.filter(t =>
+      t.name.length === 10 && t.name.endsWith("sb") &&
+      t.name !== "forterToken"
+    );
+    sbPatternTokens.forEach(t => prioritizedTokens.push(t.value));
 
-      const otherPotentials = allOAuthTokens.filter(t =>
-        !sbPatternTokens.some(sbt => sbt.name === t.name) &&
-        t.name !== "oauth2_global_js_token" &&
-        t.name !== "visitor_gql_token" &&
-        t.name !== "visitor_innova_gql_token" &&
-        !t.name.includes("master_access_token") &&
-        !t.name.includes("_vt")
-      );
-      otherPotentials.forEach(t => prioritizedTokens.push(t.value));
+    const otherPotentials = allOAuthTokens.filter(t =>
+      !sbPatternTokens.some(sbt => sbt.name === t.name) &&
+      t.name !== "oauth2_global_js_token" &&
+      t.name !== "visitor_gql_token" &&
+      t.name !== "visitor_innova_gql_token" &&
+      !t.name.includes("master_access_token") &&
+      !t.name.includes("_vt")
+    );
+    otherPotentials.forEach(t => prioritizedTokens.push(t.value));
 
-      const globalJsToken = allOAuthTokens.find(t => t.name === "oauth2_global_js_token");
-      if (globalJsToken && !prioritizedTokens.includes(globalJsToken.value)) {
-        prioritizedTokens.push(globalJsToken.value);
-      }
-      
-      const uniquePrioritizedTokens = [...new Set(prioritizedTokens)];
-      console.log("API: Candidate API tokens (prioritized):", uniquePrioritizedTokens.map(t => t.substring(0,20) + "..."));
-      resolve(uniquePrioritizedTokens);
-    });
-  });
+    const globalJsToken = allOAuthTokens.find(t => t.name === "oauth2_global_js_token");
+    if (globalJsToken && !prioritizedTokens.includes(globalJsToken.value)) {
+      prioritizedTokens.push(globalJsToken.value);
+    }
+    
+    const uniquePrioritizedTokens = [...new Set(prioritizedTokens)];
+    console.log("API: Candidate API tokens (prioritized):", uniquePrioritizedTokens.map(t => t.substring(0,20) + "..."));
+    return uniquePrioritizedTokens;
+  } catch (error) {
+    console.error("API: Error getting all cookies:", error.message);
+    return [];
+  }
 }
 
 /**

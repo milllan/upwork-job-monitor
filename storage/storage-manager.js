@@ -27,32 +27,31 @@ const MAX_RECENT_JOBS = 10; // Limit for recent jobs display
  * @returns {Promise<Object>} A promise that resolves with the storage data.
  */
 async function getStorage(keyOrKeys) {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(keyOrKeys, (result) => {
-      if (chrome.runtime.lastError) {
-        console.error("StorageManager: Error getting storage:", chrome.runtime.lastError.message);
-        // Depending on the key, you might return a default value or re-throw/reject
-        // For simplicity now, just log and return the partial result
-      }
-      resolve(result);
-    });
-  });
+  try {
+    const result = await browser.storage.local.get(keyOrKeys);
+    return result;
+  } catch (error) {
+    console.error("StorageManager: Error getting storage:", error.message);
+    // Return a default structure similar to what a successful call might return with no data
+    if (typeof keyOrKeys === 'string') return { [keyOrKeys]: undefined };
+    if (Array.isArray(keyOrKeys)) return keyOrKeys.reduce((acc, key) => { acc[key] = undefined; return acc; }, {});
+    if (keyOrKeys === null || typeof keyOrKeys === 'object') return {}; // For get(null) or get({})
+    return {}; // Fallback
+  }
 }
 
 /**
- * Sets a value(s) in chrome.storage.local.
+ * Sets a value(s) in browser.storage.local.
  * @param {Object} items An object containing key-value pairs to set.
  * @returns {Promise<void>} A promise that resolves when the data is set.
  */
 async function setStorage(items) {
-  return new Promise((resolve) => {
-    chrome.storage.local.set(items, () => {
-      if (chrome.runtime.lastError) {
-        console.error("StorageManager: Error setting storage:", chrome.runtime.lastError.message);
-      }
-      resolve();
-    });
-  });
+  try {
+    await browser.storage.local.set(items);
+  } catch (error) {
+    console.error("StorageManager: Error setting storage:", error.message);
+    // The original implementation resolved even on error. We'll mimic this by catching.
+  }
 }
 
 // Specific getter/setter functions

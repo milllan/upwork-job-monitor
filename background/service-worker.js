@@ -3,7 +3,7 @@ console.log("Background Script MV2 loaded - Dynamic Token Attempt.");
 // UpworkAPI object is expected to be globally available from api/upwork-api.js
 
 // --- WebRequest Listener to Modify Headers ---
-chrome.webRequest.onBeforeSendHeaders.addListener(
+browser.webRequest.onBeforeSendHeaders.addListener(
   function(details) {
     if (details.url.startsWith(config.UPWORK_GRAPHQL_ENDPOINT_BASE) && details.method === "POST" && details.type === "xmlhttprequest") {
       let newHeaders = details.requestHeaders.filter(header => {
@@ -53,9 +53,11 @@ async function runJobCheck(triggeredByUserQuery) {
     console.error("MV2: Failed to fetch jobs after trying all tokens.", apiResult?.message);
     await StorageManager.setMonitorStatus("Error: All tokens failed.");
     // Open Upwork search page to help re-establish tokens
-    const searchUrl = constructUpworkSearchURL(userQueryToUse, config.DEFAULT_CONTRACTOR_TIERS_GQL, config.DEFAULT_SORT_CRITERIA);
-    chrome.tabs.create({ url: searchUrl });
-    chrome.runtime.sendMessage({ action: "updatePopupDisplay" }).catch(e => {}); // Update popup with error
+    try {
+      const searchUrl = constructUpworkSearchURL(userQueryToUse, config.DEFAULT_CONTRACTOR_TIERS_GQL, config.DEFAULT_SORT_CRITERIA);
+      await browser.tabs.create({ url: searchUrl });
+      await browser.runtime.sendMessage({ action: "updatePopupDisplay" });
+    } catch (e) { console.warn("MV2: Error trying to open tab or send updatePopupDisplay message:", e); }
     return;
   }
   
@@ -143,9 +145,10 @@ async function runJobCheck(triggeredByUserQuery) {
   await StorageManager.setRecentFoundJobs(fetchedJobs ? fetchedJobs.filter(job => job && job.id && !deletedJobIds.has(job.id)) : []);
   await StorageManager.setCollapsedJobIds(Array.from(currentCollapsedJobIds)); // Save updated collapsed IDs
 
-  // In MV2, chrome.runtime.sendMessage does NOT return a Promise.
-  // Remove the .catch() as it's not valid.
-  chrome.runtime.sendMessage({ action: "updatePopupDisplay" });
+  try {
+    // browser.runtime.sendMessage returns a promise with the polyfill
+    await browser.runtime.sendMessage({ action: "updatePopupDisplay" });
+  } catch (e) { console.warn("MV2: Error sending updatePopupDisplay message post-check:", e); }
 }
 
 
@@ -155,59 +158,57 @@ async function testFetchJobs() {
   await runJobCheck();
 }
 
-chrome.runtime.onInstalled.addListener((details) => {
+browser.runtime.onInstalled.addListener(async (details) => { // Made async
   console.log("MV2: Extension installed or updated:", details.reason);
-  StorageManager.initializeStorage(config.DEFAULT_USER_QUERY);
-  setupAlarms(); // Always set up alarms on install/update
+  await StorageManager.initializeStorage(config.DEFAULT_USER_QUERY);
+  await setupAlarms(); // Always set up alarms on install/update
 });
 
-function setupAlarms() {
-  chrome.alarms.get(config.FETCH_ALARM_NAME, (alarm) => { // Use config.FETCH_ALARM_NAME
+async function setupAlarms() { // Made async
+  try {
+    const alarm = await browser.alarms.get(config.FETCH_ALARM_NAME); // Use config.FETCH_ALARM_NAME
     if (!alarm) {
-      chrome.alarms.create(config.FETCH_ALARM_NAME, { delayInMinutes: 0.2, periodInMinutes: config.FETCH_INTERVAL_MINUTES }); // Use config for interval too
+      await browser.alarms.create(config.FETCH_ALARM_NAME, { delayInMinutes: 0.2, periodInMinutes: config.FETCH_INTERVAL_MINUTES }); // Use config for interval too
     }
-  });
+  } catch (e) { console.error("MV2: Error setting up alarm:", e); }
 }
-chrome.alarms.onAlarm.addListener(async (alarm) => {
+browser.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === config.FETCH_ALARM_NAME) { // Use config.FETCH_ALARM_NAME
     await runJobCheck();
   }
 });
-function sendNotification(job) {
+async function sendNotification(job) { // Made async
   const jobUrl = `https://www.upwork.com/jobs/${job.ciphertext || job.id}`;
   const notificationOptions = {
     type: "basic", iconUrl: "icons/icon48.png", title: "New Upwork Job!",
     message: `${job.title}\nBudget: ${(job.budget && job.budget.amount != null) ? job.budget.amount + ' ' + (job.budget.currencyCode || '') : 'N/A'}`,
     priority: 2
   };
-  chrome.notifications.create(jobUrl, notificationOptions);
+  try {
+    await browser.notifications.create(jobUrl, notificationOptions);
+  } catch (e) { console.error("MV2: Error creating notification:", e); }
 }
-chrome.notifications.onClicked.addListener((notificationId) => {
-  chrome.tabs.create({ url: notificationId });
-  chrome.notifications.clear(notificationId);
+browser.notifications.onClicked.addListener(async (notificationId) => { // Made async
+  try {
+    await browser.tabs.create({ url: notificationId });
+    await browser.notifications.clear(notificationId);
+  } catch (e) { console.error("MV2: Error handling notification click:", e); }
 });
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+
+// Updated onMessage listener to use async/await for responses
+browser.runtime.onMessage.addListener(async (request, sender) => {
   if (request.action === "manualCheck") {
     const queryFromPopup = request.userQuery || config.DEFAULT_USER_QUERY; // Use config
-
-    StorageManager.setCurrentUserQuery(queryFromPopup)
-      .then(async () => { // Added async here
-        // runJobCheck is async, ensure its errors are caught.
-        try {
-          await runJobCheck(queryFromPopup);
-          if (sendResponse) sendResponse({ status: "Manual check initiated and processing." });
-        } catch (error) {
-          console.error("Background: Error during manual runJobCheck:", error);
-          if (sendResponse) sendResponse({ error: "Error during manual job check execution." });
-        }
-      })
-      .catch(error => { // Catch errors from setCurrentUserQuery itself
-        console.error("Background: Error setting currentUserQuery for manual check:", error.message);
-        if (sendResponse) sendResponse({ error: "Failed to save query before manual check." });
-      });
-
-    return true; // Crucial: indicates that sendResponse will be called asynchronously.
+    try {
+      await StorageManager.setCurrentUserQuery(queryFromPopup);
+      await runJobCheck(queryFromPopup);
+      return { status: "Manual check initiated and processing." }; // This is the response
+    } catch (error) {
+      console.error("Background: Error during manual check:", error.message, error.stack);
+      return { error: `Error during manual job check execution: ${error.message}` };
+    }
   }
-  // Return false or nothing for synchronous messages or unhandled actions.
+  // For other actions, or if no response is needed, return undefined (or nothing),
+  // which the polyfill handles as no response or resolves sendMessage to undefined.
 });
 setupAlarms();

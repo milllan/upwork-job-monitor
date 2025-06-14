@@ -213,22 +213,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function triggerCheck(queryToUse) {
+  async function triggerCheck(queryToUse) { // Made async
     updateConsolidatedStatusDisplay({ monitorStatusText: 'Checking...' });
     console.log("Popup: Triggering check with query:", queryToUse);
 
-    chrome.runtime.sendMessage({ action: "manualCheck", userQuery: queryToUse }, (response) => {
-      if (chrome.runtime.lastError) {
-        console.error("Popup: Error sending manual check message:", chrome.runtime.lastError.message);
-        // Rely on updatePopupDisplay message or next loadStoredData to update status from storage
-        loadStoredData(); // Attempt to refresh with current state on error
-      } else {
-        console.log("Popup: Manual check message sent, background responded:", response);
-        // Background will now send "updatePopupDisplay" when it's truly done.
-        // We can reflect the immediate response from background here if needed.
-        // if (response && response.status) statusEl.textContent = response.status;
-      }
-    });
+    try {
+      const response = await browser.runtime.sendMessage({ action: "manualCheck", userQuery: queryToUse });
+      console.log("Popup: Manual check message sent, background responded:", response);
+      // Background will now send "updatePopupDisplay" when it's truly done.
+      // We can reflect the immediate response from background here if needed.
+    } catch (error) {
+      console.error("Popup: Error sending manual check message:", error.message);
+      loadStoredData(); // Attempt to refresh with current state on error
+    }
   }
 
   saveQueryButton.addEventListener('click', () => {
@@ -259,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Listen for messages from background script to update the display
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "updatePopupDisplay") {
       console.log("Popup: Received updatePopupDisplay message from background. Refreshing data.");
       loadStoredData();
@@ -269,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Add a listener for storage changes to keep the popup data up-to-date
-  chrome.storage.onChanged.addListener((changes, areaName) => {
+  browser.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === 'local') {
       console.log("Popup: Storage changed, reloading data. Changes:", changes);
       // Check if relevant keys have changed before reloading to avoid unnecessary reloads
