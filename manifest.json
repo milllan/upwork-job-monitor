@@ -28,5 +28,6 @@
     "gecko": {
       "id": "your-addon-id@wpspeedopt.net"
     }
-  }
+  },
+  "web_accessible_resources": ["audio/notification.mp3", "icons/icon48.png"]
 }

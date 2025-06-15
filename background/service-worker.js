@@ -186,6 +186,9 @@ async function sendNotification(job) { // Made async
   };
   try {
     await browser.notifications.create(jobUrl, notificationOptions);
+    // Play notification sound
+    const audio = new Audio(browser.runtime.getURL("audio/notification.mp3")); // Ensure this path is correct
+    audio.play().catch(e => console.warn("MV2: Error playing notification sound:", e));
   } catch (e) { console.error("MV2: Error creating notification:", e); }
 }
 browser.notifications.onClicked.addListener(async (notificationId) => { // Made async

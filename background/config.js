@@ -33,6 +33,8 @@ const config = {
     "Product Page Designer",
     "Site Completion and Optimization",
     "Landing Page Developer",
+    "Bilingual ENG/SPA",
+    "Logo Designer",
     // Add more strings to exclude as needed
   ].map(s => s.toLowerCase()),
 
@@ -45,6 +47,7 @@ const config = {
     "Prestashop",
     "Framer",
     "WIX",
+    "Logo Designer",
   ].map(s => s.toLowerCase()),
 
   // Client countries that mark a job as low-priority (case-insensitive)
