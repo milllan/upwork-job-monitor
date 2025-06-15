@@ -35,6 +35,7 @@ const config = {
     "Landing Page Developer",
     "Bilingual ENG/SPA",
     "Logo Designer",
+    "Graphic Designer",
     // Add more strings to exclude as needed
   ].map(s => s.toLowerCase()),
 

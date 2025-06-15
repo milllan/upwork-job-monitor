@@ -1,3 +1,5 @@
+> **Note:** This is the original development plan for the project. The final implementation differs in some key areas (for example, the planned `content-script` was abandoned in favor of a direct background API approach, which is not MV3 compliant). For an accurate description of the current architecture, please see the [**User Guide**](USER_GUIDE.md).
+
 # Upwork Job Monitor Browser Extension - Project Development Plan
 
 ## Project Overview

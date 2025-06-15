@@ -14,7 +14,7 @@ The Upwork Job Monitor is a Chrome Extension that automatically monitors Upwork 
 ## Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-repo/upwork-job-monitor.git
+   git clone https://github.com/milllan/upwork-job-monitor.git
    ```
 2. Open Chrome and navigate to `chrome://extensions`
 3. Enable "Developer mode"
@@ -30,7 +30,21 @@ For example, the `DEFAULT_USER_QUERY` is defined within the `config` object in `
 // In background/config.js, within the 'config' object:
   DEFAULT_USER_QUERY: 'NOT "react" NOT "next.js" NOT "wix" ...', // Example query
 ```
+Upwork GraphQL limits the user query to 500 characters max!
 This value is part of the `config` object exported by `background/config.js`.
+
+### Customizing Job Filters
+One of the features is the ability to further customize the job filters (beyond the 500 char limit for the GraphQL query). You can do this by editing the arrays within the `config` object in `background/config.js`:
+
+-   **`TITLE_EXCLUSION_STRINGS`**: Add any string to this array to completely hide jobs whose titles contain that string. This is for jobs you *never* want to see.
+    ```javascript
+    // Example: To also exclude jobs mentioning "SEO"
+    TITLE_EXCLUSION_STRINGS: ["french speaking only", "SEO Optimization for", ...],
+    ```
+-   **`SKILL_LOW_PRIORITY_TERMS`**: Add skills here (e.g., "webflow", "wix") to mark jobs with these skills as low-priority. They will still appear in your list but won't send notifications and will be collapsed by default.
+-   **`CLIENT_COUNTRY_LOW_PRIORITY`**: Add countries here (e.g., "India", "Pakistan") to mark jobs from these locations as low-priority.
+
+After editing `config.js`, you must reload the extension from the `chrome://extensions` page for the changes to take effect.
 
 ## Architecture
 
@@ -78,22 +92,13 @@ The extension is structured for clarity and maintainability, with all configurat
 **Note:** The extension previously used a content script for DOM parsing, but this is no longer required. All job monitoring is performed via API calls in the background script.
 
 ### Key Algorithms
-**Token Retrieval** ([`background/service-worker.js:26`](background/service-worker.js:26)):
-```javascript
-async function getAllPotentialApiTokens() {
-  // Retrieves and prioritizes OAuth tokens from cookies
-}
-```
+**Token Retrieval & Rotation** (in [`api/upwork-api.js`](api/upwork-api.js)):
+The `fetchJobsWithTokenRotation` function orchestrates the authentication process. It first calls `getAllPotentialApiTokens` to scan browser cookies for all potential OAuth2 tokens, prioritizes them, and then attempts to fetch jobs with each token until one succeeds. This makes the authentication robust and automatic.
 
-**Job Filtering** ([`background/service-worker.js:248`](background/service-worker.js:248)):
-```javascript
-// Applies client-side title exclusion filters
-jobs = jobs.map(job => {
-  if (TITLE_EXCLUSION_STRINGS.some(exclude => title.includes(exclude))) {
-    return { ...job, isExcludedByTitleFilter: true };
-  }
-  return job;
-});
+**Job Filtering & Prioritization** (in [`background/service-worker.js`](background/service-worker.js)):
+After jobs are fetched, the `runJobCheck` function applies several layers of client-side filtering:
+1.  **Title Exclusion:** Jobs with titles containing phrases from `config.TITLE_EXCLUSION_STRINGS` are flagged and will not trigger notifications.
+2.  **Low-Priority (Skills/Country):** Jobs are marked as "low-priority" if they contain skills from `config.SKILL_LOW_PRIORITY_TERMS` or originate from client countries in `config.CLIENT_COUNTRY_LOW_PRIORITY`. These jobs do not trigger notifications and appear collapsed in the UI.
 ```
 
 ## Usage Guide
