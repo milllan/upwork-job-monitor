@@ -6,7 +6,7 @@
 
 The Upwork Job Monitor is a browser extension (Chrome/Firefox) that monitors Upwork job feeds for new opportunities matching your user-defined criteria. It bypasses Cloudflare protection by operating within your authenticated browser session, making it appear as legitimate user activity rather than automated bot traffic.
 
-![Popup Interface](Screenshot%202025-06-04%20151441.png)
+![Popup Interface](Screenshot%202025-06-15%20225010.png)
 
 ## Key Features
 
