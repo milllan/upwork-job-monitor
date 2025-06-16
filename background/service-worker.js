@@ -125,8 +125,11 @@ async function runJobCheck(triggeredByUserQuery) {
     fetchedJobs.forEach(job => {
       if (job && job.id && !historicalSeenJobIds.has(job.id)) {
         newJobIdsToMarkSeen.push(job.id);
-        // If it's a new, low-priority job, add to collapsedJobIds
-        if ((job.isLowPriorityBySkill || job.isLowPriorityByClientCountry) && !currentCollapsedJobIds.has(job.id)) {
+        // If it's a new, low-priority job OR a new "Filtered" (excluded by title) job,
+        // add to collapsedJobIds so it starts collapsed in the popup.
+        if (
+            (job.isLowPriorityBySkill || job.isLowPriorityByClientCountry || job.isExcludedByTitleFilter) &&
+            !currentCollapsedJobIds.has(job.id)) {
           currentCollapsedJobIds.add(job.id);
         }
       }
@@ -207,7 +210,7 @@ browser.notifications.onClicked.addListener(async (notificationId) => { // Made 
 
 
 // Updated onMessage listener to use async/await for responses
-browser.runtime.onMessage.addListener(async (request, sender) => {
+browser.runtime.onMessage.addListener(async (request, sender) => { // Consolidated listener
   if (request.action === "manualCheck") {
     const queryFromPopup = request.userQuery || config.DEFAULT_USER_QUERY; // Use config
     try {
@@ -218,25 +221,24 @@ browser.runtime.onMessage.addListener(async (request, sender) => {
       console.error("Background: Error during manual check:", error.message, error.stack);
       return { error: `Error during manual job check execution: ${error.message}` };
     }
+  } else if (request.action === "getJobDetails" && request.jobCiphertext) {
+    console.log("MV2: Received getJobDetails request for:", request.jobCiphertext);
+    try {
+      const jobDetails = await _fetchAndProcessJobDetails(request.jobCiphertext);
+      return { jobDetails: jobDetails }; // This will be the response to the popup
+    } catch (error) {
+      console.error("MV2: Error processing getJobDetails in background:", error.message);
+      return { jobDetails: null, error: error.message || "Failed to fetch job details" };
+    }
   }
-  // For other actions, or if no response is needed, return undefined (or nothing),
-  // which the polyfill handles as no response or resolves sendMessage to undefined.
-});
-
-// Add a message listener to handle job detail requests from the popup
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "getJobDetails" && message.jobCiphertext) {
-    getJobDetails(message.jobCiphertext);
-    return true; // Indicates async response
-  }
+  // Return true for other async messages if sendResponse is used, or let it be undefined.
+  // For the above, returning the promise from async function handles it.
 });
 
 setupAlarms();
 
-// Function to get detailed job information
-async function getJobDetails(jobCiphertext) {
-  console.log("MV2: Fetching detailed job information for:", jobCiphertext);
-  
+// Renamed and adapted function to be called by the message listener
+async function _fetchAndProcessJobDetails(jobCiphertext) {
   const apiResult = await UpworkAPI.fetchJobDetailsWithTokenRotation(jobCiphertext);
 
   if (apiResult && !apiResult.error) {
@@ -244,37 +246,11 @@ async function getJobDetails(jobCiphertext) {
     console.log("MV2: Successfully fetched job details");
 
     // Check if popup is open before sending
-    const popupViews = browser.extension.getViews({ type: "popup" });
-    if (popupViews && popupViews.length > 0) {
-      try {
-        await browser.runtime.sendMessage({
-          action: "jobDetailsResult",
-          jobDetails: jobDetails
-        });
-      } catch (e) {
-        console.warn("MV2: Error sending successful jobDetailsResult to popup:", e.message);
-      }
-    } else {
-      console.log("MV2: Popup not open, skipping sending successful jobDetailsResult.");
-    }
-    return jobDetails;
+    // This check is no longer strictly necessary here if we are directly responding to a message from the popup,
+    // as the popup must be open to have sent the message.
+    return apiResult.jobDetails;
   } else {
     console.error("MV2: Failed to fetch job details.", apiResult?.message);
-
-    const popupViews = browser.extension.getViews({ type: "popup" });
-    if (popupViews && popupViews.length > 0) {
-      try {
-        await browser.runtime.sendMessage({
-          action: "jobDetailsResult",
-          jobDetails: null,
-          error: apiResult?.message || "Failed to fetch job details"
-        });
-      } catch (e) {
-        console.warn("MV2: Error sending error jobDetailsResult to popup:", e.message);
-      }
-    } else {
-      console.log("MV2: Popup not open, skipping sending error jobDetailsResult.");
-    }
-    return null;
+    throw new Error(apiResult?.message || "Failed to fetch job details from API");
   }
 }

@@ -178,7 +178,9 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        const isInitiallyCollapsed = job.isExcludedByTitleFilter || collapsedJobIds.has(job.id);
+        // A job is initially collapsed if its ID is in the collapsedJobIds set.
+        // The background script is responsible for adding new low-priority/filtered jobs to this set.
+        const isInitiallyCollapsed = collapsedJobIds.has(job.id);
         const jobItemHTML = createJobItemHTML(job, isInitiallyCollapsed);
         recentJobsListDiv.insertAdjacentHTML('beforeend', jobItemHTML);
       });
@@ -353,26 +355,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Function to fetch and display job details
 async function fetchJobDetails(jobCiphertext, detailsContainer) {
+  detailsContainer.innerHTML = '<div class="loading-indicator">Loading details...</div>'; // Show loading indicator
   try {
     // Request job details from background script
-    browser.runtime.sendMessage({
+    const response = await browser.runtime.sendMessage({
       action: "getJobDetails",
       jobCiphertext: jobCiphertext
     });
-    
-    // Set up listener for the response
-    browser.runtime.onMessage.addListener(function handleDetailsResponse(message) {
-      if (message.action === "jobDetailsResult") {
-        browser.runtime.onMessage.removeListener(handleDetailsResponse);
-        
-        if (!message.jobDetails) {
-          detailsContainer.innerHTML = `
-            <p class="error-message">Failed to load job details. Please try again later.</p>
-          `;
-          return;
-        }
-        
-        const details = message.jobDetails;
+
+    if (response && response.jobDetails) {
+      const details = response.jobDetails;
+      // (The rest of the DOM update logic using 'details' remains the same)
         const clientStats = details.buyer?.info?.stats || {};
         const clientActivity = details.opening?.job?.clientActivity || {};
         const questions = details.opening?.questions || [];
@@ -466,10 +459,14 @@ async function fetchJobDetails(jobCiphertext, detailsContainer) {
           ${bidStatsHTML}
           ${questionsHTML}
         `;
-      }
-    });
+    } else {
+      console.error("Popup: Failed to get job details from background or error in response.", response?.error);
+      detailsContainer.innerHTML = `
+        <p class="error-message">Failed to load job details: ${response?.error || 'Unknown error'}. Please try again later.</p>
+      `;
+    }
   } catch (error) {
-    console.error("Popup: Error fetching job details:", error);
+    console.error("Popup: Error sending message to background or processing response for job details:", error);
     detailsContainer.innerHTML = `
       <p class="error-message">Error: ${error.message}</p>
     `;
