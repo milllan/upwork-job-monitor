@@ -14,6 +14,7 @@ const STORAGE_KEYS = {
   CURRENT_USER_QUERY: 'currentUserQuery',
   RECENT_FOUND_JOBS: 'recentFoundJobs',
   COLLAPSED_JOB_IDS: 'collapsedJobIds', // Used in popup
+  LAST_KNOWN_GOOD_TOKEN: 'lastKnownGoodToken',
 };
 
 // Define limits internally for self-containment of storage logic
@@ -146,6 +147,16 @@ async function setCollapsedJobIds(collapsedIdsArray) {
     await setStorage({ [STORAGE_KEYS.COLLAPSED_JOB_IDS]: collapsedIdsArray });
 }
 
+async function getLastKnownGoodToken() {
+  const result = await getStorage(STORAGE_KEYS.LAST_KNOWN_GOOD_TOKEN);
+  return result[STORAGE_KEYS.LAST_KNOWN_GOOD_TOKEN] || null;
+}
+
+async function setLastKnownGoodToken(token) {
+  // Store null to clear it if the token is explicitly set to null
+  await setStorage({ [STORAGE_KEYS.LAST_KNOWN_GOOD_TOKEN]: token });
+}
+
 /**
  * Initializes storage with default values on extension install or update.
  * @param {string} defaultUserQuery The default query to set initially.
@@ -159,7 +170,8 @@ async function initializeStorage(defaultUserQuery) {
         [STORAGE_KEYS.DELETED_JOB_IDS]: [],
         [STORAGE_KEYS.RECENT_FOUND_JOBS]: [],
         [STORAGE_KEYS.COLLAPSED_JOB_IDS]: [],
-        [STORAGE_KEYS.CURRENT_USER_QUERY]: defaultUserQuery // Set initial default query
+        [STORAGE_KEYS.CURRENT_USER_QUERY]: defaultUserQuery, // Set initial default query
+        [STORAGE_KEYS.LAST_KNOWN_GOOD_TOKEN]: null
      });
 }
 
@@ -182,6 +194,8 @@ const StorageManager = {
   setRecentFoundJobs,
   getCollapsedJobIds,
   setCollapsedJobIds,
+  getLastKnownGoodToken,
+  setLastKnownGoodToken,
   initializeStorage,
   STORAGE_KEYS // Expose keys for direct access if needed (e.g., in popup load)
 };

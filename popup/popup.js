@@ -405,7 +405,8 @@ async function fetchJobDetails(jobCiphertext, detailsContainer) {
           let lastActivity = 'N/A';
           if (clientActivity.lastBuyerActivity) {
             const lastActivityDate = new Date(clientActivity.lastBuyerActivity);
-            lastActivity = `${lastActivityDate.toLocaleDateString()} ${lastActivityDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+            const fullTimestamp = `${lastActivityDate.toLocaleDateString()} ${lastActivityDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+            lastActivity = `<span title="${fullTimestamp}">${timeAgo(lastActivityDate)}</span>`; // Use timeAgo and add title attribute
           }
           
           activityHTML = `
