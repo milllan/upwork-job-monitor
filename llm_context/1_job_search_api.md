@@ -1,5 +1,7 @@
 # LLM Context: Upwork Job Search GraphQL API
 
+**Core API Reference:** A stable description of the generic Upwork GraphQL API endpoint. This part changes rarely.
+
 This document explains the structure and key fields of the `job_search_reference.json` file. This API call is used for the **discovery phase** of finding jobs on Upwork. It returns a paginated list of jobs based on a search query and filters.
 
 ## Request Analysis

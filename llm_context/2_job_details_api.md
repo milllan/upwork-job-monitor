@@ -1,4 +1,6 @@
-# LLM Context: Upwork Authenticated Job Details GraphQL API
+# LLM Context: Upwork Authenticated Job Details GraphQL API 
+
+**Core API Reference:** A stable description of the generic `jobAuthDetails` GraphQL endpoint. This part changes rarely.
 
 This document explains the structure and key fields of the `job_details_reference.json` file. This API call is used for the **vetting and application phase**. It provides deep, authenticated information about a single job and the client who posted it. It requires the `ciphertext` of a job (retrieved from the search query) as input.
 
