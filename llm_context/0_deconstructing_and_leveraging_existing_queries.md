@@ -1,69 +1,239 @@
-# LM Context: Project-Specific Implementation
+# Deconstructing and Leveraging Upwork's GraphQL Queries
 
-Let's dig deeper into the two powerful queries we know of.
+This document provides a comprehensive analysis of Upwork's GraphQL API endpoints for job discovery and detailed analysis. It serves as both a technical reference and implementation guide for the Upwork Job Monitor extension.
 
-## 1. userJobSearch
+## Overview
 
-This is our entry point for finding jobs. We can modify the variables to get different results.
+The Upwork Job Monitor leverages two primary GraphQL endpoints in a chained approach:
+1. **Job Discovery**: `userJobSearch` - Finds jobs matching search criteria
+2. **Deep Analysis**: `gql-query-get-auth-job-details` - Retrieves comprehensive job and client data
 
-- **userQuery**: This is incredibly powerful. We can use boolean operators (NOT, OR) to construct very complex searches.
+## 1. Job Discovery API: `userJobSearch`
 
-- **paging**: To get a full list, we can paginate by increasing the offset in increments of count (e.g., offset: 0, count: 10, then offset: 10, count: 10, etc.).
+**Endpoint**: `https://www.upwork.com/api/graphql/v1?alias=userJobSearch`
 
-- **contractorTier**: We can filter by EntryLevel, IntermediateLevel, and ExpertLevel.
+This is the primary entry point for job discovery, used in the extension's main monitoring loop (`runJobCheck` function).
 
-- **sort**: We are currently using recency. Other likely values are Relevance (relevance+desc), Client Spend (client_total_charge+desc), or Client Rating (client_rating+desc). We can discover more by changing the sort order on the website and observing the new GraphQL call.
+### Key Request Variables
 
-### Fields to Extract for a "Chained" Request (Important!):
+#### `userQuery` (String, max 500 characters)
+- **Purpose**: Server-side filtering using boolean operators
+- **Operators**: `NOT`, `OR`, `AND` (implicit)
+- **Example**: `'NOT "react" NOT "next.js" "performance" OR "pagespeed" OR "web vitals"'`
+- **Limitation**: 500-character GraphQL limit (why client-side filtering is also needed)
+- **Current Implementation**: Defined in `config.DEFAULT_USER_QUERY`
 
-- **results.jobTile.job.ciphertext**: This is the key we need for our second query.
+#### `paging` (Object)
+- **Structure**: `{ offset: number, count: number }`
+- **Usage**: Paginate through results (offset: 0, count: 16, then offset: 16, count: 16, etc.)
+- **Current Implementation**: `count: 16` (defined in `config.API_FETCH_COUNT`)
 
-- **results.upworkHistoryData.client**: This gives us basic client info.
+#### `contractorTier` (Array)
+- **Options**: `["EntryLevel", "IntermediateLevel", "ExpertLevel"]`
+- **Current Implementation**: `["IntermediateLevel", "ExpertLevel"]` (in `config.DEFAULT_CONTRACTOR_TIERS_GQL`)
 
-## 2. gql-query-get-auth-job-details
+#### `sort` (String)
+- **Current**: `"recency"` (most recent jobs first)
+- **Alternatives**:
+  - `"relevance+desc"` - Most relevant jobs
+  - `"client_total_charge+desc"` - Highest spending clients
+  - `"client_rating+desc"` - Highest rated clients
+- **Discovery Method**: Change sort on website and inspect network requests
 
-This is our deep-dive query. It uses GraphQL Fragments (the fragment ... on ... parts) to keep the main query clean.
+### Critical Response Fields for Chaining
 
-- **Key Variable**: id. This must be the ciphertext of a job, like ~021934.....
+#### `results.jobTile.job.ciphertext`
+- **Purpose**: Unique job identifier required for detailed job query
+- **Format**: Encrypted string (e.g., `~021934a1b2c3d4e5f6...`)
+- **Usage**: Primary key for `gql-query-get-auth-job-details` API call
 
-- **Authentication**: As noted, isLoggedIn: true and valid user cookies are required to get the richest data. Without authentication, many fields will return null or be omitted.
+#### `results.upworkHistoryData.client`
+- **Purpose**: Basic client information for initial filtering
+- **Fields**: `paymentVerificationStatus`, `country`, `totalSpent.amount`, `totalFeedback`
+- **Usage**: Client-side filtering before making detailed API calls
 
-### Rich Data Points We Are Getting:
+## 2. Detailed Job Analysis API: `gql-query-get-auth-job-details`
 
-- **buyer.info.stats**: The holy grail of client stats (totalAssignments, hoursCount, feedbackCount, score, totalCharges).
+**Endpoint**: `https://www.upwork.com/api/graphql/v1?alias=gql-query-get-auth-job-details`
 
-- **buyer.workHistory**: A list of past jobs, including freelancer feedback to the client (feedbackToClient.comment), which is often more candid than the client's feedback. We can even see if a job had a bad outcome (e.g., feedback.score: 2.55).
+This authenticated endpoint provides comprehensive job and client intelligence. Currently used for on-demand analysis but planned for auto-vetting features (GitHub Issues #1 and #2).
 
-- **clientActivity**: The number of applicants, interviews, and hires for the specific job. This is crucial for deciding whether to apply. null values often mean the numbers are low (e.g., < 5 proposals).
+### Authentication Requirements
+- **Required**: Valid user session cookies
+- **Required**: `isLoggedIn: true` in request
+- **Risk**: All activity tied to specific user account
+- **Fallback**: Many fields return `null` without proper authentication
 
-- **questions**: The list of additional questions the client is asking in the application.
+### Key Request Variables
 
-## A Potential Workflow for Data Collection
+#### `id` (String, required)
+- **Source**: `ciphertext` from `userJobSearch` results
+- **Format**: Encrypted job identifier (e.g., `~021934a1b2c3d4e5f6...`)
+- **Validation**: Must be exact match from job search results
 
-Here is the logical chain of requests for our implementation:
+### High-Value Response Data
 
-1. **Search for Jobs**:
-   - Use the userJobSearch query with the desired keywords and filters.
-   - Loop through the results, collecting the job.ciphertext for each job that interests us.
+#### `buyer.info.stats` - Client Performance Metrics
+- **`totalAssignments`**: Number of jobs posted
+- **`hoursCount`**: Total hours worked with freelancers
+- **`feedbackCount`**: Number of reviews given/received
+- **`score`**: Average client rating (1-5 scale)
+- **`totalCharges.amount`**: Total money spent on platform
+- **Usage**: Primary client vetting criteria
 
-2. **Get Job & Client Details**:
-   - For each job.ciphertext collected, make a request using the gql-query-get-auth-job-details query.
-   - This provides detailed information about the job (e.g., screening questions) and the client's entire history (total spend, average rating, reviews from other freelancers).
+#### `buyer.workHistory` - Historical Job Data
+- **`feedbackToClient.comment`**: Freelancer reviews of client (often more candid)
+- **`feedback.score`**: Job outcome ratings (watch for < 4.0 scores)
+- **`job.title`**: Previous job titles (pattern analysis)
+- **Usage**: Red flag detection for problematic clients
 
-3. **(Optional/Unknown) Get More Specific Client Details**:
-   - If we discover a dedicated getClientProfile alias, we could use a client ID found in one of the previous steps to get even more focused information about the client, independent of a specific job posting. I don't know if this exists.
+#### `clientActivity` - Job Competition Metrics
+- **`applicantsCount`**: Number of proposals submitted
+- **`interviewsCount`**: Number of interviews conducted
+- **`hiresCount`**: Number of freelancers hired
+- **`null` values**: Often indicates low numbers (< 5 proposals)
+- **Usage**: Application strategy optimization (crucial for deciding whether to apply). 
 
-## Important Ethical and Legal Considerations
+#### `questions` - Screening Requirements
+- **Structure**: Array of additional application questions
+- **Usage**: Preparation for application process
+- **Analysis**: Complexity indicator for client requirements
 
-- **Terms of Service**:
-  - We are interacting with an API that is not officially documented or intended for public use. This is very likely against Upwork's Terms of Service regarding scraping or automated access. We must proceed with caution, as the account could be suspended or banned if our activity is detected and deemed malicious.
+## Implementation Workflow
 
-- **Rate Limiting**: We must not make requests too quickly. A reasonable delay (e.g., a few seconds) between requests is wise to avoid IP-blocking.
+### Current Extension Architecture
 
-- **Respectful Use**:
-  - We are using resources on their servers. This tool is for personal analysis, not for building a large-scale, public-facing application.
+The Upwork Job Monitor implements a two-phase approach:
 
-- **Authentication**:
-  - The fact that the most valuable query requires authentication makes this riskier. All activity is directly tied to a specific account.
+#### Phase 1: Continuous Monitoring (Automated)
+**Function**: `runJobCheck()` in `background/service-worker.js`
+**Frequency**: Every 3 minutes (configurable via `config.FETCH_INTERVAL_MINUTES`)
+**Process**:
+1. Execute `userJobSearch` with current user query
+2. Apply client-side filtering (`TITLE_EXCLUSION_STRINGS`, `SKILL_LOW_PRIORITY_TERMS`)
+3. Compare against seen job IDs to identify new opportunities
+4. Send notifications for new matching jobs
+5. Update popup display with latest results
 
-This is a powerful method for gaining insights that aren't easily visible on the front end. Happy (and careful) exploring.
+#### Phase 2: Detailed Analysis (On-Demand)
+**Trigger**: User interaction or future auto-vetting features
+**Process**:
+1. Collect `ciphertext` values from Phase 1 results
+2. Execute `gql-query-get-auth-job-details` for selected jobs
+3. Analyze client metrics and job competition data
+4. Generate application recommendations
+
+### Recommended Data Collection Workflow
+
+#### 1. Job Discovery and Initial Filtering
+```javascript
+// Current implementation in UpworkAPI.fetchUpworkJobsDirectly()
+const searchResults = await userJobSearch({
+  userQuery: config.DEFAULT_USER_QUERY,
+  paging: { offset: 0, count: config.API_FETCH_COUNT },
+  contractorTier: config.DEFAULT_CONTRACTOR_TIERS_GQL,
+  sort: config.DEFAULT_SORT_CRITERIA
+});
+
+// Extract ciphertext for promising jobs
+const jobCiphertexts = searchResults.results
+  .filter(job => passesClientSideFilters(job))
+  .map(job => job.jobTile.job.ciphertext);
+```
+
+#### 2. Detailed Job and Client Analysis
+```javascript
+// Future implementation for auto-vetting
+const detailedAnalysis = await Promise.all(
+  jobCiphertexts.map(ciphertext =>
+    getAuthJobDetails({ id: ciphertext })
+  )
+);
+
+// Analyze results for application prioritization
+const prioritizedJobs = detailedAnalysis
+  .filter(job => job.buyer.info.stats.score > 4.0)
+  .filter(job => job.clientActivity.applicantsCount < 10)
+  .sort((a, b) => b.buyer.info.stats.totalCharges.amount - a.buyer.info.stats.totalCharges.amount);
+```
+
+#### 3. Future Enhancement: Client Profile Deep-Dive
+**Status**: Exploratory (not yet implemented)
+**Potential**: Dedicated `getClientProfile` endpoint for client-focused analysis
+**Use Case**: Independent client research beyond specific job postings
+
+## Technical Implementation Details
+
+### Rate Limiting and Request Management
+**Current Strategy**: Token rotation with fallback mechanisms
+**Implementation**: `UpworkAPI.fetchJobsWithTokenRotation()`
+**Safeguards**:
+- 3-minute intervals between automated checks
+- Token validation before requests
+- Graceful degradation on API failures
+- Error logging for debugging
+
+### Authentication Token Management
+**Source**: Browser cookies from authenticated Upwork session
+**Method**: `getAllPotentialApiTokens()` extracts OAuth tokens
+**Rotation**: Multiple tokens attempted on failure
+**Security**: Tokens never stored persistently
+
+### Error Handling and Resilience
+**GraphQL Errors**: Logged and handled gracefully
+**Network Failures**: Automatic retry with different tokens
+**Authentication Issues**: Fallback to basic data extraction
+**Rate Limiting**: Exponential backoff (future enhancement)
+
+## Risk Assessment and Mitigation
+
+### Legal and Ethical Considerations
+
+#### Terms of Service Compliance
+- **Risk Level**: High - Using undocumented internal APIs
+- **Mitigation**: Personal use only, respectful request patterns
+- **Monitoring**: Account suspension risk if detected as malicious
+
+#### Rate Limiting and Server Resources
+- **Current Protection**: 3-minute intervals, limited batch sizes
+- **Recommendation**: Consider implementing exponential backoff
+- **Best Practice**: Monitor for 429 (Too Many Requests) responses
+
+#### Authentication and Account Security
+- **Risk**: All activity tied to specific user account
+- **Mitigation**: Use extension only with personal accounts
+- **Warning**: Avoid commercial or client accounts
+
+#### Data Privacy and Storage
+- **Current**: Minimal local storage, no external transmission
+- **Compliance**: GDPR-friendly (local processing only)
+- **Recommendation**: Clear data retention policies
+
+### Operational Guidelines
+
+1. **Personal Use Only**: Never deploy for commercial scraping
+2. **Respectful Patterns**: Maintain reasonable request intervals
+3. **Monitor Health**: Watch for API changes or blocking
+4. **Account Safety**: Use dedicated development accounts when possible
+5. **Graceful Degradation**: Handle API failures without breaking functionality
+
+## Future Development Opportunities
+
+### Planned Enhancements (GitHub Issues)
+- **Issue #1**: Auto-vetting based on client metrics
+- **Issue #2**: Advanced filtering and scoring algorithms
+- **Issue #3**: Client reputation tracking over time
+
+### API Discovery Opportunities
+- **Client Profile Endpoint**: Dedicated client analysis API
+- **Advanced Search Filters**: Additional GraphQL variables
+- **Real-time Updates**: WebSocket or polling optimizations
+
+### Performance Optimizations
+- **Caching Strategy**: Store client data to reduce API calls
+- **Batch Processing**: Group multiple job detail requests
+- **Predictive Filtering**: ML-based job relevance scoring
+
+---
+
+**Note**: This implementation provides powerful insights into Upwork's job market while maintaining ethical boundaries. Always prioritize account safety and respectful API usage.
