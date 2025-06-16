@@ -251,6 +251,72 @@
       cursor: help;
       font-size: 1.1em;
     }
+
+    .view-job-details-btn {
+      margin-top: 8px;
+      padding: 4px 8px;
+      background-color: var(--up-blue-10);
+      border: 1px solid var(--up-blue-20);
+      border-radius: 4px;
+      color: var(--up-blue);
+      cursor: pointer;
+      font-size: 0.85em;
+      transition: background-color 0.2s;
+    }
+    
+    .view-job-details-btn:hover {
+      background-color: var(--up-blue-20);
+    }
+    
+    .job-extended-details {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: var(--up-gray-95);
+      border-radius: 4px;
+      border-left: 3px solid var(--up-blue-30);
+      font-size: 0.9em;
+    }
+    
+    .loading-indicator {
+      color: var(--up-gray-50);
+      font-style: italic;
+    }
+    
+    .client-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    
+    .client-stat {
+      background-color: var(--up-gray-90);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.85em;
+    }
+    
+    .client-stat.positive {
+      background-color: var(--up-green-10);
+      color: var(--up-green);
+    }
+    
+    .client-stat.negative {
+      background-color: var(--up-red-10);
+      color: var(--up-red);
+    }
+    
+    .bid-stats {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--up-gray-80);
+    }
+    
+    .questions-section {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--up-gray-80);
+    }
   </style>
 </head>
 <body>

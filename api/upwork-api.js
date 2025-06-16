@@ -173,9 +173,155 @@ async function fetchJobsWithTokenRotation(userQuery) {
   return { error: true, message: "All candidate tokens failed." };
 }
 
+/**
+ * Fetches detailed job and client information for a specific job.
+ * @param {string} bearerToken The OAuth2 bearer token.
+ * @param {string} jobCiphertext The job's ciphertext ID from search results.
+ * @returns {Promise<Object|Object>} A promise that resolves with the job details object on success,
+ *                                   or an error object {error: true, ...} on failure.
+ */
+async function fetchJobDetails(bearerToken, jobCiphertext) {
+  const endpoint = `${config.UPWORK_GRAPHQL_ENDPOINT_BASE}?alias=gql-query-get-auth-job-details`;
+  const graphqlQuery = `
+  query JobAuthDetailsQuery($id: ID!) {
+    jobAuthDetails(id: $id) {
+      opening {
+        job {
+          description
+          clientActivity {
+            lastBuyerActivity
+            totalApplicants
+            totalHired
+            totalInvitedToInterview
+            numberOfPositionsToHire
+          }
+        }
+        questions {
+          question # Changed from 'text'
+          position
+        }
+      }
+      buyer {
+        info {
+          stats {
+            totalAssignments
+            hoursCount
+            feedbackCount
+            score
+            totalCharges {
+              amount
+            }
+          }
+        }
+        workHistory {
+          jobInfo {
+            title
+          }
+          feedback {
+            score
+            comment
+          }
+          feedbackToClient {
+            comment
+          }
+        }
+      }
+      applicantsBidsStats {
+        avgRateBid {
+          amount
+        }
+        minRateBid {
+          amount
+        }
+        maxRateBid {
+          amount
+        }
+      }
+    }
+  }`;
+  
+  const variables = {
+    id: jobCiphertext,
+    // isLoggedIn: true, // Removed as it's unused in the current query structure
+    // isFreelancerOrAgency: true // Removed as it's unused
+  };
+  
+  const graphqlPayload = { query: graphqlQuery, variables: variables };
+  const requestHeadersForFetch = {
+    "Authorization": `Bearer ${bearerToken}`,
+    "Content-Type": "application/json",
+    "Accept": "*/*",
+  };
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: requestHeadersForFetch,
+      body: JSON.stringify(graphqlPayload),
+    });
+    
+    if (!response.ok) {
+      const responseBodyText = await response.text();
+      console.warn(`API: Job details request failed with token ${bearerToken.substring(0,10)}... Status: ${response.status}`, responseBodyText.substring(0, 300));
+      return { error: true, status: response.status, body: responseBodyText.substring(0, 300) };
+    }
+    
+    const data = await response.json();
+    if (data.errors) {
+      console.warn(`API: GraphQL API errors with token ${bearerToken.substring(0,10)}...:`, data.errors);
+      return { error: true, graphqlErrors: data.errors };
+    }
+    
+    return data.data.jobAuthDetails;
+  } catch (error) { 
+    console.error(`API: Network error with token ${bearerToken.substring(0,10)}...:`, error);
+    return { error: true, networkError: error.message };
+  }
+}
+
+/**
+ * Fetches detailed job information by trying multiple API tokens until one succeeds.
+ * @param {string} jobCiphertext The job's ciphertext ID from search results.
+ * @returns {Promise<{jobDetails: Object, token: string}|{error: true, message: string, details?: any}>}
+ *          Resolves with an object containing the job details and the successful token,
+ *          or an error object if all tokens fail.
+ */
+async function fetchJobDetailsWithTokenRotation(jobCiphertext) {
+  const candidateTokens = await getAllPotentialApiTokens();
+  if (!candidateTokens || candidateTokens.length === 0) {
+    console.error("API: Cannot fetch job details, no candidate tokens found.");
+    return { error: true, message: "No candidate API tokens found." };
+  }
+
+  for (const token of candidateTokens) {
+    console.log(`API: Trying token ${token.substring(0, 15)}... for job details: "${jobCiphertext}"`);
+    const result = await fetchJobDetails(token, jobCiphertext);
+
+    if (result && !result.error) {
+      console.log(`API: Successfully fetched job details with token ${token.substring(0,15)}...`);
+      return { jobDetails: result, token: token }; // Success
+    } else {
+      // Log specific error from fetchJobDetails if an error object was returned
+      if (result && result.graphqlErrors) {
+        console.warn(`API: GraphQL error with token ${token.substring(0,15)}... - ${JSON.stringify(result.graphqlErrors)}`);
+      } else if (result && result.status) {
+        console.warn(`API: HTTP error ${result.status} with token ${token.substring(0,15)}...`);
+      } else if (result && result.networkError) {
+         console.warn(`API: Network error with token ${token.substring(0,15)}...`);
+      }
+      console.log(`API: Token ${token.substring(0,15)}... failed. Trying next.`);
+    }
+  }
+
+  console.error("API: All candidate tokens failed to fetch job details.");
+  return { error: true, message: "All candidate tokens failed to fetch job details." };
+}
+
 // Expose functions globally for MV2 background script
 const UpworkAPI = {
     getAllPotentialApiTokens,
     fetchUpworkJobsDirectly,
-    fetchJobsWithTokenRotation // Add the new function
+    fetchJobsWithTokenRotation,
+    fetchJobDetails,
+    fetchJobDetailsWithTokenRotation
 };

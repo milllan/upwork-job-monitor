@@ -143,6 +143,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <p>${clientInfo}</p>
           ${skillsDisplay ? `<p class="skills">${skillsDisplay}</p>` : ''}
           <p><small>Posted: ${job.postedOn ? new Date(job.postedOn).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ', ' + new Date(job.postedOn).toLocaleDateString() : 'N/A'} <b>(${timeAgo(job.postedOn)})</b></small></p>
+          <button class="view-job-details-btn" data-job-ciphertext="${job.ciphertext || job.id}">View Full Details</button>
+          <div class="job-extended-details" data-job-ciphertext="${job.ciphertext || job.id}" style="display: none;">
+            <div class="loading-indicator">Loading details...</div>
+          </div>
         </div>
       </div>
     `;
@@ -282,6 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
   recentJobsListDiv.addEventListener('click', (event) => {
     const toggleButton = event.target.closest('.toggle-details');
     const deleteButton = event.target.closest('.delete-job-button');
+    const detailsButton = event.target.closest('.view-job-details-btn');
     const jobItemElement = event.target.closest('.job-item');
 
     if (!jobItemElement) return;
@@ -316,6 +321,27 @@ document.addEventListener('DOMContentLoaded', () => {
       StorageManager.getRecentFoundJobs().then(currentRecentJobs => {
         StorageManager.setRecentFoundJobs(currentRecentJobs.filter(item => item.id !== jobId));
       });
+    } else if (detailsButton) {
+      event.stopPropagation();
+      const jobCiphertext = detailsButton.dataset.jobCiphertext;
+      if (!jobCiphertext) return;
+      
+      const detailsContainer = jobItemElement.querySelector(`.job-extended-details[data-job-ciphertext="${jobCiphertext}"]`);
+      if (!detailsContainer) return;
+      
+      // Toggle visibility
+      if (detailsContainer.style.display === 'none') {
+        detailsContainer.style.display = 'block';
+        detailsButton.textContent = 'Hide Details';
+        
+        // Only fetch if we haven't already
+        if (detailsContainer.querySelector('.loading-indicator')) {
+          fetchJobDetails(jobCiphertext, detailsContainer);
+        }
+      } else {
+        detailsContainer.style.display = 'none';
+        detailsButton.textContent = 'View Full Details';
+      }
     }
   });
 
@@ -324,3 +350,128 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadStoredData(); // Initial load
 });
+
+// Function to fetch and display job details
+async function fetchJobDetails(jobCiphertext, detailsContainer) {
+  try {
+    // Request job details from background script
+    browser.runtime.sendMessage({
+      action: "getJobDetails",
+      jobCiphertext: jobCiphertext
+    });
+    
+    // Set up listener for the response
+    browser.runtime.onMessage.addListener(function handleDetailsResponse(message) {
+      if (message.action === "jobDetailsResult") {
+        browser.runtime.onMessage.removeListener(handleDetailsResponse);
+        
+        if (!message.jobDetails) {
+          detailsContainer.innerHTML = `
+            <p class="error-message">Failed to load job details. Please try again later.</p>
+          `;
+          return;
+        }
+        
+        const details = message.jobDetails;
+        const clientStats = details.buyer?.info?.stats || {};
+        const clientActivity = details.opening?.job?.clientActivity || {};
+        const questions = details.opening?.questions || [];
+        const bidStats = details.applicantsBidsStats || {};
+        
+        // Format client stats
+        let clientStatsHTML = '';
+        if (clientStats) {
+          const totalSpent = clientStats.totalCharges?.amount || 0;
+          const rating = clientStats.score || 0;
+          const totalJobs = clientStats.totalAssignments || 0;
+          
+          clientStatsHTML = `
+            <div class="client-stats">
+              ${totalSpent > 10000 ? 
+                `<span class="client-stat positive">Total Spent: $${Math.round(totalSpent).toLocaleString()}</span>` : 
+                `<span class="client-stat">Total Spent: $${Math.round(totalSpent).toLocaleString()}</span>`}
+              
+              ${rating > 4.8 ? 
+                `<span class="client-stat positive">Rating: ${rating.toFixed(1)}/5.0</span>` : 
+                (rating < 4.0 ? `<span class="client-stat negative">Rating: ${rating.toFixed(1)}/5.0</span>` : 
+                `<span class="client-stat">Rating: ${rating.toFixed(1)}/5.0</span>`)}
+              
+              <span class="client-stat">Jobs Posted: ${totalJobs}</span>
+            </div>
+          `;
+        }
+        
+        // Format activity stats
+        let activityHTML = '';
+        if (clientActivity) {
+          const applicants = clientActivity.totalApplicants || 0;
+          const invited = clientActivity.totalInvitedToInterview || 0;
+          const hired = clientActivity.totalHired || 0;
+          const positions = clientActivity.numberOfPositionsToHire || 1;
+          
+          let lastActivity = 'N/A';
+          if (clientActivity.lastBuyerActivity) {
+            const lastActivityDate = new Date(clientActivity.lastBuyerActivity);
+            lastActivity = `${lastActivityDate.toLocaleDateString()} ${lastActivityDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+          }
+          
+          activityHTML = `
+            <p><strong>Job Activity:</strong></p>
+            <div class="client-stats">
+              <span class="client-stat">Applicants: ${applicants}</span>
+              <span class="client-stat">Interviews: ${invited}</span>
+              <span class="client-stat">Hired: ${hired}/${positions}</span>
+              <span class="client-stat">Last Active: ${lastActivity}</span>
+            </div>
+          `;
+        }
+        
+        // Format bid stats
+        let bidStatsHTML = '';
+        if (bidStats && (bidStats.avgRateBid?.amount || bidStats.minRateBid?.amount || bidStats.maxRateBid?.amount)) {
+          const avgBid = bidStats.avgRateBid?.amount || 0;
+          const minBid = bidStats.minRateBid?.amount || 0;
+          const maxBid = bidStats.maxRateBid?.amount || 0;
+          
+          bidStatsHTML = `
+            <div class="bid-stats">
+              <p><strong>Bid Statistics:</strong></p>
+              <div class="client-stats">
+                <span class="client-stat">Average Bid: $${avgBid.toFixed(2)}</span>
+                <span class="client-stat">Min Bid: $${minBid.toFixed(2)}</span>
+                <span class="client-stat">Max Bid: $${maxBid.toFixed(2)}</span>
+              </div>
+            </div>
+          `;
+        }
+        
+        // Format questions
+        let questionsHTML = '';
+        if (questions && questions.length > 0) {
+          questionsHTML = `
+            <div class="questions-section">
+              <p><strong>Screening Questions:</strong></p>
+              <ol>
+                ${questions.map(q => `<li>${q.question}</li>`).join('')}
+              </ol>
+            </div>
+          `;
+        }
+        
+        // Combine all sections
+        detailsContainer.innerHTML = `
+          <p><strong>Client Information:</strong></p>
+          ${clientStatsHTML}
+          ${activityHTML}
+          ${bidStatsHTML}
+          ${questionsHTML}
+        `;
+      }
+    });
+  } catch (error) {
+    console.error("Popup: Error fetching job details:", error);
+    detailsContainer.innerHTML = `
+      <p class="error-message">Error: ${error.message}</p>
+    `;
+  }
+}

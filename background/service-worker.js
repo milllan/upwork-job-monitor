@@ -146,9 +146,15 @@ async function runJobCheck(triggeredByUserQuery) {
   await StorageManager.setCollapsedJobIds(Array.from(currentCollapsedJobIds)); // Save updated collapsed IDs
 
   try {
-    // browser.runtime.sendMessage returns a promise with the polyfill
-    await browser.runtime.sendMessage({ action: "updatePopupDisplay" });
-  } catch (e) { console.warn("MV2: Error sending updatePopupDisplay message post-check:", e); }
+    // Check if the popup is open before trying to send a message.
+    // browser.extension.getViews({ type: "popup" }) is synchronous in Firefox MV2.
+    const popupViews = browser.extension.getViews({ type: "popup" });
+    if (popupViews && popupViews.length > 0) {
+      await browser.runtime.sendMessage({ action: "updatePopupDisplay" });
+    } else {
+      console.log("MV2: Popup not open, skipping updatePopupDisplay message after job check.");
+    }
+  } catch (e) { console.warn("MV2: Error during conditional send of updatePopupDisplay message post-check:", e); }
 }
 
 
@@ -191,12 +197,14 @@ async function sendNotification(job) { // Made async
     audio.play().catch(e => console.warn("MV2: Error playing notification sound:", e));
   } catch (e) { console.error("MV2: Error creating notification:", e); }
 }
+
 browser.notifications.onClicked.addListener(async (notificationId) => { // Made async
   try {
     await browser.tabs.create({ url: notificationId });
     await browser.notifications.clear(notificationId);
   } catch (e) { console.error("MV2: Error handling notification click:", e); }
 });
+
 
 // Updated onMessage listener to use async/await for responses
 browser.runtime.onMessage.addListener(async (request, sender) => {
@@ -214,4 +222,59 @@ browser.runtime.onMessage.addListener(async (request, sender) => {
   // For other actions, or if no response is needed, return undefined (or nothing),
   // which the polyfill handles as no response or resolves sendMessage to undefined.
 });
+
+// Add a message listener to handle job detail requests from the popup
+browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "getJobDetails" && message.jobCiphertext) {
+    getJobDetails(message.jobCiphertext);
+    return true; // Indicates async response
+  }
+});
+
 setupAlarms();
+
+// Function to get detailed job information
+async function getJobDetails(jobCiphertext) {
+  console.log("MV2: Fetching detailed job information for:", jobCiphertext);
+  
+  const apiResult = await UpworkAPI.fetchJobDetailsWithTokenRotation(jobCiphertext);
+
+  if (apiResult && !apiResult.error) {
+    const jobDetails = apiResult.jobDetails;
+    console.log("MV2: Successfully fetched job details");
+
+    // Check if popup is open before sending
+    const popupViews = browser.extension.getViews({ type: "popup" });
+    if (popupViews && popupViews.length > 0) {
+      try {
+        await browser.runtime.sendMessage({
+          action: "jobDetailsResult",
+          jobDetails: jobDetails
+        });
+      } catch (e) {
+        console.warn("MV2: Error sending successful jobDetailsResult to popup:", e.message);
+      }
+    } else {
+      console.log("MV2: Popup not open, skipping sending successful jobDetailsResult.");
+    }
+    return jobDetails;
+  } else {
+    console.error("MV2: Failed to fetch job details.", apiResult?.message);
+
+    const popupViews = browser.extension.getViews({ type: "popup" });
+    if (popupViews && popupViews.length > 0) {
+      try {
+        await browser.runtime.sendMessage({
+          action: "jobDetailsResult",
+          jobDetails: null,
+          error: apiResult?.message || "Failed to fetch job details"
+        });
+      } catch (e) {
+        console.warn("MV2: Error sending error jobDetailsResult to popup:", e.message);
+      }
+    } else {
+      console.log("MV2: Popup not open, skipping sending error jobDetailsResult.");
+    }
+    return null;
+  }
+}
