@@ -36,6 +36,7 @@ const config = {
     "Bilingual ENG/SPA",
     "Logo Designer",
     "Graphic Designer",
+    "Full Website Redisign",
     // Add more strings to exclude as needed
   ].map(s => s.toLowerCase()),
 

@@ -1,0 +1,120 @@
+{
+  "request": {
+    "endpoint": "https://www.upwork.com/api/graphql/v1?alias=gql-query-get-auth-job-details",
+    "payload": {
+      "query": "fragment JobPubOpeningInfoFragment on Job {ciphertext id type access title hideBudget createdOn notSureProjectDuration notSureFreelancersToHire notSureExperienceLevel notSureLocationPreference premium} fragment JobPubOpeningSegmentationDataFragment on JobSegmentation {customValue label name sortOrder type value skill {description externalLink prettyName skill id}} fragment JobPubOpeningSandDataFragment on SandsData {occupation {freeText ontologyId prefLabel id uid: id} ontologySkills {groupId id freeText prefLabel groupPrefLabel relevance} additionalSkills {groupId id freeText prefLabel relevance}} fragment JobPubOpeningFragment on JobPubOpeningInfo {status postedOn publishTime sourcingTime startDate deliveryDate workload contractorTier description info {...JobPubOpeningInfoFragment} segmentationData {...JobPubOpeningSegmentationDataFragment} sandsData {...JobPubOpeningSandDataFragment} category {name urlSlug} categoryGroup {name urlSlug} budget {amount currencyCode} annotations {tags} engagementDuration {label weeks} extendedBudgetInfo {hourlyBudgetMin hourlyBudgetMax hourlyBudgetType} attachments @include(if: $isLoggedIn) {fileName length uri} clientActivity {lastBuyerActivity totalApplicants totalHired totalInvitedToInterview unansweredInvites invitationsSent numberOfPositionsToHire} deliverables deadline tools {name}} fragment JobQualificationsFragment on JobQualifications {countries earnings groupRecno languages localDescription localFlexibilityDescription localMarket minJobSuccessScore minOdeskHours onSiteType prefEnglishSkill regions risingTalent shouldHavePortfolio states tests timezones type locationCheckRequired group {groupId groupLogo groupName} location {city country countryTimezone offsetFromUtcMillis state worldRegion} locations {id type} minHoursWeek @skip(if: $isLoggedIn)} fragment JobAuthDetailsOpeningFragment on JobAuthOpeningInfo {job {...JobPubOpeningFragment} qualifications {...JobQualificationsFragment} questions {question position}} fragment JobPubBuyerInfoFragment on JobPubBuyerInfo {location {offsetFromUtcMillis countryTimezone city country} stats {totalAssignments activeAssignmentsCount hoursCount feedbackCount score totalJobsWithHires totalCharges {amount}} company {name @include(if: $isLoggedIn) companyId @include(if: $isLoggedIn) isEDCReplicated contractDate profile {industry size}} jobs {openCount postedCount @include(if: $isLoggedIn) openJobs {id uid: id isPtcPrivate ciphertext title type}} avgHourlyJobsRate @include(if: $isLoggedIn) {amount}} fragment JobAuthDetailsBuyerWorkHistoryFragment on BuyerWorkHistoryItem {isPtcJob status isEDCReplicated isPtcPrivate startDate endDate totalCharge totalHours jobInfo {title id uid: id access type ciphertext} contractorInfo {contractorName accessType ciphertext} rate {amount} feedback {feedbackSuppressed score comment} feedbackToClient {feedbackSuppressed score comment}} fragment JobAuthDetailsBuyerFragment on JobAuthBuyerInfo {enterprise isPaymentMethodVerified info {...JobPubBuyerInfoFragment} workHistory {...JobAuthDetailsBuyerWorkHistoryFragment}} fragment JobAuthDetailsCurrentUserInfoFragment on JobCurrentUserInfo {owner freelancerInfo {profileState applied devProfileCiphertext hired application {vjApplicationId} pendingInvite {inviteId} contract {contractId status} hourlyRate {amount} qualificationsMatches {matches {clientPreferred clientPreferredLabel freelancerValue freelancerValueLabel qualification qualified}}}} query JobAuthDetailsQuery($id: ID!, $isFreelancerOrAgency: Boolean!, $isLoggedIn: Boolean!) {jobAuthDetails(id: $id) {hiredApplicantNames opening {...JobAuthDetailsOpeningFragment} buyer {...JobAuthDetailsBuyerFragment} currentUserInfo {...JobAuthDetailsCurrentUserInfoFragment} similarJobs {id uid: id ciphertext title snippet} workLocation {onSiteCity onSiteCountry onSiteReason onSiteReasonFlexible onSiteState onSiteType} phoneVerificationStatus {status} applicantsBidsStats {avgRateBid {amount currencyCode} minRateBid {amount currencyCode} maxRateBid {amount currencyCode}} specializedProfileOccupationId @include(if: $isFreelancerOrAgency) applicationContext @include(if: $isFreelancerOrAgency) {freelancerAllowed clientAllowed}}}",
+      "variables": {
+        "id": "~021934618938655086735",
+        "isFreelancerOrAgency": true,
+        "isLoggedIn": true
+      }
+    }
+  },
+  "response": {
+    "data": {
+      "jobAuthDetails": {
+        "opening": {
+          "job": {
+            "description": "Project Overview\nWe are looking to build a directory profile page for every U S credit union...",
+            "clientActivity": {
+              "lastBuyerActivity": null,
+              "totalApplicants": null,
+              "totalHired": null,
+              "totalInvitedToInterview": null,
+              "unansweredInvites": null,
+              "invitationsSent": null,
+              "numberOfPositionsToHire": 1
+            }
+          },
+          "questions": []
+        },
+        "buyer": {
+          "isPaymentMethodVerified": true,
+          "info": {
+            "location": {
+              "city": "Rolling Hills Estates",
+              "country": "United States"
+            },
+            "stats": {
+              "totalAssignments": 209,
+              "activeAssignmentsCount": 30,
+              "hoursCount": 43524.67,
+              "feedbackCount": 138,
+              "score": 4.99,
+              "totalJobsWithHires": 197,
+              "totalCharges": {
+                "amount": 807509.95
+              }
+            }
+          },
+          "workHistory": [
+            {
+              "jobInfo": {
+                "title": "Fix Node App Deployment to Cloudflare"
+              },
+              "rate": null,
+              "feedback": {
+                "score": 5,
+                "comment": ""
+              },
+              "feedbackToClient": {
+                "score": 5,
+                "comment": "I truly enjoyed working on this project. The expectations and requirements were clearly communicated from the start..."
+              }
+            },
+            {
+              "jobInfo": {
+                "title": "Professional Voiceover Needed for Video Project"
+              },
+              "rate": null,
+              "feedback": {
+                "score": 5,
+                "comment": "Heather does fantastic voiceovers and was great to work with"
+              },
+              "feedbackToClient": {
+                "score": 5,
+                "comment": "Great experience working with Joe!"
+              }
+            },
+            {
+                "jobInfo": {
+                  "title": "C++ Developer to Create Windows Shell Extension Application"
+                },
+                "rate": null,
+                "feedback": {
+                  "score": 2.55,
+                  "comment": null
+                },
+                "feedbackToClient": null
+              }
+          ]
+        },
+        "currentUserInfo": {
+          "freelancerInfo": {
+            "qualificationsMatches": {
+              "matches": [
+                {
+                  "clientPreferredLabel": "At least 0%",
+                  "freelancerValueLabel": "95%",
+                  "qualification": "MinimumJobSuccessScore",
+                  "qualified": true
+                }
+              ]
+            }
+          }
+        },
+        "applicantsBidsStats": {
+          "avgRateBid": {
+            "amount": null
+          },
+          "minRateBid": {
+            "amount": null
+          },
+          "maxRateBid": {
+            "amount": null
+          }
+        }
+      }
+    }
+  }
+}
