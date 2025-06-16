@@ -1,4 +1,4 @@
-# LLM Context: Upwork Authenticated Job Details GraphQL API 
+# LM Context: Upwork Authenticated Job Details GraphQL API 
 
 **Core API Reference:** A stable description of the generic `jobAuthDetails` GraphQL endpoint. This part changes rarely.
 

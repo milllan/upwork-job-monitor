@@ -1,4 +1,4 @@
-# LLM Context: Upwork Authenticated Job Details GraphQL API (for Upwork Job Monitor)
+# LM Context: Upwork Authenticated Job Details GraphQL API (for Upwork Job Monitor). Project-Specific Implementation.
 
 This document explains the `job_details_reference.json` file. In the **Upwork Job Monitor** extension, this API call is not part of the main monitoring loop. It is intended to be called **on-demand** when a user wants to see more details about a specific job, or as part of future "auto-vetting" features. (See GitHub Issues #1 and #2).
 
@@ -31,7 +31,7 @@ This data is the foundation for the planned "Client Vetting Score" (GitHub Issue
 -   **`workHistory`**:
     -   **Future Usage:** **CRITICAL INTELLIGENCE** for the Vetting Score. The LLM should analyze this array to:
         -   **Find Green Flags:** Extract positive comments from `feedbackToClient.comment` to show the user what other freelancers love about this client.
-        -   **Find Red Flags:** Identify any contracts with low scores in `feedback.score` (client->freelancer) or `feedbackToClient.score` (freelancer->client). A low score from a freelancer is a particularly strong warning sign.
+        -   **Find Red Flags:** Identify any contracts with low scores in `feedback.score` (client->freelancer) or `feedbackToClient.score` (freelancer->client). A low score from a freelancer is a particularly strong warning sign. Identify client with low hiring rates, usually means they want to get freelancer to work outside of the platform (risky).
 
 ### 3. The Competition (`data.jobAuthDetails.applicantsBidsStats`)
 

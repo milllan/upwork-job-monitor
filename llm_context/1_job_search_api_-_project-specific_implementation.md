@@ -1,4 +1,4 @@
-# LLM Context: Upwork Job Search GraphQL API (for Upwork Job Monitor)
+# LM Context: Upwork Job Search GraphQL API (for Upwork Job Monitor)
 
 This document explains the structure and key fields of the `job_search_reference.json` file. This API call is the core data source for the **Upwork Job Monitor** extension's monitoring loop, executed by the `runJobCheck` function in `background/service-worker.js`.
 

@@ -1,4 +1,4 @@
-# LLM Context: Upwork Job Search GraphQL API
+# LM Context: Upwork Job Search GraphQL API. Project-Specific Implementation.
 
 **Core API Reference:** A stable description of the generic Upwork GraphQL API endpoint. This part changes rarely.
 

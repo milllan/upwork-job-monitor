@@ -78,5 +78,5 @@ const config = {
   MAX_DELETED_IDS: 200, // Limit for deletedJobIds storage (used in popup/storage)
   FETCH_ALARM_NAME: "fetchUpworkJobsAlarm_MV2",
   FETCH_INTERVAL_MINUTES: 3, // How often to check for new jobs
-  API_FETCH_COUNT: 16, // Number of jobs to fetch per API request
+  API_FETCH_COUNT: 16, // Number of jobs to fetch per API request, pwork.com website defaults to 10
 };
