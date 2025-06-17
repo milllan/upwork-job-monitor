@@ -86,7 +86,14 @@ document.addEventListener('DOMContentLoaded', () => {
         clientInfo += ` | Rating: ${rating.toFixed(2)}`;
         if (rating > 4.9) clientClasses.push('high-rating');
       }
-      if (job.client.totalSpent > 0) clientInfo += ` | Spent: $${Number(job.client.totalSpent).toFixed(0)}`;
+      if (job.client.totalSpent != null && Number(job.client.totalSpent) > 0) {
+        const spentAmount = Number(job.client.totalSpent);
+        if (spentAmount > 10000) { // Threshold for high spender
+          clientInfo += ` | <span class="client-spent positive" title="High Spender Client">Spent: $${spentAmount.toFixed(0)}</span>`;
+        } else {
+          clientInfo += ` | <span class="client-spent">Spent: $${spentAmount.toFixed(0)}</span>`;
+        }
+      }
       if (job.client.paymentVerificationStatus !== 'VERIFIED') {
         clientInfo += ' <span class="unverified-icon" title="Client payment not verified">⚠️</span>';
       }
@@ -375,21 +382,15 @@ async function fetchJobDetails(jobCiphertext, detailsContainer) {
         let clientStatsHTML = '';
         if (clientStats) {
           const totalSpent = clientStats.totalCharges?.amount || 0;
-          const rating = clientStats.score || 0;
           const totalJobs = clientStats.totalAssignments || 0;
+          const totalHours = clientStats.hoursCount || 0;
+          const feedbackCount = clientStats.feedbackCount || 0;
           
           clientStatsHTML = `
             <div class="client-stats">
-              ${totalSpent > 10000 ? 
-                `<span class="client-stat positive">Total Spent: $${Math.round(totalSpent).toLocaleString()}</span>` : 
-                `<span class="client-stat">Total Spent: $${Math.round(totalSpent).toLocaleString()}</span>`}
-              
-              ${rating > 4.8 ? 
-                `<span class="client-stat positive">Rating: ${rating.toFixed(1)}/5.0</span>` : 
-                (rating < 4.0 ? `<span class="client-stat negative">Rating: ${rating.toFixed(1)}/5.0</span>` : 
-                `<span class="client-stat">Rating: ${rating.toFixed(1)}/5.0</span>`)}
-              
               <span class="client-stat">Jobs Posted: ${totalJobs}</span>
+              ${totalHours > 0 ? `<span class="client-stat">Total Hours: ${Math.round(totalHours).toLocaleString()}</span>` : ''}
+              ${feedbackCount > 0 ? `<span class="client-stat">Feedback Count: ${feedbackCount}</span>` : ''}
             </div>
           `;
         }

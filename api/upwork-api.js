@@ -54,7 +54,7 @@ async function getAllPotentialApiTokens() {
       !t.name.includes("_vt")
     );
     otherPotentials.forEach(t => candidateTokens.push(t.value));
-    console.log("API: Candidate API tokens (prioritized):", candidateTokens.map(t => t.substring(0,20) + "..."));
+    // console.log("API: Candidate API tokens (prioritized):", candidateTokens.map(t => t.substring(0,20) + "..."));
     return [...new Set(candidateTokens)]; // Ensure uniqueness
   } catch (error) {
     console.error("API: Error getting all cookies:", error.message);
@@ -169,7 +169,7 @@ async function _executeApiCallWithStickyTokenRotation(apiCallFunction, ...params
   // 1. Try with the last known good token
   const lastKnownGoodToken = await StorageManager.getLastKnownGoodToken();
   if (lastKnownGoodToken) {
-    console.log(`API: Trying last known good token ${lastKnownGoodToken.substring(0, 15)}... for ${operationName}`);
+    // console.log(`API: Trying last known good token ${lastKnownGoodToken.substring(0, 15)}... for ${operationName}`);
     const result = await apiCallFunction(lastKnownGoodToken, ...params);
     if (result && !result.error && !result.permissionIssue) { // Check for permissionIssue as well
       console.log(`API: Successfully used last known good token for ${operationName}.`);
@@ -188,7 +188,7 @@ async function _executeApiCallWithStickyTokenRotation(apiCallFunction, ...params
   }
 
   for (const token of candidateTokens) {
-    console.log(`API: Trying candidate token ${token.substring(0, 15)}... for ${operationName}`);
+    // console.log(`API: Trying candidate token ${token.substring(0, 15)}... for ${operationName}`);
     const result = await apiCallFunction(token, ...params);
 
     if (result && !result.error && !result.permissionIssue) {
@@ -205,7 +205,7 @@ async function _executeApiCallWithStickyTokenRotation(apiCallFunction, ...params
       } else if (result && result.permissionIssue) {
         console.warn(`API: Permission issue with token ${token.substring(0, 15)} for ${operationName}: ${result.message}`);
       }
-      console.log(`API: Token ${token.substring(0, 15)}... failed for ${operationName}. Trying next.`);
+      // console.log(`API: Token ${token.substring(0, 15)}... failed for ${operationName}. Trying next.`);
     }
   }
 

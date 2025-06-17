@@ -19,6 +19,7 @@ const config = {
     "SEO Optimization for",
     "Prestashop Specialist",
     "Framer website",
+    "Framer Developer",
     "SEO Specialist Needed for Website Optimization",
     "TikTok Shop",
     "Virtual Assistant",
@@ -37,6 +38,7 @@ const config = {
     "Logo Designer",
     "Graphic Designer",
     "Full Website Redisign",
+    "Logo Designer",
     // Add more strings to exclude as needed
   ].map(s => s.toLowerCase()),
 
@@ -47,9 +49,7 @@ const config = {
     "Squarespace",
     "BigCommerce",
     "Prestashop",
-    "Framer",
     "WIX",
-    "Logo Designer",
   ].map(s => s.toLowerCase()),
 
   // Client countries that mark a job as low-priority (case-insensitive)
@@ -59,6 +59,8 @@ const config = {
     "pakistan",
     "Bangladesh",
     "Philippines",
+    "Lebanon",
+    "Nigeria",
   ].map(s => s.toLowerCase()),
 
   // Storage keys
