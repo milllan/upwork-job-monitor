@@ -1,7 +1,14 @@
 // background.js (Manifest V2 - Dynamic Token Attempt)
 console.log("Background Script MV2 loaded - Dynamic Token Attempt.");
-// UpworkAPI object is expected to be globally available from api/upwork-api.js
 
+// Import necessary scripts. Order matters for dependencies.
+importScripts(
+  "../lib/browser-polyfill.min.js", // Provides 'browser' API if not natively available
+  "../background/config.js",        // Defines the global 'config' object
+  "../utils.js",                    // Provides utility functions like constructUpworkSearchURL, timeAgo
+  "../storage/storage-manager.js",  // Provides the global 'StorageManager' object, depends on 'config'
+  "../api/upwork-api.js"            // Provides the global 'UpworkAPI' object, depends on 'config' and 'StorageManager'
+);
 // --- WebRequest Listener to Modify Headers ---
 browser.webRequest.onBeforeSendHeaders.addListener(
   function(details) {

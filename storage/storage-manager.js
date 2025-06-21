@@ -4,23 +4,12 @@
  */
 console.log("Storage manager loaded.");
 
-// Define storage keys internally for self-containment
-const STORAGE_KEYS = {
-  SEEN_JOB_IDS: 'seenJobIds',
-  DELETED_JOB_IDS: 'deletedJobIds',
-  MONITOR_STATUS: 'monitorStatus',
-  LAST_CHECK_TIMESTAMP: 'lastCheckTimestamp',
-  NEW_JOBS_IN_LAST_RUN: 'newJobsInLastRun',
-  CURRENT_USER_QUERY: 'currentUserQuery',
-  RECENT_FOUND_JOBS: 'recentFoundJobs',
-  COLLAPSED_JOB_IDS: 'collapsedJobIds', // Used in popup
-  LAST_KNOWN_GOOD_TOKEN: 'lastKnownGoodToken',
-};
-
-// Define limits internally for self-containment of storage logic
-const MAX_SEEN_IDS = 500;
-const MAX_DELETED_IDS = 200;
-const MAX_RECENT_JOBS = 10; // Limit for recent jobs display
+// Use constants from the global config object
+// Assumes config.js is loaded before storage-manager.js
+const STORAGE_KEYS = config.STORAGE_KEYS;
+const MAX_SEEN_IDS = config.MAX_SEEN_IDS;
+const MAX_DELETED_IDS = config.MAX_DELETED_IDS;
+const MAX_RECENT_JOBS = config.API_FETCH_COUNT;
 
 /**
  * Retrieves a value from chrome.storage.local.

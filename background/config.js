@@ -66,10 +66,12 @@ const config = {
   ].map(s => s.toLowerCase()),
 
   // Storage keys
+  // Define all storage keys here as the single source of truth
   STORAGE_KEYS: {
     SEEN_JOB_IDS: 'seenJobIds',
     DELETED_JOB_IDS: 'deletedJobIds',
     MONITOR_STATUS: 'monitorStatus',
+    LAST_KNOWN_GOOD_TOKEN: 'lastKnownGoodToken',
     LAST_CHECK_TIMESTAMP: 'lastCheckTimestamp',
     NEW_JOBS_IN_LAST_RUN: 'newJobsInLastRun',
     CURRENT_USER_QUERY: 'currentUserQuery',
@@ -78,9 +80,9 @@ const config = {
   },
 
   // Other constants
-  MAX_SEEN_IDS: 500, // Limit for seenJobIds storage
-  MAX_DELETED_IDS: 200, // Limit for deletedJobIds storage (used in popup/storage)
+  MAX_SEEN_IDS: 500, // Limit for seenJobIds storage (historical)
+  MAX_DELETED_IDS: 200, // Limit for deletedJobIds storage (user-deleted)
   FETCH_ALARM_NAME: "fetchUpworkJobsAlarm_MV2",
   FETCH_INTERVAL_MINUTES: 3, // How often to check for new jobs
-  API_FETCH_COUNT: 12, // Number of jobs to fetch per API request, pwork.com website defaults to 10
+  API_FETCH_COUNT: 12, // Number of jobs to fetch per API request, upwork.com website defaults to 10
 };
