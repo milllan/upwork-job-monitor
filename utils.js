@@ -55,3 +55,89 @@ function timeAgo(dateInput) {
   if (days === 1) return `1 day ago`;
   return `${days} days ago`;
 }
+
+/**
+ * Formats client information into an HTML string for display in a job item.
+ * @param {object} client The client object from a job.
+ * @returns {string} The formatted HTML string for client info.
+ */
+function formatClientInfo(client) {
+  let clientInfo = 'Client info N/A';
+  if (client) {
+    clientInfo = `Client: ${client.country || 'N/A'}`;
+
+    // Client Rating
+    if (client.rating != null) {
+      const rating = parseFloat(client.rating);
+      const ratingClass = rating >= 4.9 ? ' job-item__client-rating--positive' : '';
+      clientInfo += ` | <span class="job-item__client-rating${ratingClass}" title="Client Rating">Rating: ${rating.toFixed(2)}</span>`;
+    }
+
+    // Client Total Spent
+    if (client.totalSpent != null && Number(client.totalSpent) > 0) {
+      const spentAmount = Number(client.totalSpent);
+      const spentClass = spentAmount > 10000 ? ' job-item__client-spent--positive' : ''; // Threshold for high spender
+      clientInfo += ` | <span class="job-item__client-spent${spentClass}" title="Client Spend">Spent: $${spentAmount.toFixed(0)}</span>`;
+    }
+
+    // Payment Verification Status
+    if (client.paymentVerificationStatus !== 'VERIFIED') {
+      clientInfo += ` <span class="job-item__unverified-icon" title="Client payment not verified">⚠️</span>`;
+    }
+  }
+  return clientInfo;
+}
+
+/**
+ * Formats a list of skills into a display string.
+ * @param {Array<object>} skills An array of skill objects, each with a 'name' property.
+ * @returns {string} The formatted skills string (e.g., "Skills: Skill1, Skill2, Skill3...").
+ */
+function formatSkills(skills) {
+  if (!skills || skills.length === 0) {
+    return '';
+  }
+  const skillNames = skills.map(s => s.name);
+  if (skillNames.length > 3) {
+    return `Skills: ${skillNames.slice(0, 3).join(', ')}...`;
+  }
+  return `Skills: ${skillNames.join(', ')}`;
+}
+
+
+// Export functions if this file is used as a module, otherwise they are global in the browser context.
+// For this project's MV2 setup, they are global.
+// If this were an ES module, you'd have:
+// export { constructUpworkSearchURL, timeAgo, formatBudget, formatClientInfo, formatSkills };
+
+
+/**
+ * Formats a job budget object into a display string.
+ * @param {object} budget The budget object from a job.
+ * @param {string} [budget.type] The type of job (e.g., 'HOURLY').
+ * @param {number|string} [budget.minAmount] The minimum budget amount.
+ * @param {number|string} [budget.maxAmount] The maximum budget amount.
+ * @returns {string} The formatted budget string (e.g., "$20 - $40/hr", "$500").
+ */
+function formatBudget(budget) {
+  if (!budget) return 'N/A';
+
+  const { type, minAmount, maxAmount } = budget;
+
+  if (type && type.toLowerCase().includes('hourly')) {
+    const min = parseFloat(minAmount);
+    const max = parseFloat(maxAmount);
+    if (!isNaN(min) && !isNaN(max) && min < max) {
+      return `$${Math.round(min)} - $${Math.round(max)}/hr`;
+    } else if (!isNaN(min)) {
+      return `$${Math.round(min)}/hr`;
+    }
+  } else { // fixed price
+    const amount = parseFloat(minAmount);
+    if (!isNaN(amount)) {
+      return `$${Math.round(amount)}`;
+    }
+  }
+
+  return 'N/A';
+}

@@ -4,12 +4,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const popupTitleLinkEl = document.querySelector('.app-header__title');
   const consolidatedStatusEl = document.querySelector('.app-header__status');
   const manualCheckButton = document.querySelector('.app-header__button');
+  const themeToggleButton = document.getElementById('theme-toggle-button');
   const userQueryInput = document.querySelector('.query-section__input');
   const saveQueryButton = document.querySelector('.query-section__button');
   const mainContentArea = document.querySelector('.main-content');
   const jobListContainerEl = document.querySelector('.job-list-container');
   const recentJobsListDiv = document.querySelector('.job-list');
   const jobDetailsPanelEl = document.querySelector('.details-panel');
+  const themeStylesheet = document.getElementById('theme-stylesheet');
   const jobItemTemplate = document.getElementById('job-item-template');
   const jobDetailsTemplate = document.getElementById('job-details-template');
 
@@ -20,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let collapsedJobIds = new Set(); // In-memory store for collapsed job IDs, loaded from storage (via StorageManager)
   let deletedJobIds = new Set(); // In-memory store for explicitly deleted job IDs (via StorageManager)
   let currentlySelectedJobId = null; // Keep track of the currently selected job ID
+  let currentTheme = 'light'; // Default state, will be updated from storage
 
   // In-memory state for UI elements that are updated partially, to avoid reading from the DOM.
   const popupState = {
@@ -51,6 +54,26 @@ document.addEventListener('DOMContentLoaded', () => {
       );
       popupTitleLinkEl.href = url;
     }
+  }
+
+  /**
+   * Sets the UI theme by changing the stylesheet and updating the toggle button.
+   * @param {string} theme - The theme to set ('light' or 'dark').
+   */
+  function setTheme(theme) {
+    if (!themeStylesheet || !themeToggleButton) return;
+
+    if (theme === 'dark') {
+      themeStylesheet.href = 'popup-dark.css';
+      themeToggleButton.textContent = '☀️'; // Sun icon for switching to light mode
+      themeToggleButton.title = "Switch to Light Mode";
+    } else { // Default to light
+      themeStylesheet.href = 'popup.css';
+      themeToggleButton.textContent = '🌙'; // Moon icon for switching to dark mode
+      themeToggleButton.title = "Switch to Dark Mode";
+    }
+    currentTheme = theme;
+    StorageManager.setUiTheme(theme);
   }
 
   /**
@@ -198,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const minBid = bidStats.minRateBid?.amount;
       const maxBid = bidStats.maxRateBid?.amount;
       if (avgBid || minBid || maxBid) {
-        populate('bid-stats', 'bid-avg', `Avg: $${(avgBid || 0).toFixed(2)}`);
+        populate('bid-stats', 'bid-avg', `Avg: $${(avgBid || 0).toFixed(1)}`);
         populate('bid-stats', 'bid-range', `Range: $${minBid || 0} - $${maxBid || 0}`);
       } else {
         const bidSection = clone.querySelector('[data-section="bid-stats"]');
@@ -248,53 +271,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const jobItemElement = clone.querySelector('.job-item');
 
     let budgetDisplay = 'N/A';
-    if (job.budget && job.budget.amount != null) {
-      budgetDisplay = `${job.budget.amount} ${job.budget.currencyCode || ''}`;
-      if (job.budget.type && job.budget.type.toLowerCase() !== 'fixed') {
-        budgetDisplay += ` (${job.budget.type.toLowerCase().replace('_', '-')})`;
+    if (job.budget) {
+      const { type, minAmount, maxAmount, currencyCode } = job.budget;
+      if (type && type.toLowerCase().includes('hourly')) {
+        const min = parseFloat(minAmount);
+        const max = parseFloat(maxAmount);
+        if (!isNaN(min) && !isNaN(max) && min < max) {
+          budgetDisplay = `$${Math.round(min)} - $${Math.round(max)}/hr`;
+        } else if (!isNaN(min)) {
+          budgetDisplay = `$${Math.round(min)}/hr`;
+        }
+      } else { // fixed price
+        const amount = parseFloat(minAmount);
+        if (!isNaN(amount)) {
+          budgetDisplay = `$${Math.round(amount)}`;
+        }
       }
     }
     clone.querySelector('[data-field="budget"]').textContent = budgetDisplay;
 
-    let clientInfo = 'Client info N/A';
-    let clientModifiers = [];
-    if (job.client) {
-      clientInfo = `Client: ${job.client.country || 'N/A'}`;
-      if (job.client.rating != null) {
-        const rating = parseFloat(job.client.rating);
-        if (rating >= 4.9) {
-          clientModifiers.push('job-item--high-rating');
-          clientInfo += ` | <span class="job-item__client-rating job-item__client-rating--positive" title="High Client Rating">Rating: ${rating.toFixed(2)}</span>`;
-        } else {
-          clientInfo += ` | <span class="job-item__client-rating">Rating: ${rating.toFixed(2)}</span>`;
-        }
-      }
-      if (job.client.totalSpent != null && Number(job.client.totalSpent) > 0) {
-        const spentAmount = Number(job.client.totalSpent);
-        if (spentAmount > 10000) { // Threshold for high spender
-          clientInfo += ` | <span class="job-item__client-spent job-item__client-spent--positive" title="High Spender Client">Spent: $${spentAmount.toFixed(0)}</span>`;
-        } else {
-          clientInfo += ` | <span class="job-item__client-spent">Spent: $${spentAmount.toFixed(0)}</span>`;
-        }
-      }
-      if (job.client.paymentVerificationStatus !== 'VERIFIED') {
-        clientInfo += ` <span class="job-item__unverified-icon" title="Client payment not verified">⚠️</span>`;
-      }
-    }
-    clone.querySelector('[data-field="client-info"]').innerHTML = clientInfo;
+    // Use helper function for client info
+    clone.querySelector('[data-field="client-info"]').innerHTML = formatClientInfo(job.client);
 
-    let skillsDisplay = '';
-    if (job.skills && job.skills.length > 0) {
-      skillsDisplay = `Skills: ${job.skills.map(s => s.name).slice(0, 3).join(', ')}${job.skills.length > 3 ? '...' : ''}`;
-    }
+    // Use helper function for skills
+    const skillsDisplay = formatSkills(job.skills);
     const skillsElement = clone.querySelector('[data-field="skills"]');
     if (skillsDisplay) {
       skillsElement.textContent = skillsDisplay;
     } else {
       skillsElement.parentElement.style.display = 'none'; // Hide the whole <p> tag
     }
-
-    // --- Handle Icons and Tags ---
     const titleContainer = clone.querySelector('.job-item__title-container');
     const appliedIconHTML = job.applied ? `
       <span class="job-item__applied-icon" title="You applied to this job">
@@ -336,7 +342,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (job.applied) {
       jobItemModifiers.push('job-item--applied');
     }
-    jobItemModifiers.push(...clientModifiers);
+    // Add client-based modifiers directly from job object, as formatClientInfo doesn't return them
+    if (job.client && parseFloat(job.client.rating) >= 4.9) jobItemModifiers.push('job-item--high-rating');
+    if (job.client && job.client.totalSpent != null && Number(job.client.totalSpent) > 10000) jobItemModifiers.push('job-item--high-spent');
+
 
     jobItemElement.classList.add(...jobItemModifiers);
     jobItemElement.dataset.jobId = job.id;
@@ -406,39 +415,37 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. Update Details Section
     const budgetEl = element.querySelector('[data-field="budget"]');
     if (budgetEl) {
-        let budgetDisplay = 'N/A';
-        if (job.budget && job.budget.amount != null) {
-          budgetDisplay = `${job.budget.amount} ${job.budget.currencyCode || ''}`;
-          if (job.budget.type && job.budget.type.toLowerCase() !== 'fixed') {
-            budgetDisplay += ` (${job.budget.type.toLowerCase().replace('_', '-')})`;
+      let budgetDisplay = 'N/A';
+      if (job.budget) {
+        const { type, minAmount, maxAmount, currencyCode } = job.budget;
+        if (type && type.toLowerCase().includes('hourly')) {
+          const min = parseFloat(minAmount);
+          const max = parseFloat(maxAmount);
+          if (!isNaN(min) && !isNaN(max) && min < max) {
+            budgetDisplay = `$${Math.round(min)} - $${Math.round(max)}/hr`;
+          } else if (!isNaN(min)) {
+            budgetDisplay = `$${Math.round(min)}/hr`;
+          }
+        } else { // fixed price
+          const amount = parseFloat(minAmount);
+          if (!isNaN(amount)) {
+            budgetDisplay = `$${Math.round(amount)}`;
           }
         }
-        budgetEl.textContent = budgetDisplay;
+      }
+      budgetEl.textContent = budgetDisplay;
     }
 
+    // Use helper function for client info
     const clientInfoEl = element.querySelector('[data-field="client-info"]');
     if (clientInfoEl) {
-        let clientInfo = 'Client info N/A';
-        if (job.client) {
-          clientInfo = `Client: ${job.client.country || 'N/A'}`;
-          if (job.client.rating != null) {
-            const rating = parseFloat(job.client.rating);
-            clientInfo += ` | <span class="job-item__client-rating${rating >= 4.9 ? ' job-item__client-rating--positive' : ''}" title="Client Rating">Rating: ${rating.toFixed(2)}</span>`;
-          }
-          if (job.client.totalSpent != null && Number(job.client.totalSpent) > 0) {
-            const spentAmount = Number(job.client.totalSpent);
-            clientInfo += ` | <span class="job-item__client-spent${spentAmount > 10000 ? ' job-item__client-spent--positive' : ''}" title="Client Spend">Spent: $${spentAmount.toFixed(0)}</span>`;
-          }
-          if (job.client.paymentVerificationStatus !== 'VERIFIED') {
-            clientInfo += ` <span class="job-item__unverified-icon" title="Client payment not verified">⚠️</span>`;
-          }
-        }
-        clientInfoEl.innerHTML = clientInfo;
+        clientInfoEl.innerHTML = formatClientInfo(job.client);
     }
 
+    // Use helper function for skills
     const skillsEl = element.querySelector('[data-field="skills"]');
     if (skillsEl) {
-        const skillsDisplay = (job.skills && job.skills.length > 0) ? `Skills: ${job.skills.map(s => s.name).slice(0, 3).join(', ')}${job.skills.length > 3 ? '...' : ''}` : '';
+        const skillsDisplay = formatSkills(job.skills);
         skillsEl.textContent = skillsDisplay;
         skillsEl.parentElement.style.display = skillsDisplay ? '' : 'none';
     }
@@ -515,20 +522,22 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadStoredData() {
     console.log("Popup: loadStoredData called.");
     try {
-      const [monitorStatus, lastCheckTimestamp, currentUserQuery, recentFoundJobs, loadedCollapsedIds, loadedDeletedIds] = await Promise.all([
+      const [monitorStatus, lastCheckTimestamp, currentUserQuery, recentFoundJobs, loadedCollapsedIds, loadedDeletedIds, loadedTheme] = await Promise.all([
         StorageManager.getMonitorStatus(),
         StorageManager.getLastCheckTimestamp(),
         StorageManager.getCurrentUserQuery(),
         StorageManager.getRecentFoundJobs(),
         StorageManager.getCollapsedJobIds(),
-        StorageManager.getDeletedJobIds()
+        StorageManager.getDeletedJobIds(),
+        StorageManager.getUiTheme()
       ]);
 
       const currentQuery = currentUserQuery || config.DEFAULT_USER_QUERY; // Use config default if storage is empty
       userQueryInput.value = currentQuery; // Set input value
       deletedJobIds = loadedDeletedIds; // Update in-memory sets
       collapsedJobIds = loadedCollapsedIds;
-
+      
+      setTheme(loadedTheme); // Apply the theme
       // Update UI elements
       updateConsolidatedStatusDisplay({ monitorStatusText: monitorStatus, lastCheckTimestamp: lastCheckTimestamp, deletedJobsCount: deletedJobIds.size });
       updatePopupTitleLink(currentQuery); // Update title link
@@ -584,6 +593,11 @@ document.addEventListener('DOMContentLoaded', () => {
     triggerCheck(queryToUse);
   });
 
+  themeToggleButton.addEventListener('click', () => {
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+  });
+
   // Listen for messages from background script to update the display
   browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "updatePopupDisplay") {
@@ -597,13 +611,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Add a listener for storage changes to keep the popup data up-to-date
   browser.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === 'local') {
-      console.log("Popup: Storage changed, reloading data. Changes:", changes);
-      // Check if relevant keys have changed before reloading to avoid unnecessary reloads
-      const relevantKeys = ['monitorStatus', 'lastCheckTimestamp', 'recentFoundJobs', 'collapsedJobIds', 'deletedJobIds', 'currentUserQuery'];
-      const hasRelevantChange = Object.keys(changes).some(key => relevantKeys.includes(key) || Object.values(StorageManager.STORAGE_KEYS).includes(key));
-      if (hasRelevantChange) {
-        loadStoredData();
+      const changedKeys = Object.keys(changes);
+
+      // If the only change was the UI theme, we don't need a full reload.
+      // The theme is handled directly by its own click handler, and reloading
+      // here would cause a feedback loop.
+      if (changedKeys.length === 1 && changedKeys[0] === StorageManager.STORAGE_KEYS.UI_THEME) {
+        console.log("Popup: UI theme changed, no data reload needed.");
+        return; // Exit without reloading
       }
+
+      // For any other data change, or multiple changes, reload the data.
+      console.log("Popup: Storage changed, reloading data. Changes:", changes);
+      loadStoredData();
     }
   });
 

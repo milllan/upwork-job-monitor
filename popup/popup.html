@@ -3,13 +3,14 @@
 <head>
   <title>Upwork Monitor</title>
   <meta charset="utf-8">
-  <link rel="stylesheet" href="popup.css">
+  <link id="theme-stylesheet" rel="stylesheet" href="popup.css"> <!-- Default to light theme -->
 </head>
 <body>
   <header class="app-header">
     <a class="app-header__title" href="#" target="_blank">Upwork Job Monitor</a>
     <div class="app-header__meta">
       <p class="app-header__status">Initializing status...</p>
+      <button id="theme-toggle-button" class="btn btn--icon btn--muted" title="Toggle Theme" aria-label="Toggle Theme">🌙</button>
       <button class="app-header__button btn btn--icon" title="Check Now (with saved query)">&#x21BB;</button>
     </div>
   </header>

@@ -146,6 +146,20 @@ async function setLastKnownGoodToken(token) {
   await setStorage({ [STORAGE_KEYS.LAST_KNOWN_GOOD_TOKEN]: token });
 }
 
+async function getUiTheme() {
+  const result = await getStorage(STORAGE_KEYS.UI_THEME);
+  // Default to 'light' if nothing is set
+  return result[STORAGE_KEYS.UI_THEME] || 'light';
+}
+
+async function setUiTheme(theme) {
+  if (theme === 'light' || theme === 'dark') {
+    await setStorage({ [STORAGE_KEYS.UI_THEME]: theme });
+  } else {
+    console.warn(`StorageManager: Invalid theme "${theme}" provided. Not setting.`);
+  }
+}
+
 /**
  * Initializes storage with default values on extension install or update.
  * @param {string} defaultUserQuery The default query to set initially.
@@ -160,7 +174,8 @@ async function initializeStorage(defaultUserQuery) {
         [STORAGE_KEYS.RECENT_FOUND_JOBS]: [],
         [STORAGE_KEYS.COLLAPSED_JOB_IDS]: [],
         [STORAGE_KEYS.CURRENT_USER_QUERY]: defaultUserQuery, // Set initial default query
-        [STORAGE_KEYS.LAST_KNOWN_GOOD_TOKEN]: null
+        [STORAGE_KEYS.LAST_KNOWN_GOOD_TOKEN]: null,
+        [STORAGE_KEYS.UI_THEME]: 'light' // Default theme
      });
 }
 
@@ -185,6 +200,8 @@ const StorageManager = {
   setCollapsedJobIds,
   getLastKnownGoodToken,
   setLastKnownGoodToken,
+  getUiTheme,
+  setUiTheme,
   initializeStorage,
   STORAGE_KEYS // Expose keys for direct access if needed (e.g., in popup load)
 };

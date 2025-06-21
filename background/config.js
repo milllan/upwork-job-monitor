@@ -76,7 +76,8 @@ const config = {
     NEW_JOBS_IN_LAST_RUN: 'newJobsInLastRun',
     CURRENT_USER_QUERY: 'currentUserQuery',
     RECENT_FOUND_JOBS: 'recentFoundJobs',
-    COLLAPSED_JOB_IDS: 'collapsedJobIds', // Used in popup
+    COLLAPSED_JOB_IDS: 'collapsedJobIds',
+    UI_THEME: 'uiTheme'
   },
 
   // Other constants

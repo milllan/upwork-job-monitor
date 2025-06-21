@@ -138,7 +138,12 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
         description: job.description,
         postedOn: job.jobTile.job.publishTime || job.jobTile.job.createTime,
         applied: job.applied,
-        budget: { amount: job.jobTile.job.fixedPriceAmount?.amount || job.jobTile.job.hourlyBudgetMin || job.jobTile.job.hourlyBudgetMax, currencyCode: job.jobTile.job.fixedPriceAmount?.isoCurrencyCode || 'USD', type: job.jobTile.job.jobType },
+        budget: {
+          type: job.jobTile.job.jobType,
+          currencyCode: job.jobTile.job.fixedPriceAmount?.isoCurrencyCode || 'USD',
+          minAmount: job.jobTile.job.jobType.toLowerCase().includes('hourly') ? job.jobTile.job.hourlyBudgetMin : job.jobTile.job.fixedPriceAmount?.amount,
+          maxAmount: job.jobTile.job.jobType.toLowerCase().includes('hourly') ? job.jobTile.job.hourlyBudgetMax : job.jobTile.job.fixedPriceAmount?.amount,
+        },
         client: {
           paymentVerificationStatus: job.upworkHistoryData?.client?.paymentVerificationStatus,
           country: job.upworkHistoryData?.client?.country,
