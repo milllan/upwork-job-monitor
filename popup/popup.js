@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const userQueryInput = document.querySelector('.query-section__input');
   const saveQueryButton = document.querySelector('.query-section__button');
   const mainContentArea = document.querySelector('.main-content');
+  const jobListContainerEl = document.querySelector('.job-list-container');
   const recentJobsListDiv = document.querySelector('.job-list');
   const jobDetailsPanelEl = document.querySelector('.details-panel');
 
@@ -620,4 +621,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // No mouseenter/mouseleave needed for jobDetailsTooltipEl itself for this interaction model.
 
   loadStoredData(); // Initial load
+
+  // Add scroll listener for top shadow hint
+  recentJobsListDiv.addEventListener('scroll', () => {
+    if (!jobListContainerEl) return;
+    // A small threshold prevents the shadow from appearing on tiny scrolls/bounces
+    const isScrolled = recentJobsListDiv.scrollTop > 10;
+    jobListContainerEl.classList.toggle('job-list-container--scrolled', isScrolled);
+  });
 });
