@@ -347,29 +347,30 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function displayRecentJobs(jobs = []) {
-    console.log("Popup: displayRecentJobs called with:", jobs);
-    recentJobsListDiv.innerHTML = '';
-    currentlySelectedJobId = null; // Reset selected job when list re-renders
+    
+      console.log("Popup: displayRecentJobs called with:", jobs);
+      recentJobsListDiv.innerHTML = '';
+      currentlySelectedJobId = null; // Reset selected job when list re-renders
 
-    if (!Array.isArray(jobs) || jobs.length === 0) {
+      if (!Array.isArray(jobs) || jobs.length === 0) {
       console.log("Popup: No valid jobs array to display or jobs array is empty.");
       recentJobsListDiv.innerHTML = '<p class="job-list__no-jobs">No new jobs found in the last check.</p>';
       //recentJobsListDiv.classList.add('empty-list');
       mainContentArea.classList.add('empty-list'); // Add empty list class to main content area
       if (jobDetailsPanelEl) jobDetailsPanelEl.innerHTML = '<p class="details-panel__no-jobs">No jobs to display details for.</p>'; // Clear panel
-      return;
-    }
+      
+      }
 
-    // Filter out jobs that have been explicitly deleted
-    const jobsToDisplay = jobs.filter(job => job && job.id && !deletedJobIds.has(job.id));
+      // Filter out jobs that have been explicitly deleted
+      const jobsToDisplay = jobs.filter(job => job && job.id && !deletedJobIds.has(job.id));
 
-    if (jobsToDisplay.length === 0) {
+      if (jobsToDisplay.length === 0) {
       console.log("Popup: No jobs to display after filtering deleted items.");
       recentJobsListDiv.innerHTML = '<p class="job-list__no-jobs">No new jobs found (all previously seen or deleted).</p>';
       //recentJobsListDiv.classList.add('empty-list');
       mainContentArea.classList.add('empty-list'); // Add empty list class to main content area
       if (jobDetailsPanelEl) jobDetailsPanelEl.innerHTML = '<p class="details-panel__no-jobs">No jobs to display details for.</p>'; // Clear panel
-    } else {
+      } else {
       console.log(`Popup: Displaying ${jobsToDisplay.length} jobs (filtered from ${jobs.length} total recent).`);
       jobsToDisplay.forEach((job, index) => {
         if (!job || !job.id) {
@@ -394,7 +395,8 @@ document.addEventListener('DOMContentLoaded', () => {
         jobDetailsPanelEl.innerHTML = '<p class="details-panel__no-jobs">No job selected or available for details.</p>';
         setSelectedJobItem(null); // Clear any selection if no suitable job
       }
-    }
+      }
+    
   }
 
   // Refactored loadStoredData to use StorageManager
@@ -622,11 +624,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadStoredData(); // Initial load
 
-  // Add scroll listener for top shadow hint
-  recentJobsListDiv.addEventListener('scroll', () => {
-    if (!jobListContainerEl) return;
-    // A small threshold prevents the shadow from appearing on tiny scrolls/bounces
-    const isScrolled = recentJobsListDiv.scrollTop > 10;
-    jobListContainerEl.classList.toggle('job-list-container--scrolled', isScrolled);
-  });
+  // Initialize UI enhancements like scroll hints
+  UJM_UI.initializeScrollHints(jobListContainerEl, recentJobsListDiv);
 });
