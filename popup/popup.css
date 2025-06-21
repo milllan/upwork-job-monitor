@@ -361,17 +361,23 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
   /*margin-top: 8px;*/
 }
 .details-panel { /* Styles for the job details panel itself */
-  background-color: var(--white); /* Lighter background */
-  border: 1px solid var(--up-gray-70); /* Visible border */
+  /* Flex properties from old #jobDetailsPanel ID */
+  flex-grow: 1; /* Allow this panel to grow and take remaining space */
+  flex-shrink: 1; /* Allow to shrink if necessary */
+  flex-basis: 0;  /* Start with a basis of 0, flex-grow will expand it */
+  box-sizing: border-box; /* Include padding and border in the element's total width and height */
+
+  background-color: var(--white);
+  border: 1px solid var(--up-gray-70);
   border-radius: 5px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1); /* Softer shadow */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   padding: 12px;
   font-size: 13px;
   line-height: 1.5;
   overflow-y: auto;
 }
 
-#recentJobsList {
+.job-list {
   margin-top: 0px;
   /*max-height: 400px;*/ /* Default max-height when jobs are present */
   overflow-y: auto;
@@ -383,21 +389,21 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
   box-sizing: border-box; /* Include padding and border in the element's total width and height */
 }
 
-#recentJobsList,
-#jobDetailsPanel {
+.job-list,
+.details-panel {
   /* Cross-Browser Scrollbar Styling (Firefox Support) */
   /* Note: Webkit browsers (Chrome, Safari) use ::-webkit-scrollbar */
   scrollbar-width: thin; /* Firefox */
   scrollbar-color: #ccc transparent; /* Firefox */
 }
-#recentJobsList::-webkit-scrollbar,
-#jobDetailsPanel::-webkit-scrollbar {
+.job-list::-webkit-scrollbar,
+.details-panel::-webkit-scrollbar {
   width: 8px; /* Narrower scrollbar */
 }
 
 body::-webkit-scrollbar-thumb,
-#recentJobsList::-webkit-scrollbar-thumb,
-#jobDetailsPanel::-webkit-scrollbar-thumb {
+.job-list::-webkit-scrollbar-thumb,
+.details-panel::-webkit-scrollbar-thumb {
   background: #ccc;
   border-radius: 4px;
 }
@@ -406,25 +412,17 @@ body::-webkit-scrollbar-thumb,
   scrollbar-color: #ccc transparent; /* Firefox */
 }
 
-/*#recentJobsList.empty-list {
+/*.job-list.empty-list {
   max-height: 60px;
 }*/
-#jobDetailsPanel {
-  flex-grow: 1; /* Allow this panel to grow and take remaining space */
-  flex-shrink: 1; /* Allow to shrink if necessary */
-  flex-basis: 0;  /* Start with a basis of 0, flex-grow will expand it */
-  box-sizing: border-box; /* Include padding and border in the element's total width and height */
-  /* display: block; is default for div, align-self and max-height are already set by ID or class */
-  /* The visual styles (background, border, padding) are now handled by .details-panel class */
-}
 /* Styles for side-by-side layout */
-#mainContentArea {
+.main-content {
   display: flex;
   flex-direction: row; /* Arrange children side-by-side */
   gap: 15px; /* Space between job list and details panel */
   margin-top: 10px; /* Add some margin at the top */
   height: 471px;
 }
-#mainContentArea.empty-list {
+.main-content.empty-list {
   height: 90px; /* Adjust height when the job list is empty */
 }

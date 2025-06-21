@@ -6,9 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const manualCheckButton = document.querySelector('.app-header__button');
   const userQueryInput = document.querySelector('.query-section__input');
   const saveQueryButton = document.querySelector('.query-section__button');
-  const mainContentArea = document.getElementById('mainContentArea');
-  const recentJobsListDiv = document.getElementById('recentJobsList');
-  const jobDetailsPanelEl = document.getElementById('jobDetailsPanel');
+  const mainContentArea = document.querySelector('.main-content');
+  const recentJobsListDiv = document.querySelector('.job-list');
+  const jobDetailsPanelEl = document.querySelector('.details-panel');
 
   // This DEFAULT_QUERY is used if no query is in storage.
   // For the link to match the service-worker's DEFAULT_USER_QUERY initially (if no user query is set),

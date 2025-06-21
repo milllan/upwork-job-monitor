@@ -36,6 +36,24 @@ The main header for the popup UI.
 
 ---
 
+### Layout Blocks
+
+These blocks structure the main layout of the popup.
+
+#### `main-content`
+
+- **Block**: `.main-content`
+
+#### `job-list`
+
+- **Block**: `.job-list`
+
+#### `details-panel`
+
+- **Block**: `.details-panel`
+
+---
+
 ### `query-section`
 
 The section containing the user's search query input and save button.
@@ -128,4 +146,3 @@ Represents a single job entry in the list. It has several elements for its conte
   </div>
 </div>
 ```
-

@@ -20,13 +20,13 @@
   </div>
   <hr>
 
-  <div id="mainContentArea">
-    <div id="recentJobsList" class="recent-jobs-container">
+  <div class="main-content">
+    <div class="job-list">
       <!-- Jobs will be injected here -->
       <p class="no-jobs">No new jobs found in the last check.</p> <!-- This will be replaced by JS -->
     </div>
     <!-- Container for the job details panel, now a flex item, with ARIA live region attributes -->
-    <div id="jobDetailsPanel" class="details-panel" role="region" aria-label="Job Details Panel" aria-live="polite" aria-atomic="true"></div>
+    <div class="details-panel" role="region" aria-label="Job Details Panel" aria-live="polite" aria-atomic="true"></div>
   </div>
   <script src="../lib/browser-polyfill.min.js"></script>
   <script src="../utils.js"></script> <!-- Add this line -->
