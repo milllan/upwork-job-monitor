@@ -4,6 +4,9 @@
   <title>Upwork Monitor</title>
   <meta charset="utf-8">
   <link id="theme-stylesheet" rel="stylesheet" href="popup.css"> <!-- Default to light theme -->
+    <!-- Pre-emptive theme loader to prevent FOUC -->
+  <script src="../lib/browser-polyfill.min.js"></script>
+  <script src="theme-loader.js"></script>
 </head>
 <body>
   <header class="app-header">
@@ -31,7 +34,6 @@
     <!-- Container for the job details panel, now a flex item, with ARIA live region attributes -->
     <div class="details-panel" role="region" aria-label="Job Details Panel" aria-live="polite" aria-atomic="true"></div>
   </div>
-  <script src="../lib/browser-polyfill.min.js"></script>
   <script src="../utils.js"></script> <!-- Add this line -->
   <script src="ui-helpers.js"></script>
   <script src="../background/config.js"></script> <!-- Add this line -->

@@ -443,5 +443,4 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initialize UI enhancements like scroll hints
   UJM_UI.initializeScrollHints(jobListContainerEl, recentJobsListDiv);
-  updateThemeUI(); // Set initial theme from loaded state
 });
