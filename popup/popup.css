@@ -40,19 +40,20 @@ body {
   background-color: var(--up-page-bg);
 }
 h1 { font-size: 16px; margin: 0 0 8px 0; display: flex; align-items: center; justify-content: space-between; }
-h1 #consolidatedStatus { /* Style for the status message within h1 */
+ #consolidatedStatus { /* Style for the status message within h1 */
   font-size: 0.9em;
   color: #333;
   margin: 0 10px 0 0; /* Remove bottom margin, add right margin for spacing */
   font-weight: var(--up-font-weight-normal); /* Ensure it's not bold like h1 */
 }
 p { margin: 4px 0; }
-input[type="text"]#userQueryInput { /* Corrected selector: no space */
+ #userQueryInput { /* Corrected selector: no space */
   flex-grow: 1; /* Allow input to take available space */
   box-sizing: border-box;
 }
 /* Base button styles */
 .up-btn {
+  margin: 0; /* Normalize button margins */
   border: none; /* Remove default button border */
   border-radius: 4px; /* Add slight border-radius for consistency */
   cursor: pointer;
@@ -76,8 +77,6 @@ input[type="text"]#userQueryInput { /* Corrected selector: no space */
 
 /* Icon button base style */
 .up-btn-icon {
-  background: none;
-  border: none;
   font-size: 18px; /* Default icon size */
   padding: 0 5px; /* Minimal padding for click target */
   line-height: 1; /* Helps align icon vertically */
@@ -228,9 +227,7 @@ h1, h2, h3, h4, h5, h6 {
   margin: 0 0 0 10px; /* Margin to space it from title */
 }
 #saveQueryButton {
-  padding: 0 0 0 2px; /* Minimal padding for click target */
-  margin-left: 0; /* Space between input and button */
-  margin-top: 0; /* Reset default button margin-top */
+  padding: 0 0 0 2px; /* Specific padding override for this icon */
 }
 .job-item.high-rating {
   border-left-color: var(--up-green);
@@ -383,7 +380,7 @@ h1, h2, h3, h4, h5, h6 {
   width: 8px; /* Narrower scrollbar */
 }
 
-body::-webkit-scrollbar-thumb
+body::-webkit-scrollbar-thumb,
 #recentJobsList::-webkit-scrollbar-thumb,
 #jobDetailsPanel::-webkit-scrollbar-thumb {
   background: #ccc;
