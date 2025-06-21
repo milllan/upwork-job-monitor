@@ -25,6 +25,7 @@
 
   /* UI Elements */
   --up-button-bg: var(--brand-green);
+  --up-button-bg-hover: var(--up-green);
   --up-button-text: var(--white);
   --up-link-color: var(--up-blue);
   --up-link-color-hover: var(--up-blue-hover);
@@ -53,6 +54,7 @@ p { margin: 4px 0; }
 }
 /* Base button styles */
 .up-btn {
+  background-color: transparent; /* Ensure buttons are transparent by default */
   margin: 0; /* Normalize button margins */
   border: none; /* Remove default button border */
   border-radius: 4px; /* Add slight border-radius for consistency */
