@@ -51,6 +51,15 @@ These blocks structure the main layout of the popup.
 #### `details-panel`
 
 - **Block**: `.details-panel`
+- **Elements**:
+    - `.details-panel__loading`: The "Loading..." text indicator.
+    - `.details-panel__error`: The error message text.
+    - `.details-panel__stats-group`: A container for a group of stats (e.g., Client Info, Job Activity).
+    - `.details-panel__stat`: A single stat lozenge within a stats group.
+    - `.details-panel__bids`: The container for bid statistics.
+    - `.details-panel__questions`: The container for screening questions.
+    - `.details-panel__description`: The container for the main job description.
+    - `.details-panel__description-content`: The pre-formatted block holding the description text.
 
 ---
 

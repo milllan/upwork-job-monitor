@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   async function updateDetailsPanel(jobCiphertext) {
     if (!jobDetailsPanelEl) return;
-    jobDetailsPanelEl.innerHTML = '<div class="loading-indicator">Loading details...</div>'; // Show loading indicator
+    jobDetailsPanelEl.innerHTML = '<div class="details-panel__loading">Loading details...</div>'; // Show loading indicator
     
     setSelectedJobItem(jobCiphertext); // Highlight the item in the list
 
@@ -158,11 +158,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const feedbackCount = clientStats.feedbackCount || 0;
         
         clientStatsHTML = `
-          <div class="client-stats">
+          <div class="details-panel__stats-group">
             <strong>Client Info:</strong>
-            <span class="client-stat">Jobs Posted: ${totalJobs}</span>
-            ${totalHours > 0 ? `<span class="client-stat">${Math.round(totalHours).toLocaleString()}h total</span>` : ''}
-            ${feedbackCount > 0 ? `<span class="client-stat">Feedback Count: ${feedbackCount}</span>` : ''}
+            <span class="details-panel__stat">Jobs Posted: ${totalJobs}</span>
+            ${totalHours > 0 ? `<span class="details-panel__stat">${Math.round(totalHours).toLocaleString()}h total</span>` : ''}
+            ${feedbackCount > 0 ? `<span class="details-panel__stat">Feedback Count: ${feedbackCount}</span>` : ''}
           </div>
         `;
       }
@@ -183,12 +183,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         activityHTML = `
-          <div class="client-stats">
+          <div class="details-panel__stats-group">
             <strong>Job Activity:</strong>
-            <span class="client-stat">Applicants: ${applicants}</span>
-            <span class="client-stat">Interviews: ${invited}</span>
-            <span class="client-stat">Hired: ${hired}/${positions}</span>
-            <span class="client-stat">Last Active: ${lastActivity}</span>
+            <span class="details-panel__stat">Applicants: ${applicants}</span>
+            <span class="details-panel__stat">Interviews: ${invited}</span>
+            <span class="details-panel__stat">Hired: ${hired}/${positions}</span>
+            <span class="details-panel__stat">Last Active: ${lastActivity}</span>
           </div>
         `;
       }
@@ -201,11 +201,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const maxBid = bidStats.maxRateBid?.amount || 0;
         
         bidStatsHTML = `
-          <div class="bid-stats">
-            <div class="client-stats">
+          <div class="details-panel__bids">
+            <div class="details-panel__stats-group">
               <strong>Bid Stats:</strong>
-              <span class="client-stat">Avg: $${avgBid.toFixed(2)}</span>
-              <span class="client-stat">Range: $${minBid} - $${maxBid}</span>
+              <span class="details-panel__stat">Avg: $${avgBid.toFixed(2)}</span>
+              <span class="details-panel__stat">Range: $${minBid} - $${maxBid}</span>
             </div>
           </div>
         `;
@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let questionsHTML = '';
       if (questions && questions.length > 0) {
         questionsHTML = `
-          <div class="job-item__questions-section">
+          <div class="details-panel__questions">
             <p><strong>Screening Questions:</strong></p>
             <ol>
               ${questions.map(q => `<li>${q.question}</li>`).join('')}
@@ -233,8 +233,8 @@ document.addEventListener('DOMContentLoaded', () => {
           .trim();
         
         descriptionHTML = `
-          <div class="job-description-section">
-            <div class="job-description-content">${cleanDescription.replace(/\n/g, '<br>')}</div>
+          <div class="details-panel__description">
+            <div class="details-panel__description-content">${cleanDescription.replace(/\n/g, '<br>')}</div>
           </div>
         `;
       }
@@ -249,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     } catch (error) {
       jobDetailsPanelEl.innerHTML = `
-        <p class="error-message">Failed to load job details: ${error.message}. Please try again later.</p>
+        <p class="details-panel__error">Failed to load job details: ${error.message}. Please try again later.</p>
       `;
     }
   }
