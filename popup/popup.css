@@ -50,7 +50,7 @@ body {
   color: var(--up-black);
   background-color: var(--up-page-bg);
   margin: 0; /* Reset default body margin */
-  padding: 8px;
+  padding: 12px;
   box-sizing: border-box; /* Include padding and border in the element's total width and height */
 }
 .app-header {
@@ -153,7 +153,12 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
   margin-bottom: 8px;
   background-color: var(--up-gray-95);
   font-size: 13px;
-  transition: background-color 0.2s ease; /* Smooth transition for selection */
+  /*transition: background-color 0.2s ease;*/ /* Smooth transition for selection */
+  transition: box-shadow 0.2s ease-in-out;
+}
+
+.job-item:hover, .job-item--selected {
+  box-shadow: inset 0 0 0 1000px rgba(0, 0, 0, 0.04);
 }
 
 
@@ -299,7 +304,7 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
   color: var(--up-gray-10);
 }
 .job-item--selected {
-  background-color: var(--up-job-item-bg-applied);
+  /*background-color: var(--up-job-item-bg-applied);*/
   border-left-color: var(--up-blue);
 }
 .job-item--selected::after {

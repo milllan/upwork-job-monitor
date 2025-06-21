@@ -134,7 +134,7 @@ Represents a single job entry in the list. It has several elements for its conte
     - `.job-item__client-spent`: The text showing client spend. Has a `--positive` modifier for high-spending clients.
     - `.job-item__skills`: The paragraph for skills.
 - **Modifiers**:
-    - `.job-item--selected`: Applied on hover/selection to highlight the item.
+    - `.job-item--selected`: Applied on selection to highlight the item. It adds a subtle overlay, preserving any underlying status colors (like for low-priority jobs). The same effect is applied on hover.
     - `.job-item--collapsed`: Applied when the details are hidden.
     - `.job-item--low-priority`: For jobs marked by skill or country.
     - `.job-item--excluded`: For jobs filtered out by title.
