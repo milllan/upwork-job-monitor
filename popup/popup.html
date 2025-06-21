@@ -36,5 +36,57 @@
   <script src="../background/config.js"></script> <!-- Add this line -->
   <script src="../storage/storage-manager.js"></script> <!-- Add this line -->
   <script src="popup.js"></script>
+
+  <!-- Job Item Template -->
+  <template id="job-item-template">
+    <div class="job-item" data-job-id="">
+      <div class="job-item__header">
+        <span class="job-item__toggle">+</span>
+        <h3 class="job-item__title-container">
+          <!-- applied-icon will be prepended here -->
+          <!-- priority-tag will be prepended here -->
+          <a href="#" target="_blank" data-ciphertext="" class="job-item__title"></a>
+        </h3>
+        <span class="job-item__delete-btn" title="Remove from list">×</span>
+      </div>
+      <div class="job-item__details">
+        <p class="job-item__meta"><strong>Budget:</strong> <span data-field="budget"></span></p>
+        <p class="job-item__meta" data-field="client-info"></p>
+        <p class="job-item__skills" data-field="skills"></p>
+        <p class="job-item__meta"><small>Posted: <span data-field="posted-on"></span> <b>(<span data-field="time-ago"></span>)</b></small></p>
+      </div>
+    </div>
+  </template>
+
+  <!-- Job Details Panel Template -->
+  <template id="job-details-template">
+      <div data-section="client-info" class="details-panel__stats-group">
+          <strong>Client Info:</strong>
+          <span class="details-panel__stat" data-field="client-jobs-posted"></span>
+          <span class="details-panel__stat" data-field="client-hours"></span>
+          <span class="details-panel__stat" data-field="client-feedback-count"></span>
+      </div>
+      <div data-section="job-activity" class="details-panel__stats-group">
+          <strong>Job Activity:</strong>
+          <span class="details-panel__stat" data-field="activity-applicants"></span>
+          <span class="details-panel__stat" data-field="activity-interviews"></span>
+          <span class="details-panel__stat" data-field="activity-hired"></span>
+          <span class="details-panel__stat">Last Active: <span data-field="activity-last-active"></span></span>
+      </div>
+      <div class="details-panel__bids" data-section="bid-stats">
+          <div class="details-panel__stats-group">
+              <strong>Bid Stats:</strong>
+              <span class="details-panel__stat" data-field="bid-avg"></span>
+              <span class="details-panel__stat" data-field="bid-range"></span>
+          </div>
+      </div>
+      <div class="details-panel__questions" data-section="questions">
+          <p><strong>Screening Questions:</strong></p>
+          <ol data-field="questions-list"></ol>
+      </div>
+      <div class="details-panel__description" data-section="description">
+          <div class="details-panel__description-content" data-field="description-content"></div>
+      </div>
+  </template>
 </body>
 </html>
