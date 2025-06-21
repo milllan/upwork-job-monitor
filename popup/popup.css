@@ -76,31 +76,39 @@ p { margin: 4px 0; }
 
 /* Base button styles */
 .btn {
-  background-color: transparent; /* Ensure buttons are transparent by default */
+  /* Define local custom properties for the button component API */
+  --btn-bg-color: transparent;
+  --btn-bg-color-hover: transparent;
+  --btn-color: var(--up-gray-10);
+  --btn-color-hover: var(--up-link-color);
+
+  background-color: var(--btn-bg-color);
+  color: var(--btn-color);
+
   margin: 0; /* Normalize button margins */
   border: none; /* Remove default button border */
   border-radius: 4px; /* Add slight border-radius for consistency */
   cursor: pointer;
   transition: background-color 0.1s ease-in-out, color 0.1s ease-in-out; /* Smooth transition for hover effect */
-  display: inline-flex; /* For aligning content like text and icons */
-  align-items: center; /* Vertically center content */
-  justify-content: center; /* Horizontally center content */
-  color: var(--up-gray-10); /* Default color */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .btn:hover {
-  color: var(--up-link-color); /* Default hover color */
+  background-color: var(--btn-bg-color-hover);
+  color: var(--btn-color-hover);
 }
 
 /* Primary button style (green background) */
 .btn--primary {
+  /* Modifier only sets the custom properties */
+  --btn-bg-color: var(--up-button-bg);
+  --btn-bg-color-hover: var(--up-button-bg-hover);
+  --btn-color: var(--up-button-text);
+  --btn-color-hover: var(--up-button-text);
+
   margin-top: 4px;
   padding: 5px 8px;
-  background-color: var(--up-button-bg);
-  color: var(--up-button-text);
-}
-.btn--primary:hover {
-  background-color: var(--up-button-bg-hover);
-  color: var(--up-button-text);
 }
 
 /* Icon button base style */
@@ -112,10 +120,8 @@ p { margin: 4px 0; }
 
 /* Muted color variations for icon buttons */
 .btn--muted {
-  color: var(--up-gray-50);
-}
-.btn--muted:hover {
-  color: var(--up-black);
+  --btn-color: var(--up-gray-50);
+  --btn-color-hover: var(--up-black);
 }
 .query-section {
   margin-bottom: 8px;
@@ -244,25 +250,27 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
   border-left-color: var(--up-green);
   background-color: var(--up-job-item-bg-high-rating);
 }
-.job-item--excluded {
-  padding: 4px 8px;
-  border-left-color: var(--up-gray-80);
-}
 .job-item--applied {
   border-left-color: var(--up-blue);
   background-color: var(--up-job-item-bg-applied);
   opacity: 0.7;
 }
+
+/* Modifiers for de-emphasized items (excluded or low priority) */
+.job-item--excluded,
 .job-item--low-priority {
   padding-top: 4px;
   padding-bottom: 4px;
 }
+.job-item--excluded .job-item__title-container,
+.job-item--low-priority .job-item__title-container {
+  font-size: 0.9em;
+}
+.job-item--excluded {
+  border-left-color: var(--up-gray-80);
+}
 .job-item--excluded .job-item__title {
   color: var(--up-gray-50);
-  font-size: .9em;
-}
-.job-item--low-priority .job-item__title-container {
-  font-size: 0.85em;
 }
 .job-item--low-priority .job-item__title {
   color: var(--up-black);
