@@ -1,5 +1,5 @@
 // popup.js
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Assuming StorageManager is loaded via popup.html
   const popupTitleLinkEl = document.querySelector('.app-header__title');
   const consolidatedStatusEl = document.querySelector('.app-header__status');
@@ -16,6 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const jobDetailsTemplate = document.getElementById('job-details-template');
   let jobDetailsComponent; // Will be initialized in DOMContentLoaded
 
+  // Initialize AppState for centralized state management
+  const appState = new AppState();
+  await appState.loadFromStorage();
+
   // This DEFAULT_QUERY is used if no query is in storage.
   // For the link to match the service-worker's DEFAULT_USER_QUERY initially (if no user query is set),
   // ensure this string is identical to DEFAULT_USER_QUERY in service-worker.js.
@@ -24,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let deletedJobIds = new Set(); // In-memory store for explicitly deleted job IDs (via StorageManager)
   let currentlySelectedJobId = null; // Keep track of the currently selected job ID
   let jobItemComponents = new Map(); // Map of job ID -> JobItem component instance
-  let currentTheme = 'light'; // Default state, will be updated from storage
 
   // In-memory state for UI elements that are updated partially, to avoid reading from the DOM.
   const popupState = {
@@ -59,23 +62,21 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * Sets the UI theme by changing the stylesheet and updating the toggle button.
-   * @param {string} theme - The theme to set ('light' or 'dark').
+   * Updates the UI theme based on the current state in AppState.
    */
-  function setTheme(theme) {
+  function updateThemeUI() {
+    const theme = appState.getTheme();
     if (!themeStylesheet || !themeToggleButton) return;
 
     if (theme === 'dark') {
       themeStylesheet.href = 'popup-dark.css';
       themeToggleButton.textContent = '☀️'; // Sun icon for switching to light mode
       themeToggleButton.title = "Switch to Light Mode";
-    } else { // Default to light
+    } else {
       themeStylesheet.href = 'popup.css';
       themeToggleButton.textContent = '🌙'; // Moon icon for switching to dark mode
       themeToggleButton.title = "Switch to Dark Mode";
     }
-    currentTheme = theme;
-    StorageManager.setUiTheme(theme);
   }
 
   /**
@@ -300,22 +301,19 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadStoredData() {
     console.log("Popup: loadStoredData called.");
     try {
-      const [monitorStatus, lastCheckTimestamp, currentUserQuery, recentFoundJobs, loadedCollapsedIds, loadedDeletedIds, loadedTheme] = await Promise.all([
+      const [monitorStatus, lastCheckTimestamp, currentUserQuery, recentFoundJobs, loadedCollapsedIds, loadedDeletedIds] = await Promise.all([
         StorageManager.getMonitorStatus(),
         StorageManager.getLastCheckTimestamp(),
         StorageManager.getCurrentUserQuery(),
         StorageManager.getRecentFoundJobs(),
         StorageManager.getCollapsedJobIds(),
-        StorageManager.getDeletedJobIds(),
-        StorageManager.getUiTheme()
+        StorageManager.getDeletedJobIds()
       ]);
 
       const currentQuery = currentUserQuery || config.DEFAULT_USER_QUERY; // Use config default if storage is empty
       userQueryInput.value = currentQuery; // Set input value
       deletedJobIds = loadedDeletedIds; // Update in-memory sets
       collapsedJobIds = loadedCollapsedIds;
-      
-      setTheme(loadedTheme); // Apply the theme
       // Update UI elements
       updateConsolidatedStatusDisplay({ monitorStatusText: monitorStatus, lastCheckTimestamp: lastCheckTimestamp, deletedJobsCount: deletedJobIds.size });
       updatePopupTitleLink(currentQuery); // Update title link
@@ -372,8 +370,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   themeToggleButton.addEventListener('click', () => {
+    const currentTheme = appState.getTheme();
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
+    appState.setTheme(newTheme);
   });
 
   // Listen for messages from background script to update the display
@@ -385,6 +384,9 @@ document.addEventListener('DOMContentLoaded', () => {
       return true; 
     }
   });
+
+  // Subscribe to theme changes for reactive UI updates
+  appState.subscribeToSelector('theme', updateThemeUI);
 
   // --- IntersectionObserver for Pre-fetching Job Details for Tooltips ---
   let jobItemObserver = null;
@@ -437,8 +439,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     console.log("Popup: DOMContentLoaded complete. Loading stored data...");
 
-  loadStoredData(); // Initial load
+  await loadStoredData(); // Initial load
 
   // Initialize UI enhancements like scroll hints
   UJM_UI.initializeScrollHints(jobListContainerEl, recentJobsListDiv);
+  updateThemeUI(); // Set initial theme from loaded state
 });
