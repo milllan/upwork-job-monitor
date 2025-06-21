@@ -26,7 +26,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Use config.DEFAULT_USER_QUERY as the fallback if storage is empty
   let collapsedJobIds = new Set(); // In-memory store for collapsed job IDs, loaded from storage (via StorageManager)
   let deletedJobIds = new Set(); // In-memory store for explicitly deleted job IDs (via StorageManager)
-  let currentlySelectedJobId = null; // Keep track of the currently selected job ID
   let jobItemComponents = new Map(); // Map of job ID -> JobItem component instance
 
   // In-memory state for UI elements that are updated partially, to avoid reading from the DOM.
@@ -149,25 +148,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Sets the visual selection highlight on a job item.
+   * Sets the selected job in the application state.
+   * The UI update is handled reactively by a state subscriber.
    * @param {string} jobId The ID of the job item to select.
    */
   function setSelectedJobItem(jobId) {
+    appState.setSelectedJobId(jobId);
+  }
+
+  /**
+   * Updates the UI to visually reflect the currently selected job item.
+   * This function is called by the AppState subscriber.
+   * @param {string|null} newJobId The newly selected job ID.
+   * @param {string|null} oldJobId The previously selected job ID.
+   */
+  function updateJobSelectionUI(newJobId, oldJobId) {
     // Remove selection from previously selected item
-    if (currentlySelectedJobId) {
-      const prevSelectedElement = recentJobsListDiv.querySelector(`.job-item[data-job-id="${currentlySelectedJobId}"]`);
+    if (oldJobId) {
+      const prevSelectedElement = recentJobsListDiv.querySelector(`.job-item[data-job-id="${oldJobId}"]`);
       if (prevSelectedElement) {
         prevSelectedElement.classList.remove('job-item--selected');
       }
     }
 
     // Add selection to the new item
-    const newSelectedElement = recentJobsListDiv.querySelector(`.job-item[data-job-id="${jobId}"]`);
-    if (newSelectedElement) {
-      newSelectedElement.classList.add('job-item--selected');
-      currentlySelectedJobId = jobId;
-    } else {
-      currentlySelectedJobId = null; // Job item not found
+    if (newJobId) {
+      const newSelectedElement = recentJobsListDiv.querySelector(`.job-item[data-job-id="${newJobId}"]`);
+      if (newSelectedElement) {
+        newSelectedElement.classList.add('job-item--selected');
+      }
     }
   }
 
@@ -219,9 +228,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     deletedJobIds.add(jobId);
     saveDeletedState();
 
-    if (jobId === currentlySelectedJobId) {
+    if (jobId === appState.getSelectedJobId()) {
       jobDetailsComponent.showInitialMessage('Job removed. Select another job.');
-      currentlySelectedJobId = null;
+      appState.setSelectedJobId(null);
     }
 
     // Also remove from the master list in storage
@@ -236,7 +245,7 @@ document.addEventListener('DOMContentLoaded', async () => {
    * @param {string} jobCiphertext The ciphertext of the job to select.
    */
   function handleJobSelect(jobCiphertext) {
-    if (jobCiphertext !== currentlySelectedJobId) {
+    if (jobCiphertext !== appState.getSelectedJobId()) {
       updateDetailsPanel(jobCiphertext);
     }
   }
@@ -251,7 +260,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       recentJobsListDiv.innerHTML = '<p class="job-list__no-jobs">No new jobs found.</p>';
       mainContentArea.classList.add('empty-list');
       jobDetailsComponent.showInitialMessage('No jobs to display.');
-      currentlySelectedJobId = null;
+      appState.setSelectedJobId(null);
       jobItemComponents.forEach(c => c.destroy());
       jobItemComponents.clear();
       setupIntersectionObserver([]);
@@ -387,6 +396,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Subscribe to theme changes for reactive UI updates
   appState.subscribeToSelector('theme', updateThemeUI);
+
+  // Subscribe to selected job changes for reactive UI updates
+  appState.subscribeToSelector('selectedJobId', (newValue, prevValue) => {
+    updateJobSelectionUI(newValue, prevValue);
+  });
 
   // --- IntersectionObserver for Pre-fetching Job Details for Tooltips ---
   let jobItemObserver = null;

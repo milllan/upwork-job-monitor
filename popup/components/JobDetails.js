@@ -104,7 +104,7 @@ class JobDetails {
     const clientStats = details?.buyer?.info?.stats || {};
     if (Object.keys(clientStats).length > 0) {
       vm.clientJobsPosted = `Jobs: ${clientStats.totalAssignments || 0}`;
-      if (clientStats.hoursCount > 0) vm.clientHours = `${Math.round(clientStats.hoursCount).toLocaleString()}h total`;
+      if (clientStats.hoursCount > 0) vm.clientHours = `${Math.round(clientStats.hoursCount).toLocaleString()} h total`;
       if (clientStats.feedbackCount > 0) vm.clientFeedbackCount = `Feedback: ${clientStats.feedbackCount}`;
       vm.showClientInfo = true;
     }

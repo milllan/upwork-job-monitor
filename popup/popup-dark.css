@@ -242,7 +242,8 @@ hr { margin: 12px 0; border: 0; border-top: 1px solid var(--up-border-color); }
   display: none;
 }
 
-.details-panel__bids,
+.details-panel__job-activity,
+/*.details-panel__bids,*/
 .details-panel__questions,
 .details-panel__description {
   margin: 0; padding-top: 16px; border-top: 1px solid var(--up-border-color);
