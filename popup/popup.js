@@ -19,6 +19,13 @@ document.addEventListener('DOMContentLoaded', () => {
   let deletedJobIds = new Set(); // In-memory store for explicitly deleted job IDs (via StorageManager)
   let currentlySelectedJobId = null; // Keep track of the currently selected job ID
 
+  // In-memory state for UI elements that are updated partially, to avoid reading from the DOM.
+  const popupState = {
+    monitorStatusText: 'Initializing...',
+    lastCheckTimestamp: null,
+    deletedJobsCount: 0
+  };
+
   // Add a cache for job details to avoid duplicate fetches
   const jobDetailsCache = new Map();
   const CACHE_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes in milliseconds
@@ -44,28 +51,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  /**
+   * Updates the consolidated status display in the header.
+   * This function updates an in-memory state object and then re-renders the display.
+   * @param {object} data - An object with partial data to update.
+   * @param {string} [data.monitorStatusText] - The new monitor status text.
+   * @param {number|null} [data.lastCheckTimestamp] - The timestamp of the last check.
+   * @param {number} [data.deletedJobsCount] - The count of deleted jobs.
+   */
   function updateConsolidatedStatusDisplay(data = {}) {
     if (!consolidatedStatusEl) return;
 
-    // Preserve existing values if not provided in data, to allow partial updates
-    const currentStatusText = consolidatedStatusEl.querySelector('span[title^="Current monitor status"]')?.textContent || 'Idle';
-    const currentLastCheckText = consolidatedStatusEl.querySelector('span[title^="Last successful check time"]')?.textContent.replace('Last: ','') || 'N/A';
-    const currentDeletedText = consolidatedStatusEl.querySelector('span[title^="Jobs you\'ve deleted"]')?.textContent.replace('Del: ','') || deletedJobIds.size.toString();
-
-    const statusText = data.monitorStatusText !== undefined ? data.monitorStatusText : currentStatusText; // Use provided status or current
-    
-    let lastCheckDisplay = currentLastCheckText;
+    // 1. Update the in-memory state with any new data provided.
+    if (data.monitorStatusText !== undefined) popupState.monitorStatusText = data.monitorStatusText;
     if (data.lastCheckTimestamp !== undefined) {
-      if (data.lastCheckTimestamp) {
-        const lastCheckDate = new Date(data.lastCheckTimestamp);
-        const timeString = lastCheckDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        lastCheckDisplay = `${timeString} (${timeAgo(lastCheckDate)})`;
-      } else {
-        lastCheckDisplay = 'N/A';
-      }
+      popupState.lastCheckTimestamp = data.lastCheckTimestamp;
     }
-    const deletedCount = data.deletedJobsCount !== undefined ? data.deletedJobsCount : parseInt(currentDeletedText, 10) || 0; // Use provided count or current
+    if (data.deletedJobsCount !== undefined) popupState.deletedJobsCount = data.deletedJobsCount;
 
+    // 2. Prepare display strings from the (now updated) state.
+    const statusText = popupState.monitorStatusText || 'Idle';
+    const deletedCount = popupState.deletedJobsCount || 0;
+    let lastCheckDisplay = 'N/A';
+    if (popupState.lastCheckTimestamp) {
+      const lastCheckDate = new Date(popupState.lastCheckTimestamp);
+      const timeString = lastCheckDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      lastCheckDisplay = `${timeString} (${timeAgo(lastCheckDate)})`;
+    }
+
+    // 3. Render the UI from the state.
     consolidatedStatusEl.innerHTML =
       `<span class="app-header__status-tag" title="Current monitor status">${statusText}</span>` +
       `<span class="app-header__status-tag" title="Last successful check time">Last: ${lastCheckDisplay}</span>` +
