@@ -1,27 +1,56 @@
 // background.js (Manifest V2 - Dynamic Token Attempt)
 console.log("Background Script MV2 loaded - Dynamic Token Attempt.");
 // --- WebRequest Listener to Modify Headers ---
+
+// Helper function to upsert (update or insert) a header in a requestHeaders array
+function upsertHeader(headers, name, value) {
+  const lowerName = name.toLowerCase();
+  const index = headers.findIndex(h => h.name.toLowerCase() === lowerName);
+  if (index > -1) {
+    headers[index].value = value;
+  } else {
+    headers.push({ name: name, value: value });
+  }
+}
+
+// Headers to remove from the request (case-insensitive)
+const HEADERS_TO_REMOVE = [
+  'sec-fetch-site',
+  'sec-fetch-mode',
+  'sec-fetch-dest',
+  'origin',
+  'referer',
+  'x-upwork-api-tenantid',
+  'x-upwork-accept-language',
+  'dnt'
+];
+
 browser.webRequest.onBeforeSendHeaders.addListener(
   function(details) {
-    if (details.url.startsWith(config.UPWORK_GRAPHQL_ENDPOINT_BASE) && details.method === "POST" && details.type === "xmlhttprequest") {
-      let newHeaders = details.requestHeaders.filter(header => {
-        const nameLower = header.name.toLowerCase(); // Ensure case-insensitive comparison
-        return !nameLower.startsWith('sec-fetch-') && nameLower !== 'origin' && nameLower !== 'referer' && nameLower !== 'x-upwork-api-tenantid' && nameLower !== 'x-upwork-accept-language' && nameLower !== 'dnt';
-      });
-      newHeaders.push({ name: "Origin", value: config.UPWORK_DOMAIN });
-      newHeaders.push({ name: "Referer", value: `${config.UPWORK_DOMAIN}/nx/search/jobs/` });
-      newHeaders.push({ name: "X-Upwork-API-TenantId", value: config.X_UPWORK_API_TENANT_ID });
-      newHeaders.push({ name: "X-Upwork-Accept-Language", value: "en-US" });
-      newHeaders.push({ name: "DNT", value: "1" });
-      const uaIndex = newHeaders.findIndex(h => h.name.toLowerCase() === 'user-agent'); // Find existing User-Agent
-      const targetUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36";
-      if (uaIndex > -1) newHeaders[uaIndex].value = targetUA; else newHeaders.push({ name: "User-Agent", value: targetUA });
-      const targetAcceptLang = "en-US,en;q=0.9,hr;q=0.8,sr-Latn-RS;q=0.7,sr;q=0.6,sh;q=0.5,sr-Cyrl-RS;q=0.4,sr-Cyrl-BA;q=0.3,en-GB;q=0.2";
-      const alIndex = newHeaders.findIndex(h => h.name.toLowerCase() === 'accept-language');
-      if (alIndex > -1) newHeaders[alIndex].value = targetAcceptLang; else newHeaders.push({ name: "Accept-Language", value: targetAcceptLang });
-      return { requestHeaders: newHeaders };
+    // Check if the request matches the target GraphQL endpoint and method
+    const isTargetRequest = details.url.startsWith(config.UPWORK_GRAPHQL_ENDPOINT_BASE) &&
+                            details.method === "POST" &&
+                            details.type === "xmlhttprequest";
+
+    if (!isTargetRequest) {
+      return { cancel: false }; // Don't modify other requests
     }
-    return { cancel: false }; // Don't block other requests
+
+    // Filter out unwanted headers
+    let newHeaders = details.requestHeaders.filter(header => {
+      return !HEADERS_TO_REMOVE.includes(header.name.toLowerCase());
+    });
+
+    // Add/Update required headers using the helper function and config values
+    upsertHeader(newHeaders, "Origin", config.UPWORK_DOMAIN);
+    upsertHeader(newHeaders, "Referer", `${config.UPWORK_DOMAIN}/nx/search/jobs/`);
+    upsertHeader(newHeaders, "X-Upwork-API-TenantId", config.X_UPWORK_API_TENANT_ID);
+    upsertHeader(newHeaders, "X-Upwork-Accept-Language", config.WEBREQUEST_HEADERS.X_UPWORK_ACCEPT_LANGUAGE);
+    upsertHeader(newHeaders, "DNT", config.WEBREQUEST_HEADERS.DNT);
+    upsertHeader(newHeaders, "User-Agent", config.WEBREQUEST_HEADERS.USER_AGENT);
+    upsertHeader(newHeaders, "Accept-Language", config.WEBREQUEST_HEADERS.ACCEPT_LANGUAGE);
+
+    return { requestHeaders: newHeaders };
   },
   { urls: [config.TARGET_GRAPHQL_URL_PATTERN] },
   ["blocking", "requestHeaders"]

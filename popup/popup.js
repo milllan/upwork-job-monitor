@@ -367,16 +367,88 @@ document.addEventListener('DOMContentLoaded', () => {
    * @param {boolean} isCollapsed Whether the job item should be collapsed.
    */
   function updateJobItemElement(element, job, isCollapsed) {
-    // For this project, the primary things that change are state-based classes.
-    // The core content (title, budget, etc.) is assumed to be static once rendered.
+    // 1. Update state-based classes
     element.classList.toggle('job-item--collapsed', isCollapsed);
     element.classList.toggle('job-item--low-priority', job.isLowPriorityBySkill || job.isLowPriorityByClientCountry);
     element.classList.toggle('job-item--excluded', job.isExcludedByTitleFilter);
     element.classList.toggle('job-item--applied', job.applied);
+    element.classList.toggle('job-item--high-rating', job.client && parseFloat(job.client.rating) >= 4.9);
 
     const toggleButton = element.querySelector('.job-item__toggle');
     if (toggleButton) {
       toggleButton.textContent = isCollapsed ? '+' : '-';
+    }
+
+    // 2. Update Header Icons & Tags (remove old, add new to prevent duplication)
+    const titleContainer = element.querySelector('.job-item__title-container');
+    if (titleContainer) {
+        titleContainer.querySelectorAll('.job-item__applied-icon, .job-item__priority-tag').forEach(el => el.remove());
+
+        const appliedIconHTML = job.applied ? `
+          <span class="job-item__applied-icon" title="You applied to this job">
+            <img src="icons/applied-icon.svg" alt="Applied to job" class="air3-icon sm" data-test="UpCIcon" />
+          </span>` : '';
+
+        let priorityTagHTML = '';
+        if (job.isExcludedByTitleFilter) {
+          priorityTagHTML = '<span class="job-item__priority-tag">Filtered</span>';
+        } else if (job.isLowPriorityByClientCountry && job.client && job.client.country) {
+          const countryName = job.client.country.charAt(0).toUpperCase() + job.client.country.slice(1).toLowerCase();
+          priorityTagHTML = `<span class="job-item__priority-tag">${countryName}</span>`;
+        } else if (job.isLowPriorityBySkill) {
+          priorityTagHTML = '<span class="job-item__priority-tag">Skill</span>';
+        }
+
+        if (priorityTagHTML) titleContainer.insertAdjacentHTML('afterbegin', priorityTagHTML);
+        if (appliedIconHTML) titleContainer.insertAdjacentHTML('afterbegin', appliedIconHTML);
+    }
+
+    // 3. Update Details Section
+    const budgetEl = element.querySelector('[data-field="budget"]');
+    if (budgetEl) {
+        let budgetDisplay = 'N/A';
+        if (job.budget && job.budget.amount != null) {
+          budgetDisplay = `${job.budget.amount} ${job.budget.currencyCode || ''}`;
+          if (job.budget.type && job.budget.type.toLowerCase() !== 'fixed') {
+            budgetDisplay += ` (${job.budget.type.toLowerCase().replace('_', '-')})`;
+          }
+        }
+        budgetEl.textContent = budgetDisplay;
+    }
+
+    const clientInfoEl = element.querySelector('[data-field="client-info"]');
+    if (clientInfoEl) {
+        let clientInfo = 'Client info N/A';
+        if (job.client) {
+          clientInfo = `Client: ${job.client.country || 'N/A'}`;
+          if (job.client.rating != null) {
+            const rating = parseFloat(job.client.rating);
+            clientInfo += ` | <span class="job-item__client-rating${rating >= 4.9 ? ' job-item__client-rating--positive' : ''}" title="Client Rating">Rating: ${rating.toFixed(2)}</span>`;
+          }
+          if (job.client.totalSpent != null && Number(job.client.totalSpent) > 0) {
+            const spentAmount = Number(job.client.totalSpent);
+            clientInfo += ` | <span class="job-item__client-spent${spentAmount > 10000 ? ' job-item__client-spent--positive' : ''}" title="Client Spend">Spent: $${spentAmount.toFixed(0)}</span>`;
+          }
+          if (job.client.paymentVerificationStatus !== 'VERIFIED') {
+            clientInfo += ` <span class="job-item__unverified-icon" title="Client payment not verified">⚠️</span>`;
+          }
+        }
+        clientInfoEl.innerHTML = clientInfo;
+    }
+
+    const skillsEl = element.querySelector('[data-field="skills"]');
+    if (skillsEl) {
+        const skillsDisplay = (job.skills && job.skills.length > 0) ? `Skills: ${job.skills.map(s => s.name).slice(0, 3).join(', ')}${job.skills.length > 3 ? '...' : ''}` : '';
+        skillsEl.textContent = skillsDisplay;
+        skillsEl.parentElement.style.display = skillsDisplay ? '' : 'none';
+    }
+
+    const postedOnEl = element.querySelector('[data-field="posted-on"]');
+    const timeAgoEl = element.querySelector('[data-field="time-ago"]');
+    if (postedOnEl && timeAgoEl) {
+        const postedOnDate = job.postedOn ? new Date(job.postedOn) : null;
+        postedOnEl.textContent = postedOnDate ? `${postedOnDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}, ${postedOnDate.toLocaleDateString()}` : 'N/A';
+        timeAgoEl.textContent = postedOnDate ? timeAgo(postedOnDate) : 'N/A';
     }
   }
 

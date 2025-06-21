@@ -85,4 +85,12 @@ const config = {
   FETCH_ALARM_NAME: "fetchUpworkJobsAlarm_MV2",
   FETCH_INTERVAL_MINUTES: 3, // How often to check for new jobs
   API_FETCH_COUNT: 12, // Number of jobs to fetch per API request, upwork.com website defaults to 10
+
+  // Specific headers for webRequest modification
+  WEBREQUEST_HEADERS: {
+    USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+    ACCEPT_LANGUAGE: "en-US,en;q=0.9,hr;q=0.8,sr-Latn-RS;q=0.7,sr;q=0.6,sh;q=0.5,sr-Cyrl-RS;q=0.4,sr-Cyrl-BA;q=0.3,en-GB;q=0.2",
+    X_UPWORK_ACCEPT_LANGUAGE: "en-US",
+    DNT: "1"
+  },
 };
