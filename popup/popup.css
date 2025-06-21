@@ -324,7 +324,7 @@ h1, h2, h3, h4, h5, h6 {
   border-top: 1px solid var(--up-gray-80);
 }
 
-.questions-section {
+.job-item__questions-section { /* Element: job-item__questions-section */
   margin-top: 6px; /* Reduced top margin */
   padding-top: 6px; /* Reduced top padding */
   border-top: 1px solid var(--up-gray-80);
