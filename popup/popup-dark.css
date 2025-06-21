@@ -181,7 +181,8 @@ hr { margin: 12px 0; border: 0; border-top: 1px solid var(--up-border-color); }
   border-left-color: var(--up-blue);
 }
 .job-item--collapsed .job-item__details { display: none; }
-.job-item--high-rating { border-left-color: var(--brand-green); }
+.job-item--high-rating,
+.job-item--high-spent { border-left-color: var(--brand-green); }
 .job-item--applied { border-left-color: var(--up-blue); opacity: 0.7; }
 .job-item--excluded { border-left-color: var(--up-text-muted); opacity: 0.6; }
 .job-item--low-priority { border-left-color: var(--up-text-muted); }

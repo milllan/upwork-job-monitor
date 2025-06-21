@@ -266,47 +266,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function createJobItemElement(job, isInitiallyCollapsed) {
-    const clone = jobItemTemplate.content.cloneNode(true);
-    const jobItemElement = clone.querySelector('.job-item');
-
-    let budgetDisplay = 'N/A';
-    if (job.budget) {
-      const { type, minAmount, maxAmount, currencyCode } = job.budget;
-      if (type && type.toLowerCase().includes('hourly')) {
-        const min = parseFloat(minAmount);
-        const max = parseFloat(maxAmount);
-        if (!isNaN(min) && !isNaN(max) && min < max) {
-          budgetDisplay = `$${Math.round(min)} - $${Math.round(max)}/hr`;
-        } else if (!isNaN(min)) {
-          budgetDisplay = `$${Math.round(min)}/hr`;
-        }
-      } else { // fixed price
-        const amount = parseFloat(minAmount);
-        if (!isNaN(amount)) {
-          budgetDisplay = `$${Math.round(amount)}`;
-        }
-      }
-    }
-    clone.querySelector('[data-field="budget"]').textContent = budgetDisplay;
-
-    // Use helper function for client info
-    clone.querySelector('[data-field="client-info"]').innerHTML = formatClientInfo(job.client);
-
-    // Use helper function for skills
-    const skillsDisplay = formatSkills(job.skills);
-    const skillsElement = clone.querySelector('[data-field="skills"]');
-    if (skillsDisplay) {
-      skillsElement.textContent = skillsDisplay;
-    } else {
-      skillsElement.parentElement.style.display = 'none'; // Hide the whole <p> tag
-    }
-    const titleContainer = clone.querySelector('.job-item__title-container');
-    const appliedIconHTML = job.applied ? `
-      <span class="job-item__applied-icon" title="You applied to this job">
-        <img src="icons/applied-icon.svg" alt="Applied to job" class="air3-icon sm" data-test="UpCIcon" />
-      </span>` : '';
-
+  /**
+   * Creates a "ViewModel" object from a raw job data object.
+   * This ViewModel is a clean, display-ready representation of the job.
+   * @param {object} job The raw job data object.
+   * @returns {object} A ViewModel object.
+   */
+  function _prepareJobViewModel(job) {
+    const isLowPriority = job.isLowPriorityBySkill || job.isLowPriorityByClientCountry;
+    
     let priorityTagHTML = '';
     if (job.isExcludedByTitleFilter) {
       priorityTagHTML = '<span class="job-item__priority-tag">Filtered</span>';
@@ -317,146 +285,91 @@ document.addEventListener('DOMContentLoaded', () => {
       priorityTagHTML = '<span class="job-item__priority-tag">Skill</span>';
     }
 
-    if (priorityTagHTML) {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = priorityTagHTML;
-      titleContainer.prepend(tempDiv.firstElementChild);
-    }
-    if (appliedIconHTML) {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = appliedIconHTML;
-      titleContainer.prepend(tempDiv.firstElementChild);
-    }
-
-    const isLowPriority = job.isLowPriorityBySkill || job.isLowPriorityByClientCountry;
-    let jobItemModifiers = [];
-    if (isInitiallyCollapsed) {
-      jobItemModifiers.push('job-item--collapsed');
-    }
-    if (isLowPriority) {
-      jobItemModifiers.push('job-item--low-priority');
-    }
-    if (job.isExcludedByTitleFilter) {
-      jobItemModifiers.push('job-item--excluded');
-    }
-    if (job.applied) {
-      jobItemModifiers.push('job-item--applied');
-    }
-    // Add client-based modifiers directly from job object, as formatClientInfo doesn't return them
-    if (job.client && parseFloat(job.client.rating) >= 4.9) jobItemModifiers.push('job-item--high-rating');
-    if (job.client && job.client.totalSpent != null && Number(job.client.totalSpent) > 10000) jobItemModifiers.push('job-item--high-spent');
-
-
-    jobItemElement.classList.add(...jobItemModifiers);
-    jobItemElement.dataset.jobId = job.id;
-    jobItemElement.dataset.ciphertextForTooltip = job.ciphertext || job.id; // For IntersectionObserver
-
-    clone.querySelector('.job-item__toggle').textContent = isInitiallyCollapsed ? '+' : '-';
-
-    const titleLink = clone.querySelector('.job-item__title');
-    const jobUrl = `https://www.upwork.com/jobs/${job.ciphertext || job.id}`;
-    titleLink.href = jobUrl;
-    titleLink.dataset.ciphertext = job.ciphertext || job.id;
-    titleLink.textContent = job.title || 'No Title';
-
     const postedOnDate = job.postedOn ? new Date(job.postedOn) : null;
-    if (postedOnDate) {
-      clone.querySelector('[data-field="posted-on"]').textContent = `${postedOnDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}, ${postedOnDate.toLocaleDateString()}`;
-      clone.querySelector('[data-field="time-ago"]').textContent = timeAgo(postedOnDate);
-    }
 
-    return jobItemElement;
+    return {
+        // Raw data needed for logic
+        id: job.id,
+        ciphertext: job.ciphertext || job.id,
+        
+        // Pre-formatted display strings
+        budget: formatBudget(job.budget),
+        clientInfo: formatClientInfo(job.client),
+        skills: formatSkills(job.skills),
+        title: job.title || 'No Title',
+        jobUrl: `https://www.upwork.com/jobs/${job.ciphertext || job.id}`,
+        postedOn: postedOnDate ? `${postedOnDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}, ${postedOnDate.toLocaleDateString()}` : 'N/A',
+        timeAgo: postedOnDate ? timeAgo(postedOnDate) : 'N/A',
+
+        // HTML snippets
+        appliedIconHTML: job.applied ? `<span class="job-item__applied-icon" title="You applied to this job"><img src="icons/applied-icon.svg" alt="Applied to job" class="air3-icon sm" data-test="UpCIcon" /></span>` : '',
+        priorityTagHTML: priorityTagHTML,
+
+        // Boolean flags for classes
+        isLowPriority: isLowPriority,
+        isExcludedByTitleFilter: job.isExcludedByTitleFilter,
+        isApplied: !!job.applied,
+        isHighRating: job.client && parseFloat(job.client.rating) >= 4.9,
+        isHighSpent: job.client && job.client.totalSpent != null && Number(job.client.totalSpent) > 10000,
+    };
   }
 
   /**
-   * Updates an existing job item DOM element with new data.
-   * This is more efficient than re-creating the element for minor state changes.
-   * @param {HTMLElement} element The existing job item DOM element.
-   * @param {object} job The job data object.
-   * @param {boolean} isCollapsed Whether the job item should be collapsed.
+   * Populates a job item DOM element with data from a ViewModel.
+   * @param {HTMLElement} element The job item element to populate.
+   * @param {object} vm The ViewModel object created by _prepareJobViewModel.
+   * @param {boolean} isCollapsed The current collapsed state of the item.
    */
-  function updateJobItemElement(element, job, isCollapsed) {
-    // 1. Update state-based classes
-    element.classList.toggle('job-item--collapsed', isCollapsed);
-    element.classList.toggle('job-item--low-priority', job.isLowPriorityBySkill || job.isLowPriorityByClientCountry);
-    element.classList.toggle('job-item--excluded', job.isExcludedByTitleFilter);
-    element.classList.toggle('job-item--applied', job.applied);
-    element.classList.toggle('job-item--high-rating', job.client && parseFloat(job.client.rating) >= 4.9);
-
-    const toggleButton = element.querySelector('.job-item__toggle');
-    if (toggleButton) {
-      toggleButton.textContent = isCollapsed ? '+' : '-';
+  function _populateJobItemElement(element, vm, isCollapsed) {
+    // Populate from view model
+    element.querySelector('[data-field="budget"]').textContent = vm.budget;
+    element.querySelector('[data-field="client-info"]').innerHTML = vm.clientInfo;
+    const skillsElement = element.querySelector('[data-field="skills"]');
+    if (vm.skills) {
+      skillsElement.textContent = vm.skills;
+      skillsElement.parentElement.style.display = '';
+    } else {
+      skillsElement.parentElement.style.display = 'none';
     }
+    element.querySelector('[data-field="posted-on"]').textContent = vm.postedOn;
+    element.querySelector('[data-field="time-ago"]').textContent = vm.timeAgo;
+    
+    const titleLink = element.querySelector('.job-item__title');
+    titleLink.href = vm.jobUrl;
+    titleLink.dataset.ciphertext = vm.ciphertext;
+    titleLink.textContent = vm.title;
 
-    // 2. Update Header Icons & Tags (remove old, add new to prevent duplication)
+    // Handle HTML snippets
     const titleContainer = element.querySelector('.job-item__title-container');
-    if (titleContainer) {
-        titleContainer.querySelectorAll('.job-item__applied-icon, .job-item__priority-tag').forEach(el => el.remove());
+    titleContainer.querySelectorAll('.job-item__applied-icon, .job-item__priority-tag').forEach(el => el.remove()); // Clear existing
+    if (vm.priorityTagHTML) titleContainer.insertAdjacentHTML('afterbegin', vm.priorityTagHTML);
+    if (vm.appliedIconHTML) titleContainer.insertAdjacentHTML('afterbegin', vm.appliedIconHTML);
 
-        const appliedIconHTML = job.applied ? `
-          <span class="job-item__applied-icon" title="You applied to this job">
-            <img src="icons/applied-icon.svg" alt="Applied to job" class="air3-icon sm" data-test="UpCIcon" />
-          </span>` : '';
+    // Handle classes
+    element.classList.toggle('job-item--collapsed', isCollapsed);
+    element.classList.toggle('job-item--low-priority', vm.isLowPriority);
+    element.classList.toggle('job-item--excluded', vm.isExcludedByTitleFilter);
+    element.classList.toggle('job-item--applied', vm.isApplied);
+    element.classList.toggle('job-item--high-rating', vm.isHighRating);
+    element.classList.toggle('job-item--high-spent', vm.isHighSpent);
 
-        let priorityTagHTML = '';
-        if (job.isExcludedByTitleFilter) {
-          priorityTagHTML = '<span class="job-item__priority-tag">Filtered</span>';
-        } else if (job.isLowPriorityByClientCountry && job.client && job.client.country) {
-          const countryName = job.client.country.charAt(0).toUpperCase() + job.client.country.slice(1).toLowerCase();
-          priorityTagHTML = `<span class="job-item__priority-tag">${countryName}</span>`;
-        } else if (job.isLowPriorityBySkill) {
-          priorityTagHTML = '<span class="job-item__priority-tag">Skill</span>';
-        }
+    element.dataset.jobId = vm.id;
+    element.dataset.ciphertextForTooltip = vm.ciphertext;
 
-        if (priorityTagHTML) titleContainer.insertAdjacentHTML('afterbegin', priorityTagHTML);
-        if (appliedIconHTML) titleContainer.insertAdjacentHTML('afterbegin', appliedIconHTML);
-    }
+    element.querySelector('.job-item__toggle').textContent = isCollapsed ? '+' : '-';
+  }
 
-    // 3. Update Details Section
-    const budgetEl = element.querySelector('[data-field="budget"]');
-    if (budgetEl) {
-      let budgetDisplay = 'N/A';
-      if (job.budget) {
-        const { type, minAmount, maxAmount, currencyCode } = job.budget;
-        if (type && type.toLowerCase().includes('hourly')) {
-          const min = parseFloat(minAmount);
-          const max = parseFloat(maxAmount);
-          if (!isNaN(min) && !isNaN(max) && min < max) {
-            budgetDisplay = `$${Math.round(min)} - $${Math.round(max)}/hr`;
-          } else if (!isNaN(min)) {
-            budgetDisplay = `$${Math.round(min)}/hr`;
-          }
-        } else { // fixed price
-          const amount = parseFloat(minAmount);
-          if (!isNaN(amount)) {
-            budgetDisplay = `$${Math.round(amount)}`;
-          }
-        }
-      }
-      budgetEl.textContent = budgetDisplay;
-    }
+  function createJobItemElement(job, isInitiallyCollapsed) {
+    const clone = jobItemTemplate.content.cloneNode(true);
+    const jobItemElement = clone.querySelector('.job-item');
+    const vm = _prepareJobViewModel(job);
+    _populateJobItemElement(jobItemElement, vm, isInitiallyCollapsed);
+    return jobItemElement;
+  }
 
-    // Use helper function for client info
-    const clientInfoEl = element.querySelector('[data-field="client-info"]');
-    if (clientInfoEl) {
-        clientInfoEl.innerHTML = formatClientInfo(job.client);
-    }
-
-    // Use helper function for skills
-    const skillsEl = element.querySelector('[data-field="skills"]');
-    if (skillsEl) {
-        const skillsDisplay = formatSkills(job.skills);
-        skillsEl.textContent = skillsDisplay;
-        skillsEl.parentElement.style.display = skillsDisplay ? '' : 'none';
-    }
-
-    const postedOnEl = element.querySelector('[data-field="posted-on"]');
-    const timeAgoEl = element.querySelector('[data-field="time-ago"]');
-    if (postedOnEl && timeAgoEl) {
-        const postedOnDate = job.postedOn ? new Date(job.postedOn) : null;
-        postedOnEl.textContent = postedOnDate ? `${postedOnDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}, ${postedOnDate.toLocaleDateString()}` : 'N/A';
-        timeAgoEl.textContent = postedOnDate ? timeAgo(postedOnDate) : 'N/A';
-    }
+  function updateJobItemElement(element, job, isCollapsed) {
+    const vm = _prepareJobViewModel(job);
+    _populateJobItemElement(element, vm, isCollapsed);
   }
 
   function displayRecentJobs(jobs = []) {

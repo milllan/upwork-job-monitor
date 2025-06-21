@@ -296,7 +296,8 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
   font-weight: var(--up-font-weight-normal);
 }
 
-.job-item--high-rating {
+.job-item--high-rating,
+.job-item--high-spent {
   border-left-color: var(--up-green);
   background-color: var(--up-job-item-bg-high-rating);
 }
