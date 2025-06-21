@@ -262,8 +262,12 @@ document.addEventListener('DOMContentLoaded', () => {
       clientInfo = `Client: ${job.client.country || 'N/A'}`;
       if (job.client.rating != null) {
         const rating = parseFloat(job.client.rating);
-        clientInfo += ` | Rating: ${rating.toFixed(2)}`;
-          if (rating >= 4.9) clientModifiers.push('job-item--high-rating');
+        if (rating >= 4.9) {
+          clientModifiers.push('job-item--high-rating');
+          clientInfo += ` | <span class="job-item__client-rating job-item__client-rating--positive" title="High Client Rating">Rating: ${rating.toFixed(2)}</span>`;
+        } else {
+          clientInfo += ` | <span class="job-item__client-rating">Rating: ${rating.toFixed(2)}</span>`;
+        }
       }
       if (job.client.totalSpent != null && Number(job.client.totalSpent) > 0) {
         const spentAmount = Number(job.client.totalSpent);

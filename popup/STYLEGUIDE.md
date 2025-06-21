@@ -132,6 +132,7 @@ Represents a single job entry in the list. It has several elements for its conte
     - `.job-item__details`: The collapsible container for job details.
     - `.job-item__meta`: A generic paragraph for a line of detail (e.g., budget, client info).
     - `.job-item__unverified-icon`: The warning icon for unverified clients.
+    - `.job-item__client-rating`: The text showing client rating. Has a `--positive` modifier for high-rated clients.
     - `.job-item__client-spent`: The text showing client spend. Has a `--positive` modifier for high-spending clients.
     - `.job-item__skills`: The paragraph for skills.
 - **Modifiers**:
@@ -155,7 +156,7 @@ Represents a single job entry in the list. It has several elements for its conte
   </div>
   <div class="job-item__details">
     <p class="job-item__meta"><strong>Budget:</strong> 1000 USD</p>
-    <p class="job-item__meta">Client: United States | Rating: 4.95 | <span class="job-item__client-spent job-item__client-spent--positive">$10k+</span><span class="job-item__unverified-icon">⚠️</span></p>
+    <p class="job-item__meta">Client: United States | <span class="job-item__client-rating job-item__client-rating--positive">Rating: 4.95</span> | <span class="job-item__client-spent job-item__client-spent--positive">$10k+</span><span class="job-item__unverified-icon">⚠️</span></p>
     <p class="job-item__skills">Skills: Skill 1, Skill 2</p>
     <p class="job-item__meta"><small>Posted: 10:30 AM, 1/1/2024 <b>(2 hours ago)</b></small></p>
   </div>

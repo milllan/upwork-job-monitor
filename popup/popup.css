@@ -357,6 +357,11 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
   font-size: 1.1em;
 }
 
+.job-item__client-rating--positive {
+  color: var(--up-green);
+  font-weight: var(--up-font-weight-bold);
+}
+
 .job-item__client-spent--positive {
   color: var(--up-green);
   font-weight: var(--up-font-weight-bold);
