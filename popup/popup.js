@@ -1,11 +1,11 @@
 // popup.js
 document.addEventListener('DOMContentLoaded', () => {
   // Assuming StorageManager is loaded via popup.html
-  const popupTitleLinkEl = document.getElementById('popupTitleLink'); // Link for the main title
-  const consolidatedStatusEl = document.getElementById('consolidatedStatus');
-  const manualCheckButton = document.getElementById('manualCheckButton');
-  const userQueryInput = document.getElementById('userQueryInput');
-  const saveQueryButton = document.getElementById('saveQueryButton');
+  const popupTitleLinkEl = document.querySelector('.app-header__title');
+  const consolidatedStatusEl = document.querySelector('.app-header__status');
+  const manualCheckButton = document.querySelector('.app-header__button');
+  const userQueryInput = document.querySelector('.query-section__input');
+  const saveQueryButton = document.querySelector('.query-section__button');
   const mainContentArea = document.getElementById('mainContentArea');
   const recentJobsListDiv = document.getElementById('recentJobsList');
   const jobDetailsPanelEl = document.getElementById('jobDetailsPanel');
@@ -114,14 +114,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (currentlySelectedJobId) {
       const prevSelectedElement = recentJobsListDiv.querySelector(`.job-item[data-job-id="${currentlySelectedJobId}"]`);
       if (prevSelectedElement) {
-        prevSelectedElement.classList.remove('selected-job');
+        prevSelectedElement.classList.remove('job-item--selected');
       }
     }
 
     // Add selection to the new item
     const newSelectedElement = recentJobsListDiv.querySelector(`.job-item[data-job-id="${jobId}"]`);
     if (newSelectedElement) {
-      newSelectedElement.classList.add('selected-job');
+      newSelectedElement.classList.add('job-item--selected');
       currentlySelectedJobId = jobId;
     } else {
       currentlySelectedJobId = null; // Job item not found
@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function createJobItemHTML(job, isInitiallyCollapsed) {
+  function createJobItemHTML(job, isInitiallyCollapsed) { // BEM Refactor
     const jobUrl = `https://www.upwork.com/jobs/${job.ciphertext || job.id}`;
     let budgetDisplay = 'N/A';
     if (job.budget && job.budget.amount != null) {
@@ -265,13 +265,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let clientInfo = 'Client info N/A';
-    let clientClasses = [];
+    let clientModifiers = [];
     if (job.client) {
       clientInfo = `Client: ${job.client.country || 'N/A'}`;
       if (job.client.rating != null) {
         const rating = parseFloat(job.client.rating);
         clientInfo += ` | Rating: ${rating.toFixed(2)}`;
-          if (rating >= 4.9) clientClasses.push('high-rating'); // Use >= for high rating
+          if (rating >= 4.9) clientModifiers.push('job-item--high-rating');
       }
       if (job.client.totalSpent != null && Number(job.client.totalSpent) > 0) {
         const spentAmount = Number(job.client.totalSpent);
@@ -292,54 +292,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const appliedIconHTML = job.applied ? `
-      <span class="applied-job-icon" title="You applied to this job">
+      <span class="job-item__applied-icon" title="You applied to this job">
         <img src="icons/applied-icon.svg" alt="Applied to job" class="air3-icon sm" data-test="UpCIcon" />
       </span>` : '';
 
-    let titlePrefix = '';
-    if (job.isExcludedByTitleFilter) { // Highest precedence for the tag
-      titlePrefix = '<span class="low-priority-prefix">Filtered</span> ';
+    let priorityTagHTML = '';
+    if (job.isExcludedByTitleFilter) {
+      priorityTagHTML = '<span class="job-item__priority-tag">Filtered</span>';
     } else if (job.isLowPriorityByClientCountry && job.client && job.client.country) {
-      // Capitalize the first letter of the country for display
       const countryName = job.client.country.charAt(0).toUpperCase() + job.client.country.slice(1).toLowerCase();
-      titlePrefix = `<span class="low-priority-prefix">${countryName}</span> `;
+      priorityTagHTML = `<span class="job-item__priority-tag">${countryName}</span>`;
     } else if (job.isLowPriorityBySkill) {
-      titlePrefix = '<span class="low-priority-prefix">Skill</span> ';
+      priorityTagHTML = '<span class="job-item__priority-tag">Skill</span>';
     }
 
     const isLowPriority = job.isLowPriorityBySkill || job.isLowPriorityByClientCountry;
-    let jobItemClasses = 'job-item';
+    let jobItemModifiers = [];
+    if (isInitiallyCollapsed) {
+      jobItemModifiers.push('job-item--collapsed');
+    }
     if (isLowPriority) {
-      jobItemClasses += ' low-priority';
+      jobItemModifiers.push('job-item--low-priority');
     }
     if (job.isExcludedByTitleFilter) {
-      jobItemClasses += ' excluded-by-filter';
+      jobItemModifiers.push('job-item--excluded');
     }
     if (job.applied) {
-      jobItemClasses += ' job-applied';
+      jobItemModifiers.push('job-item--applied');
     }
-    if (clientClasses.length > 0) {
-      jobItemClasses += ' ' + clientClasses.join(' ');
-    }
+    jobItemModifiers.push(...clientModifiers);
 
-    // Add data-ciphertext attribute to the link for the hover handler
+    const jobItemClasses = `job-item ${jobItemModifiers.join(' ')}`.trim();
+
     return `
       <div class="${jobItemClasses}" data-job-id="${job.id}">
-        <div class="job-header ${isInitiallyCollapsed ? 'job-title-collapsed' : ''}">
-          <span class="toggle-details" data-job-id="${job.id}">${isInitiallyCollapsed ? '+' : '-'}</span>
-          <h3>
+        <div class="job-item__header">
+          <span class="job-item__toggle">${isInitiallyCollapsed ? '+' : '-'}</span>
+          <h3 class="job-item__title-container">
             ${appliedIconHTML}
-            ${titlePrefix}<a href="${jobUrl}" target="_blank" 
-                            data-ciphertext="${job.ciphertext || job.id}" 
-                            class="job-title-link">${job.title || 'No Title'}</a>
+            ${priorityTagHTML}
+            <a href="${jobUrl}" target="_blank" data-ciphertext="${job.ciphertext || job.id}" class="job-item__title">${job.title || 'No Title'}</a>
           </h3>
-          <span class="delete-job-button" data-job-id="${job.id}" title="Remove from list">×</span>
+          <span class="job-item__delete-btn" title="Remove from list">×</span>
         </div>
-        <div class="job-details" style="display: ${isInitiallyCollapsed ? 'none' : 'block'};">
-          <p><strong>Budget:</strong> ${budgetDisplay}</p>
-          <p>${clientInfo}</p>
-          ${skillsDisplay ? `<p class="skills">${skillsDisplay}</p>` : ''}
-          <p><small>Posted: ${job.postedOn ? new Date(job.postedOn).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ', ' + new Date(job.postedOn).toLocaleDateString() : 'N/A'} <b>(${timeAgo(job.postedOn)})</b></small></p>
+        <div class="job-item__details">
+          <p class="job-item__meta"><strong>Budget:</strong> ${budgetDisplay}</p>
+          <p class="job-item__meta">${clientInfo}</p>
+          ${skillsDisplay ? `<p class="job-item__skills">${skillsDisplay}</p>` : ''}
+          <p class="job-item__meta"><small>Posted: ${job.postedOn ? new Date(job.postedOn).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ', ' + new Date(job.postedOn).toLocaleDateString() : 'N/A'} <b>(${timeAgo(job.postedOn)})</b></small></p>
         </div>
       </div>
     `;
@@ -494,31 +494,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Event delegation for job items
   recentJobsListDiv.addEventListener('click', (event) => {
-    const toggleButton = event.target.closest('.toggle-details');
-    const deleteButton = event.target.closest('.delete-job-button');
     const jobItemElement = event.target.closest('.job-item');
-
     if (!jobItemElement) return;
+
     const jobId = jobItemElement.dataset.jobId;
+    const toggleButton = event.target.closest('.job-item__toggle');
+    const deleteButton = event.target.closest('.job-item__delete-btn');
 
     if (toggleButton && jobId) {
       event.stopPropagation();
       console.log(`Popup: Toggling job ID: ${jobId}`);
-      const detailsDiv = jobItemElement.querySelector('.job-details');
-      const headerDiv = jobItemElement.querySelector('.job-header');
       
-      if (detailsDiv.style.display === 'none') {
-        detailsDiv.style.display = 'block';
-        toggleButton.textContent = '-';
-        headerDiv.classList.remove('job-title-collapsed');
-        collapsedJobIds.delete(jobId);
-      } else {
-        detailsDiv.style.display = 'none';
-        toggleButton.textContent = '+';
-        headerDiv.classList.add('job-title-collapsed');
+      const isNowCollapsed = jobItemElement.classList.toggle('job-item--collapsed');
+      toggleButton.textContent = isNowCollapsed ? '+' : '-';
+
+      if (isNowCollapsed) {
         collapsedJobIds.add(jobId);
+      } else {
+        collapsedJobIds.delete(jobId);
       }
       saveCollapsedState();
+
     } else if (deleteButton && jobId) {
       event.stopPropagation();
       console.log(`Popup: Deleting job ID: ${jobId}`);
