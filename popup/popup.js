@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const themeStylesheet = document.getElementById('theme-stylesheet');
   const jobItemTemplate = document.getElementById('job-item-template');
   const jobDetailsTemplate = document.getElementById('job-details-template');
+  let jobDetailsComponent; // Will be initialized in DOMContentLoaded
 
   // This DEFAULT_QUERY is used if no query is in storage.
   // For the link to match the service-worker's DEFAULT_USER_QUERY initially (if no user query is set),
@@ -22,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let collapsedJobIds = new Set(); // In-memory store for collapsed job IDs, loaded from storage (via StorageManager)
   let deletedJobIds = new Set(); // In-memory store for explicitly deleted job IDs (via StorageManager)
   let currentlySelectedJobId = null; // Keep track of the currently selected job ID
+  let jobItemComponents = new Map(); // Map of job ID -> JobItem component instance
   let currentTheme = 'light'; // Default state, will be updated from storage
 
   // In-memory state for UI elements that are updated partially, to avoid reading from the DOM.
@@ -173,203 +175,69 @@ document.addEventListener('DOMContentLoaded', () => {
    * @param {string} jobCiphertext - The ciphertext ID of the job.
    */
   async function updateDetailsPanel(jobCiphertext) {
-    if (!jobDetailsPanelEl) return;
-    jobDetailsPanelEl.innerHTML = '<div class="details-panel__loading">Loading details...</div>'; // Show loading indicator
+    if (!jobDetailsComponent) return;
+    jobDetailsComponent.showLoading();
     
     setSelectedJobItem(jobCiphertext); // Highlight the item in the list
 
     try {
       const details = await fetchJobDetailsWithCache(jobCiphertext);
-      const clone = jobDetailsTemplate.content.cloneNode(true);
-
-      // --- Helper function to populate a field and hide its section if no data ---
-      const populate = (sectionName, fieldName, content, isHtml = false) => {
-        const section = clone.querySelector(`[data-section="${sectionName}"]`);
-        const field = clone.querySelector(`[data-field="${fieldName}"]`);
-        if (section && field) {
-          if (content !== null && content !== undefined && String(content).trim() !== '') {
-            if (isHtml) field.innerHTML = content; else field.textContent = content;
-            section.style.display = '';
-          } else {
-            section.style.display = 'none';
-          }
-        }
-      };
-
-      // --- Populate Client Info ---
-      const clientStats = details.buyer?.info?.stats || {};
-      populate('client-info', 'client-jobs-posted', `Jobs: ${clientStats.totalAssignments || 0}`);
-      populate('client-info', 'client-hours', clientStats.hoursCount > 0 ? `${Math.round(clientStats.hoursCount).toLocaleString()}h total` : null);
-      populate('client-info', 'client-feedback-count', clientStats.feedbackCount > 0 ? `Feedback: ${clientStats.feedbackCount}` : null);
-
-      // --- Populate Job Activity ---
-      const clientActivity = details.opening?.job?.clientActivity || {};
-      let lastActivityText = null;
-      if (clientActivity.lastBuyerActivity) {
-        const lastActivityDate = new Date(clientActivity.lastBuyerActivity);
-        const fullTimestamp = `${lastActivityDate.toLocaleDateString()} ${lastActivityDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
-        lastActivityText = `<span title="${fullTimestamp}">${timeAgo(lastActivityDate)}</span>`;
-      }
-      populate('job-activity', 'activity-applicants', `Applicants: ${clientActivity.totalApplicants || 0}`);
-      populate('job-activity', 'activity-interviews', `Interviews: ${clientActivity.totalInvitedToInterview || 0}`);
-      populate('job-activity', 'activity-hired', `Hired: ${clientActivity.totalHired || 0}/${clientActivity.numberOfPositionsToHire || 1}`);
-      populate('job-activity', 'activity-last-active', lastActivityText, true);
-
-      // --- Populate Bid Stats ---
-      const bidStats = details.applicantsBidsStats || {};
-      const avgBid = bidStats.avgRateBid?.amount;
-      const minBid = bidStats.minRateBid?.amount;
-      const maxBid = bidStats.maxRateBid?.amount;
-      if (avgBid || minBid || maxBid) {
-        populate('bid-stats', 'bid-avg', `Avg: $${(avgBid || 0).toFixed(1)}`);
-        populate('bid-stats', 'bid-range', `Range: $${minBid || 0} - $${maxBid || 0}`);
-      } else {
-        const bidSection = clone.querySelector('[data-section="bid-stats"]');
-        if (bidSection) bidSection.style.display = 'none';
-      }
-
-      // --- Populate Screening Questions ---
-      const questions = details.opening?.questions || [];
-      const questionsSection = clone.querySelector('[data-section="questions"]');
-      if (questions.length > 0) {
-        const list = clone.querySelector('[data-field="questions-list"]');
-        questions.forEach(q => {
-          const li = document.createElement('li');
-          li.textContent = q.question;
-          list.appendChild(li);
-        });
-        questionsSection.style.display = '';
-      } else {
-        questionsSection.style.display = 'none';
-      }
-
-      // --- Populate Description ---
-      const jobDescription = details.opening?.job?.description;
-      if (jobDescription && jobDescription.trim().length > 0) {
-        const cleanDescription = jobDescription
-          .replace(/<\/?[^>]+(>|$)/g, "") // Remove HTML tags
-          .trim();
-        populate('description', 'description-content', cleanDescription.replace(/\n/g, '<br>'), true);
-      } else {
-        const descSection = clone.querySelector('[data-section="description"]');
-        if (descSection) descSection.style.display = 'none';
-      }
-
-      // Replace panel content with the populated template
-      jobDetailsPanelEl.innerHTML = '';
-      jobDetailsPanelEl.appendChild(clone);
-
+      jobDetailsComponent.render(details);
     } catch (error) {
-      jobDetailsPanelEl.innerHTML = `
-        <p class="details-panel__error">Failed to load job details: ${error.message}. Please try again later.</p>
-      `;
+      jobDetailsComponent.showError(error);
     }
   }
 
-  /**
-   * Creates a "ViewModel" object from a raw job data object.
-   * This ViewModel is a clean, display-ready representation of the job.
-   * @param {object} job The raw job data object.
-   * @returns {object} A ViewModel object.
-   */
-  function _prepareJobViewModel(job) {
-    const isLowPriority = job.isLowPriorityBySkill || job.isLowPriorityByClientCountry;
-    
-    let priorityTagHTML = '';
-    if (job.isExcludedByTitleFilter) {
-      priorityTagHTML = '<span class="job-item__priority-tag">Filtered</span>';
-    } else if (job.isLowPriorityByClientCountry && job.client && job.client.country) {
-      const countryName = job.client.country.charAt(0).toUpperCase() + job.client.country.slice(1).toLowerCase();
-      priorityTagHTML = `<span class="job-item__priority-tag">${countryName}</span>`;
-    } else if (job.isLowPriorityBySkill) {
-      priorityTagHTML = '<span class="job-item__priority-tag">Skill</span>';
-    }
-
-    const postedOnDate = job.postedOn ? new Date(job.postedOn) : null;
-
-    return {
-        // Raw data needed for logic
-        id: job.id,
-        ciphertext: job.ciphertext || job.id,
-        
-        // Pre-formatted display strings
-        budget: formatBudget(job.budget),
-        clientInfo: formatClientInfo(job.client),
-        skills: formatSkills(job.skills),
-        title: job.title || 'No Title',
-        jobUrl: `https://www.upwork.com/jobs/${job.ciphertext || job.id}`,
-        postedOn: postedOnDate ? `${postedOnDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}, ${postedOnDate.toLocaleDateString()}` : 'N/A',
-        timeAgo: postedOnDate ? timeAgo(postedOnDate) : 'N/A',
-
-        // HTML snippets
-        appliedIconHTML: job.applied ? `<span class="job-item__applied-icon" title="You applied to this job"><img src="icons/applied-icon.svg" alt="Applied to job" class="air3-icon sm" data-test="UpCIcon" /></span>` : '',
-        priorityTagHTML: priorityTagHTML,
-
-        // Boolean flags for classes
-        isLowPriority: isLowPriority,
-        isExcludedByTitleFilter: job.isExcludedByTitleFilter,
-        isApplied: !!job.applied,
-        isHighRating: job.client && parseFloat(job.client.rating) >= 4.9,
-        isHighSpent: job.client && job.client.totalSpent != null && Number(job.client.totalSpent) > 10000,
-    };
-  }
+  // --- Component Event Handlers ---
 
   /**
-   * Populates a job item DOM element with data from a ViewModel.
-   * @param {HTMLElement} element The job item element to populate.
-   * @param {object} vm The ViewModel object created by _prepareJobViewModel.
-   * @param {boolean} isCollapsed The current collapsed state of the item.
+   * Handles the toggle event from a JobItem component.
+   * @param {string} jobId The ID of the job being toggled.
+   * @param {boolean} isNowCollapsed The new collapsed state.
    */
-  function _populateJobItemElement(element, vm, isCollapsed) {
-    // Populate from view model
-    element.querySelector('[data-field="budget"]').textContent = vm.budget;
-    element.querySelector('[data-field="client-info"]').innerHTML = vm.clientInfo;
-    const skillsElement = element.querySelector('[data-field="skills"]');
-    if (vm.skills) {
-      skillsElement.textContent = vm.skills;
-      skillsElement.parentElement.style.display = '';
+  function handleJobToggle(jobId, isNowCollapsed) {
+    if (isNowCollapsed) {
+      collapsedJobIds.add(jobId);
     } else {
-      skillsElement.parentElement.style.display = 'none';
+      collapsedJobIds.delete(jobId);
     }
-    element.querySelector('[data-field="posted-on"]').textContent = vm.postedOn;
-    element.querySelector('[data-field="time-ago"]').textContent = vm.timeAgo;
-    
-    const titleLink = element.querySelector('.job-item__title');
-    titleLink.href = vm.jobUrl;
-    titleLink.dataset.ciphertext = vm.ciphertext;
-    titleLink.textContent = vm.title;
-
-    // Handle HTML snippets
-    const titleContainer = element.querySelector('.job-item__title-container');
-    titleContainer.querySelectorAll('.job-item__applied-icon, .job-item__priority-tag').forEach(el => el.remove()); // Clear existing
-    if (vm.priorityTagHTML) titleContainer.insertAdjacentHTML('afterbegin', vm.priorityTagHTML);
-    if (vm.appliedIconHTML) titleContainer.insertAdjacentHTML('afterbegin', vm.appliedIconHTML);
-
-    // Handle classes
-    element.classList.toggle('job-item--collapsed', isCollapsed);
-    element.classList.toggle('job-item--low-priority', vm.isLowPriority);
-    element.classList.toggle('job-item--excluded', vm.isExcludedByTitleFilter);
-    element.classList.toggle('job-item--applied', vm.isApplied);
-    element.classList.toggle('job-item--high-rating', vm.isHighRating);
-    element.classList.toggle('job-item--high-spent', vm.isHighSpent);
-
-    element.dataset.jobId = vm.id;
-    element.dataset.ciphertextForTooltip = vm.ciphertext;
-
-    element.querySelector('.job-item__toggle').textContent = isCollapsed ? '+' : '-';
+    saveCollapsedState();
   }
 
-  function createJobItemElement(job, isInitiallyCollapsed) {
-    const clone = jobItemTemplate.content.cloneNode(true);
-    const jobItemElement = clone.querySelector('.job-item');
-    const vm = _prepareJobViewModel(job);
-    _populateJobItemElement(jobItemElement, vm, isInitiallyCollapsed);
-    return jobItemElement;
+  /**
+   * Handles the delete event from a JobItem component.
+   * @param {string} jobId The ID of the job to delete.
+   */
+  function handleJobDelete(jobId) {
+    const component = jobItemComponents.get(jobId);
+    if (component) {
+      component.destroy();
+      jobItemComponents.delete(jobId);
+    }
+
+    deletedJobIds.add(jobId);
+    saveDeletedState();
+
+    if (jobId === currentlySelectedJobId) {
+      jobDetailsComponent.showInitialMessage('Job removed. Select another job.');
+      currentlySelectedJobId = null;
+    }
+
+    // Also remove from the master list in storage
+    StorageManager.getRecentFoundJobs().then(currentJobs => {
+      const updatedJobs = currentJobs.filter(j => j.id !== jobId);
+      StorageManager.setRecentFoundJobs(updatedJobs);
+    });
   }
 
-  function updateJobItemElement(element, job, isCollapsed) {
-    const vm = _prepareJobViewModel(job);
-    _populateJobItemElement(element, vm, isCollapsed);
+  /**
+   * Handles the select event from a JobItem component (on mouseenter).
+   * @param {string} jobCiphertext The ciphertext of the job to select.
+   */
+  function handleJobSelect(jobCiphertext) {
+    if (jobCiphertext !== currentlySelectedJobId) {
+      updateDetailsPanel(jobCiphertext);
+    }
   }
 
   function displayRecentJobs(jobs = []) {
@@ -377,58 +245,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const jobsToDisplay = jobs.filter(job => job && job.id && !deletedJobIds.has(job.id));
 
+    // --- 1. Handle Empty List ---
     if (jobsToDisplay.length === 0) {
       recentJobsListDiv.innerHTML = '<p class="job-list__no-jobs">No new jobs found.</p>';
       mainContentArea.classList.add('empty-list');
-      if (jobDetailsPanelEl) jobDetailsPanelEl.innerHTML = '<p class="details-panel__no-jobs">No jobs to display.</p>';
+      jobDetailsComponent.showInitialMessage('No jobs to display.');
       currentlySelectedJobId = null;
+      jobItemComponents.forEach(c => c.destroy());
+      jobItemComponents.clear();
       setupIntersectionObserver([]);
       return;
     }
 
     mainContentArea.classList.remove('empty-list');
 
-    const existingJobElements = new Map();
-    Array.from(recentJobsListDiv.children).forEach(child => {
-      if (child.dataset && child.dataset.jobId) {
-        existingJobElements.set(child.dataset.jobId, child);
-      }
-    });
-
+    // --- 2. Destroy old components and prepare for new render ---
+    jobItemComponents.forEach(c => c.destroy());
+    jobItemComponents.clear();
     const fragment = document.createDocumentFragment();
     let firstNonFilteredJob = null;
-    const newJobElements = [];
 
+    // --- 3. Create and Render New Components ---
     jobsToDisplay.forEach(job => {
       if (!firstNonFilteredJob && !job.isExcludedByTitleFilter) {
         firstNonFilteredJob = job;
       }
 
-      const isCollapsed = collapsedJobIds.has(job.id);
-      let jobItemElement = existingJobElements.get(job.id);
+      const jobComponent = new JobItem(job, {
+        isCollapsed: collapsedJobIds.has(job.id),
+        onToggle: handleJobToggle,
+        onDelete: handleJobDelete,
+        onSelect: handleJobSelect,
+      });
 
-      if (jobItemElement) {
-        updateJobItemElement(jobItemElement, job, isCollapsed);
-        existingJobElements.delete(job.id);
-      } else {
-        jobItemElement = createJobItemElement(job, isCollapsed);
-      }
-      fragment.appendChild(jobItemElement);
-      newJobElements.push(jobItemElement);
+      jobItemComponents.set(job.id, jobComponent);
+      fragment.appendChild(jobComponent.render());
     });
 
-    existingJobElements.forEach(element => element.remove());
-
+    // --- 4. Append to DOM and Update Details Panel ---
     recentJobsListDiv.replaceChildren(fragment);
 
     if (firstNonFilteredJob && firstNonFilteredJob.id) {
-      updateDetailsPanel(firstNonFilteredJob.id);
-    } else if (jobDetailsPanelEl) {
-      jobDetailsPanelEl.innerHTML = '<p class="details-panel__no-jobs">No job selected.</p>';
+      handleJobSelect(firstNonFilteredJob.id);
+    } else {
+      jobDetailsComponent.showInitialMessage('No job selected.');
       setSelectedJobItem(null);
     }
 
-    setupIntersectionObserver(newJobElements);
+    // --- 5. Re-initialize Intersection Observer ---
+    setupIntersectionObserver(Array.from(jobItemComponents.values()).map(c => c.element));
   }
 
   // Refactored loadStoredData to use StorageManager
@@ -521,67 +386,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Add a listener for storage changes to keep the popup data up-to-date
-  browser.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === 'local') {
-      const changedKeys = Object.keys(changes);
-
-      // If the only change was the UI theme, we don't need a full reload.
-      // The theme is handled directly by its own click handler, and reloading
-      // here would cause a feedback loop.
-      if (changedKeys.length === 1 && changedKeys[0] === StorageManager.STORAGE_KEYS.UI_THEME) {
-        console.log("Popup: UI theme changed, no data reload needed.");
-        return; // Exit without reloading
-      }
-
-      // For any other data change, or multiple changes, reload the data.
-      console.log("Popup: Storage changed, reloading data. Changes:", changes);
-      loadStoredData();
-    }
-  });
-
-  // Event delegation for job items
-  recentJobsListDiv.addEventListener('click', (event) => {
-    const jobItemElement = event.target.closest('.job-item');
-    if (!jobItemElement) return;
-
-    const jobId = jobItemElement.dataset.jobId;
-    const toggleButton = event.target.closest('.job-item__toggle');
-    const deleteButton = event.target.closest('.job-item__delete-btn');
-
-    if (toggleButton && jobId) {
-      event.stopPropagation();
-      console.log(`Popup: Toggling job ID: ${jobId}`);
-      
-      const isNowCollapsed = jobItemElement.classList.toggle('job-item--collapsed');
-      toggleButton.textContent = isNowCollapsed ? '+' : '-';
-
-      if (isNowCollapsed) {
-        collapsedJobIds.add(jobId);
-      } else {
-        collapsedJobIds.delete(jobId);
-      }
-      saveCollapsedState();
-
-    } else if (deleteButton && jobId) {
-      event.stopPropagation();
-      console.log(`Popup: Deleting job ID: ${jobId}`);
-      jobItemElement.remove();
-      deletedJobIds.add(jobId);
-      saveDeletedState();
-
-      // If the deleted job was the one selected, clear the details panel
-      if (jobId === currentlySelectedJobId) {
-        if (jobDetailsPanelEl) jobDetailsPanelEl.innerHTML = '<p class="details-panel__no-jobs">Job removed. Select another job to see details.</p>';
-        currentlySelectedJobId = null;
-      }
-
-      StorageManager.getRecentFoundJobs().then(currentRecentJobs => {
-        StorageManager.setRecentFoundJobs(currentRecentJobs.filter(item => item.id !== jobId));
-      });
-    }
-  });
-
   // --- IntersectionObserver for Pre-fetching Job Details for Tooltips ---
   let jobItemObserver = null;
   function setupIntersectionObserver(elementsToObserve = []) {
@@ -614,38 +418,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }, observerOptions);
 
     // Observe existing and future .job-item elements
-    document.querySelectorAll('#recentJobsList .job-item').forEach(item => {
-        if (item.dataset.jobCiphertextForTooltip) jobItemObserver.observe(item);
+    elementsToObserve.forEach(item => {
+      if (item && item.dataset.ciphertextForTooltip) {
+        jobItemObserver.observe(item);
+      }
     });
   }
 
-
-  // The MutationObserver is no longer needed as displayRecentJobs now explicitly calls setupIntersectionObserver.
-
-  console.log("Popup: Added storage listener.");
-
-  // --- Event listeners for the new tooltip ---
-  recentJobsListDiv.addEventListener('mouseenter', async (event) => {
-    const jobItemElement = event.target.closest('.job-item');
-    if (jobItemElement) {
-      const jobCiphertext = jobItemElement.dataset.jobId; 
-      if (!jobCiphertext) {
-        console.warn("Popup: job-item missing data-job-id for details panel.", jobItemElement);
-        return;
+    // Initialize JobDetails component
+    if (typeof JobDetails === 'undefined') {
+      console.error("Initialization Error: JobDetails class is not defined. Please ensure popup/components/JobDetails.js is loaded correctly and without errors.");
+      if (jobDetailsPanelEl) {
+        jobDetailsPanelEl.innerHTML = '<p class="details-panel__error">Initialization failed: Job details component missing. Try reloading the extension.</p>';
       }
-      // Ensure IntersectionObserver can pick it up if it hasn't already
-      if (!jobItemElement.dataset.jobCiphertextForTooltip) {
-        jobItemElement.dataset.jobCiphertextForTooltip = jobCiphertext;
-        if (jobItemObserver) jobItemObserver.observe(jobItemElement); // Observe if not already
-      }
-
-      // Only update if it's not already selected, to avoid redundant updates
-      // and potential flicker if updateDetailsPanel is slow.
-      if (jobCiphertext !== currentlySelectedJobId) {
-        updateDetailsPanel(jobCiphertext);
-      }
+      return; // Stop further execution if a critical component is missing
     }
-  }, true); // Use capture phase to ensure it runs
+    jobDetailsComponent = new JobDetails(jobDetailsPanelEl);
+
+    console.log("Popup: DOMContentLoaded complete. Loading stored data...");
 
   loadStoredData(); // Initial load
 
