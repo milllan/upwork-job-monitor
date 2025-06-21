@@ -67,9 +67,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const deletedCount = data.deletedJobsCount !== undefined ? data.deletedJobsCount : parseInt(currentDeletedText, 10) || 0; // Use provided count or current
 
     consolidatedStatusEl.innerHTML =
-      `<span title="Current monitor status">${statusText}</span> | ` +
-      `<span title="Last successful check time">Last: ${lastCheckDisplay}</span> | ` +
-      `<span title="Jobs you've deleted from the list">Del: ${deletedCount}</span>`;
+      `<span class="app-header__status-tag" title="Current monitor status">${statusText}</span>` +
+      `<span class="app-header__status-tag" title="Last successful check time">Last: ${lastCheckDisplay}</span>` +
+      `<span class="app-header__status-tag" title="Jobs you've deleted from the list">Del: ${deletedCount}</span>`;
   }
 
   // Function to fetch job details with caching

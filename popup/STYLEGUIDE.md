@@ -21,6 +21,7 @@ The main header for the popup UI.
     - `.app-header__title`: The main title link.
     - `.app-header__meta`: A container for status information.
     - `.app-header__status`: The text displaying the current monitor status.
+    - `.app-header__status-tag`: An individual "tag" or "lozenge" within the status area.
     - `.app-header__button`: The manual refresh button.
 
 **Example:**
