@@ -240,13 +240,6 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
   font-weight: var(--up-font-weight-normal);
 }
 
-/* Slightly smaller font,  moved out of .job-item */
-.no-jobs  {
- text-align:  center;
- color:  #777;
- padding:  10px;
- font-size:  13px;
-}
 .job-item--high-rating {
   border-left-color: var(--up-green);
   background-color: var(--up-job-item-bg-high-rating);
@@ -299,13 +292,17 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
 
 /* --- End job-item Block --- */
 
-.unverified-icon {
+.job-item__unverified-icon {
   color: var(--orange-light);
   margin-left: 4px;
   cursor: help;
   font-size: 1.1em;
 }
 
+.job-item__client-spent--positive {
+  color: var(--up-green);
+  font-weight: var(--up-font-weight-bold);
+}
 
 .details-panel__loading,
 .details-panel__error {
@@ -315,11 +312,6 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
 
 .details-panel__error {
   color: #d00; /* A distinct error color */
-}
-
-.client-spent.positive {
-  color: var(--up-green);
-  font-weight: var(--up-font-weight-bold);
 }
 
 .details-panel__stats-group {
@@ -392,6 +384,14 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
   flex-basis: 385px; /* Fixed width for the job list */
   min-width: 300px; /* Prevent it from becoming too small */
   box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+
+.job-list__no-jobs,
+.details-panel__no-jobs {
+ text-align:  center;
+ color:  #777;
+ padding:  10px;
+ font-size:  13px;
 }
 
 .job-list,

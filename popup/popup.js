@@ -276,13 +276,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (job.client.totalSpent != null && Number(job.client.totalSpent) > 0) {
         const spentAmount = Number(job.client.totalSpent);
         if (spentAmount > 10000) { // Threshold for high spender
-          clientInfo += ` | <span class="client-spent positive" title="High Spender Client">Spent: $${spentAmount.toFixed(0)}</span>`;
+          clientInfo += ` | <span class="job-item__client-spent job-item__client-spent--positive" title="High Spender Client">Spent: $${spentAmount.toFixed(0)}</span>`;
         } else {
-          clientInfo += ` | <span class="client-spent">Spent: $${spentAmount.toFixed(0)}</span>`;
+          clientInfo += ` | <span class="job-item__client-spent">Spent: $${spentAmount.toFixed(0)}</span>`;
         }
       }
       if (job.client.paymentVerificationStatus !== 'VERIFIED') {
-        clientInfo += ' <span class="unverified-icon" title="Client payment not verified">⚠️</span>';
+        clientInfo += ` <span class="job-item__unverified-icon" title="Client payment not verified">⚠️</span>`;
       }
     }
 
@@ -352,10 +352,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!Array.isArray(jobs) || jobs.length === 0) {
       console.log("Popup: No valid jobs array to display or jobs array is empty.");
-      recentJobsListDiv.innerHTML = '<p class="no-jobs">No new jobs found in the last check.</p>';
+      recentJobsListDiv.innerHTML = '<p class="job-list__no-jobs">No new jobs found in the last check.</p>';
       //recentJobsListDiv.classList.add('empty-list');
       mainContentArea.classList.add('empty-list'); // Add empty list class to main content area
-      if (jobDetailsPanelEl) jobDetailsPanelEl.innerHTML = '<p class="no-jobs">No jobs to display details for.</p>'; // Clear panel
+      if (jobDetailsPanelEl) jobDetailsPanelEl.innerHTML = '<p class="details-panel__no-jobs">No jobs to display details for.</p>'; // Clear panel
       return;
     }
 
@@ -364,10 +364,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (jobsToDisplay.length === 0) {
       console.log("Popup: No jobs to display after filtering deleted items.");
-      recentJobsListDiv.innerHTML = '<p class="no-jobs">No new jobs found (all previously seen or deleted).</p>';
+      recentJobsListDiv.innerHTML = '<p class="job-list__no-jobs">No new jobs found (all previously seen or deleted).</p>';
       //recentJobsListDiv.classList.add('empty-list');
       mainContentArea.classList.add('empty-list'); // Add empty list class to main content area
-      if (jobDetailsPanelEl) jobDetailsPanelEl.innerHTML = '<p class="no-jobs">No jobs to display details for.</p>'; // Clear panel
+      if (jobDetailsPanelEl) jobDetailsPanelEl.innerHTML = '<p class="details-panel__no-jobs">No jobs to display details for.</p>'; // Clear panel
     } else {
       console.log(`Popup: Displaying ${jobsToDisplay.length} jobs (filtered from ${jobs.length} total recent).`);
       jobsToDisplay.forEach((job, index) => {
@@ -390,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (firstNonFilteredJob && firstNonFilteredJob.id) {
         updateDetailsPanel(firstNonFilteredJob.id); // This will also call setSelectedJobItem
       } else if (jobDetailsPanelEl) {
-        jobDetailsPanelEl.innerHTML = '<p class="no-jobs">No job selected or available for details.</p>';
+        jobDetailsPanelEl.innerHTML = '<p class="details-panel__no-jobs">No job selected or available for details.</p>';
         setSelectedJobItem(null); // Clear any selection if no suitable job
       }
     }
@@ -423,7 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
       console.error("Popup: Error in loadStoredData Promise.all:", error, error.stack ? error.stack : '(no stack trace)');
       updateConsolidatedStatusDisplay({ monitorStatusText: 'Error loading status' });
-      recentJobsListDiv.innerHTML = '<p class="no-jobs">Error loading job data.</p>';
+      recentJobsListDiv.innerHTML = '<p class="job-list__no-jobs">Error loading job data.</p>';
     }
   }
 
@@ -524,7 +524,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // If the deleted job was the one selected, clear the details panel
       if (jobId === currentlySelectedJobId) {
-        if (jobDetailsPanelEl) jobDetailsPanelEl.innerHTML = '<p class="no-jobs">Job removed. Select another job to see details.</p>';
+        if (jobDetailsPanelEl) jobDetailsPanelEl.innerHTML = '<p class="details-panel__no-jobs">Job removed. Select another job to see details.</p>';
         currentlySelectedJobId = null;
       }
 
