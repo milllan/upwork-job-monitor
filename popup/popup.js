@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let questionsHTML = '';
       if (questions && questions.length > 0) {
         questionsHTML = `
-          <div class="questions-section">
+          <div class="job-item__questions-section">
             <p><strong>Screening Questions:</strong></p>
             <ol>
               ${questions.map(q => `<li>${q.question}</li>`).join('')}
