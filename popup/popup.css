@@ -224,10 +224,10 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
 }
 
 .job-item__applied-icon {
-  margin: 3px 8px 0 0;
+  margin: 0 4px 0 0;
   display: inline-flex;
   align-items: center;
-  width: 16px;
+  width: 36px;
   height: 16px;
   --icon-color: var(--up-blue);
 }

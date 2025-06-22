@@ -112,7 +112,7 @@ hr { margin: 12px 0; border: 0; border-top: 1px solid var(--up-border-color); }
 
 .job-list-container {
   position: relative; flex-grow: 0; flex-shrink: 0;
-  flex-basis: 420px; min-width: 300px;
+  flex-basis: 359px; min-width: 300px;
 }
 .job-list { height: 100%; overflow-y: auto; box-sizing: border-box; }
 
@@ -144,7 +144,9 @@ hr { margin: 12px 0; border: 0; border-top: 1px solid var(--up-border-color); }
   min-width: 0;
 }
 
-.job-item__applied-icon { display: inline-flex; align-items: center; width: 16px; height: 16px; }
+.job-item__applied-icon { display: inline-flex; align-items: center; width: 40px; height: 16px; background-color: var(--brand-green); border-radius: 4px; }
+
+.job-item__applied-icon img { background-color: var(--brand-green); border-radius: 4px; }
 .job-item__priority-tag {
   display: inline-block; background-color: var(--up-page-bg);
   border: 1px solid var(--up-border-color); color: var(--up-text-muted);
@@ -173,7 +175,10 @@ hr { margin: 12px 0; border: 0; border-top: 1px solid var(--up-border-color); }
 .job-item__meta { margin: 0; color: var(--up-text-secondary); line-height: 1.5; }
 .job-item__meta > strong { font-weight: var(--up-font-weight-medium); color: var(--up-text-primary); }
 
-.job-item__skills { margin: 0; font-style: italic; font-size: 12px; color: var(--up-text-muted); }
+.job-item__skills { margin: 0; font-style: italic; font-size: 12px; color: var(--up-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; }
 
 /* --- Job Item Modifiers --- */
 .job-item--selected {
@@ -205,7 +210,7 @@ hr { margin: 12px 0; border: 0; border-top: 1px solid var(--up-border-color); }
   flex-grow: 1; box-sizing: border-box;
   background-color: var(--up-panel-bg);
   border: 1px solid var(--up-border-color); border-radius: 8px;
-  padding: 16px; font-size: 14px; line-height: 1.6;
+  padding: 14px; font-size: 14px; line-height: 1.6;
   overflow-y: auto; display: flex; flex-direction: column; gap: 18px;
 }
 
