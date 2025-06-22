@@ -46,7 +46,9 @@
 
 body {
   font-family: var(--up-font-family, sans-serif); /* Use CSS var, fallback to sans-serif */
-  width: 700px; padding: 10px; font-size: 14px; overflow-x: hidden;
+  width: 700px;
+  height: 600px;
+  padding: 10px; font-size: 14px; overflow-x: hidden;
   color: var(--up-black);
   background-color: var(--up-page-bg);
   margin: 0; /* Reset default body margin */
@@ -568,9 +570,9 @@ body::-webkit-scrollbar-thumb,
 .main-content {
   display: flex;
   flex-direction: row; /* Arrange children side-by-side */
-  gap: 15px; /* Space between job list and details panel */
+  gap: 16px; /* Space between job list and details panel */
   margin-top: 10px; /* Add some margin at the top */
-  height: 471px;
+  height: calc(100vh - 92px); /* Use calc to fill remaining height after header */
 }
 .main-content.empty-list {
   height: 90px; /* Adjust height when the job list is empty */

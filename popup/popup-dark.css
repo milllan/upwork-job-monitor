@@ -39,6 +39,7 @@
 body {
   font-family: var(--up-font-family, sans-serif);
   width: 799px;
+  height: 600px;
   font-size: 14px;
   overflow-x: hidden;
   color: var(--up-text-secondary);
@@ -106,7 +107,12 @@ hr { margin: 12px 0; border: 0; border-top: 1px solid var(--up-border-color); }
 /* --- Main Layout --- */
 .main-content {
   display: flex; flex-direction: row; gap: 16px;
-  margin-top: 12px; height: 462px; /* was 485px */
+  margin-top: 12px; 
+  height: 462px;
+  height: calc(100vh - 120px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 .main-content.empty-list { height: 90px; }
 
