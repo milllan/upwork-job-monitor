@@ -90,8 +90,10 @@ class JobDetails {
         vm.contractorHistory.forEach(contractor => {
           const li = document.createElement('li');
           const a = document.createElement('a');
+          const firstName = contractor.name.split(' ')[0]; // Only take the first name for a cleaner look.
+
           a.href = `https://www.upwork.com/freelancers/${contractor.ciphertext}`;
-          a.textContent = contractor.name;
+          a.textContent = firstName;
           a.target = '_blank';
           a.rel = 'noopener noreferrer';
           li.appendChild(a);

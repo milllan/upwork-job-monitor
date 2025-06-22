@@ -38,7 +38,7 @@
 
 body {
   font-family: var(--up-font-family, sans-serif);
-  width: 790px;
+  width: 799px;
   font-size: 14px;
   overflow-x: hidden;
   color: var(--up-text-secondary);
@@ -112,7 +112,7 @@ hr { margin: 12px 0; border: 0; border-top: 1px solid var(--up-border-color); }
 
 .job-list-container {
   position: relative; flex-grow: 0; flex-shrink: 0;
-  flex-basis: 359px; min-width: 300px;
+  flex-basis: 353px; min-width: 300px;
 }
 .job-list { height: 100%; overflow-y: auto; box-sizing: border-box; }
 
@@ -249,7 +249,6 @@ hr { margin: 12px 0; border: 0; border-top: 1px solid var(--up-border-color); }
 
 .details-panel__job-activity,
 /*.details-panel__bids,*/
-.details-panel__contractor-history,
 .details-panel__questions,
 .details-panel__description {
   margin: 0; padding-top: 16px; border-top: 1px solid var(--up-border-color);
@@ -260,14 +259,31 @@ hr { margin: 12px 0; border: 0; border-top: 1px solid var(--up-border-color); }
   display: flex; flex-direction: column; gap: 8px;
 }
 
-/* --- Contractor History --- */
+.details-panel__contractor-history {
+  position: relative;
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--up-border-color);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.details-panel__contractor-history p {
+  margin: 0;
+  flex-shrink: 0;
+    position: absolute;
+    top: 0;
+    font-size: .75em;
+}
 .details-panel__contractor-history ul {
   list-style-type: none;
   padding-left: 0;
-  margin: 8px 0 0 0;
+  margin: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 5px; /* Space for scrollbar */
 }
 
 .details-panel__contractor-history li {
@@ -275,6 +291,8 @@ hr { margin: 12px 0; border: 0; border-top: 1px solid var(--up-border-color); }
   border: 1px solid var(--up-border-color);
   padding: 2px 8px;
   border-radius: 6px;
+  white-space: nowrap; /* Prevent names with hyphens from wrapping */
+  font-size: 0.85em;
 }
 
 .details-panel__contractor-history li a {
@@ -292,14 +310,16 @@ hr { margin: 12px 0; border: 0; border-top: 1px solid var(--up-border-color); }
   height: 100%; display: flex; align-items: center; justify-content: center;
 }
 
-.job-list, .details-panel, body {
+.job-list, .details-panel, .details-panel__contractor-history ul, body {
   scrollbar-width: thin; scrollbar-color: var(--up-border-color) transparent;
 }
 .job-list::-webkit-scrollbar,
 .details-panel::-webkit-scrollbar,
+.details-panel__contractor-history ul::-webkit-scrollbar,
 body::-webkit-scrollbar { width: 8px; }
 .job-list::-webkit-scrollbar-thumb,
 .details-panel::-webkit-scrollbar-thumb,
+.details-panel__contractor-history ul::-webkit-scrollbar-thumb,
 body::-webkit-scrollbar-thumb {
   background: var(--up-border-color); border-radius: 4px;
 }

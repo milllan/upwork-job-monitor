@@ -405,24 +405,37 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
 }
 
 .details-panel__contractor-history {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   margin-top: 6px;
   padding-top: 6px;
   border-top: 1px solid var(--up-gray-80);
 }
 
+.details-panel__contractor-history p {
+  margin: 0;
+  flex-shrink: 0;
+}
+
 .details-panel__contractor-history ul {
   list-style-type: none;
   padding-left: 0;
-  margin: 4px 0 0 0;
+  margin: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px 8px;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 5px; /* Space for scrollbar */
 }
 
 .details-panel__contractor-history li {
   background-color: var(--up-gray-80);
   padding: 2px 6px;
   border-radius: 4px;
+  white-space: nowrap; /* Prevent names with hyphens from wrapping */
+  font-size: 0.85em;
 }
 
 .details-panel__contractor-history li a {
@@ -523,19 +536,22 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
 }
 
 .job-list,
-.details-panel {
+.details-panel,
+.details-panel__contractor-history ul {
   /* Cross-Browser Scrollbar Styling (Firefox Support) */
   /* Note: Webkit browsers (Chrome, Safari) use ::-webkit-scrollbar */
   scrollbar-width: thin; /* Firefox */
   scrollbar-color: #ccc transparent; /* Firefox */
 }
 .job-list::-webkit-scrollbar,
+.details-panel__contractor-history ul::-webkit-scrollbar,
 .details-panel::-webkit-scrollbar {
   width: 8px; /* Narrower scrollbar */
 }
 
 body::-webkit-scrollbar-thumb,
 .job-list::-webkit-scrollbar-thumb,
+.details-panel__contractor-history ul::-webkit-scrollbar-thumb,
 .details-panel::-webkit-scrollbar-thumb {
   background: #ccc;
   border-radius: 4px;
