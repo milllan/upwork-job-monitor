@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // For the link to match the service-worker's DEFAULT_USER_QUERY initially (if no user query is set),
   // ensure this string is identical to DEFAULT_USER_QUERY in service-worker.js.
   // Use config.DEFAULT_USER_QUERY as the fallback if storage is empty
-  let collapsedJobIds = new Set(); // In-memory store for collapsed job IDs, loaded from storage (via StorageManager)
   let deletedJobIds = new Set(); // In-memory store for explicitly deleted job IDs (via StorageManager)
   let jobItemComponents = new Map(); // Map of job ID -> JobItem component instance
 
@@ -38,10 +37,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Add a cache for job details to avoid duplicate fetches
   const jobDetailsCache = new Map();
   const CACHE_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes in milliseconds
-
-  function saveCollapsedState() {
-    StorageManager.setCollapsedJobIds(Array.from(collapsedJobIds));
-  }
 
   async function saveDeletedState() {
     await StorageManager.addDeletedJobIds(Array.from(deletedJobIds)); // StorageManager handles the limit
@@ -206,12 +201,7 @@ document.addEventListener('DOMContentLoaded', async () => {
    * @param {boolean} isNowCollapsed The new collapsed state.
    */
   function handleJobToggle(jobId, isNowCollapsed) {
-    if (isNowCollapsed) {
-      collapsedJobIds.add(jobId);
-    } else {
-      collapsedJobIds.delete(jobId);
-    }
-    saveCollapsedState();
+    appState.toggleJobCollapse(jobId);
   }
 
   /**
@@ -282,7 +272,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       const jobComponent = new JobItem(job, {
-        isCollapsed: collapsedJobIds.has(job.id),
+        // A job is collapsed if it's marked as low-priority/filtered (default state),
+        // OR if the user has manually collapsed it via the toggle.
+        isCollapsed: job.isLowPriorityBySkill || job.isLowPriorityByClientCountry ||
+                       job.isExcludedByTitleFilter || appState.getCollapsedJobIds().has(job.id),
         onToggle: handleJobToggle,
         onDelete: handleJobDelete,
         onSelect: handleJobSelect,
@@ -292,7 +285,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       fragment.appendChild(jobComponent.render());
     });
 
-    // --- 4. Append to DOM and Update Details Panel ---
+    // --- 4. Append to DOM anEd Update Details Panel ---
     recentJobsListDiv.replaceChildren(fragment);
 
     if (firstNonFilteredJob && firstNonFilteredJob.id) {
@@ -310,19 +303,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function loadStoredData() {
     console.log("Popup: loadStoredData called.");
     try {
-      const [monitorStatus, lastCheckTimestamp, currentUserQuery, recentFoundJobs, loadedCollapsedIds, loadedDeletedIds] = await Promise.all([
+      const [monitorStatus, lastCheckTimestamp, currentUserQuery, recentFoundJobs, loadedDeletedIds] = await Promise.all([
         StorageManager.getMonitorStatus(),
         StorageManager.getLastCheckTimestamp(),
         StorageManager.getCurrentUserQuery(),
         StorageManager.getRecentFoundJobs(),
-        StorageManager.getCollapsedJobIds(),
         StorageManager.getDeletedJobIds()
       ]);
 
       const currentQuery = currentUserQuery || config.DEFAULT_USER_QUERY; // Use config default if storage is empty
       userQueryInput.value = currentQuery; // Set input value
       deletedJobIds = loadedDeletedIds; // Update in-memory sets
-      collapsedJobIds = loadedCollapsedIds;
       // Update UI elements
       updateConsolidatedStatusDisplay({ monitorStatusText: monitorStatus, lastCheckTimestamp: lastCheckTimestamp, deletedJobsCount: deletedJobIds.size });
       updatePopupTitleLink(currentQuery); // Update title link
