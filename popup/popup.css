@@ -387,6 +387,12 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
   margin-bottom: 6px; /* Reduced bottom margin */
 }
 
+.details-panel__job-activity {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+ }
+
 .details-panel__stat {
   background-color: var(--up-gray-90);
   padding: 2px 6px; /* Reduced padding */

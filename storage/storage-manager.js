@@ -63,11 +63,9 @@ async function getDeletedJobIds() {
   return new Set(result[STORAGE_KEYS.DELETED_JOB_IDS] || []);
 }
 
-async function addDeletedJobIds(newJobIdsArray) {
-   const currentDeletedIds = await getDeletedJobIds();
-   newJobIdsArray.forEach(id => currentDeletedIds.add(id));
-   const prunedDeletedJobIdsArray = Array.from(currentDeletedIds).slice(-MAX_DELETED_IDS);
-   await setStorage({ [STORAGE_KEYS.DELETED_JOB_IDS]: prunedDeletedJobIdsArray });
+async function setDeletedJobIds(deletedIdsArray) {
+  const prunedDeletedJobIdsArray = deletedIdsArray.slice(-MAX_DELETED_IDS);
+  await setStorage({ [STORAGE_KEYS.DELETED_JOB_IDS]: prunedDeletedJobIdsArray });
 }
 
 async function removeDeletedJobId(jobId) {
@@ -184,7 +182,7 @@ const StorageManager = {
   getSeenJobIds,
   addSeenJobIds,
   getDeletedJobIds,
-  addDeletedJobIds,
+  setDeletedJobIds,
   removeDeletedJobId,
   getMonitorStatus,
   setMonitorStatus,

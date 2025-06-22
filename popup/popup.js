@@ -23,26 +23,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // This DEFAULT_QUERY is used if no query is in storage.
   // For the link to match the service-worker's DEFAULT_USER_QUERY initially (if no user query is set),
   // ensure this string is identical to DEFAULT_USER_QUERY in service-worker.js.
-  // Use config.DEFAULT_USER_QUERY as the fallback if storage is empty
-  let deletedJobIds = new Set(); // In-memory store for explicitly deleted job IDs (via StorageManager)
   let jobItemComponents = new Map(); // Map of job ID -> JobItem component instance
 
   // In-memory state for UI elements that are updated partially, to avoid reading from the DOM.
-  const popupState = {
-    monitorStatusText: 'Initializing...',
-    lastCheckTimestamp: null,
-    deletedJobsCount: 0
-  };
-
-  // Add a cache for job details to avoid duplicate fetches
   const jobDetailsCache = new Map();
   const CACHE_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes in milliseconds
-
-  async function saveDeletedState() {
-    await StorageManager.addDeletedJobIds(Array.from(deletedJobIds)); // StorageManager handles the limit
-    // Update UI immediately for deleted count
-    updateConsolidatedStatusDisplay({ deletedJobsCount: deletedJobIds.size });
-  }
 
   function updatePopupTitleLink(currentQuery) {
     if (popupTitleLinkEl) {
@@ -74,29 +59,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Updates the consolidated status display in the header.
-   * This function updates an in-memory state object and then re-renders the display.
-   * @param {object} data - An object with partial data to update.
-   * @param {string} [data.monitorStatusText] - The new monitor status text.
-   * @param {number|null} [data.lastCheckTimestamp] - The timestamp of the last check.
-   * @param {number} [data.deletedJobsCount] - The count of deleted jobs.
+   * Renders the consolidated status display in the header based on the current AppState.
+   * This function is called by AppState subscribers.
    */
-  function updateConsolidatedStatusDisplay(data = {}) {
+  function renderStatusHeader() {
     if (!consolidatedStatusEl) return;
 
-    // 1. Update the in-memory state with any new data provided.
-    if (data.monitorStatusText !== undefined) popupState.monitorStatusText = data.monitorStatusText;
-    if (data.lastCheckTimestamp !== undefined) {
-      popupState.lastCheckTimestamp = data.lastCheckTimestamp;
-    }
-    if (data.deletedJobsCount !== undefined) popupState.deletedJobsCount = data.deletedJobsCount;
-
-    // 2. Prepare display strings from the (now updated) state.
-    const statusText = popupState.monitorStatusText || 'Idle';
-    const deletedCount = popupState.deletedJobsCount || 0;
+    // 1. Read all required data directly from AppState.
+    const statusText = appState.getMonitorStatus() || 'Idle';
+    const deletedCount = appState.getDeletedJobsCount();
+    const lastCheckTimestamp = appState.getLastCheckTimestamp();
     let lastCheckDisplay = 'N/A';
-    if (popupState.lastCheckTimestamp) {
-      const lastCheckDate = new Date(popupState.lastCheckTimestamp);
+    if (lastCheckTimestamp) {
+      const lastCheckDate = new Date(lastCheckTimestamp);
       const timeString = lastCheckDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       lastCheckDisplay = `${timeString} (${timeAgo(lastCheckDate)})`;
     }
@@ -209,25 +184,10 @@ document.addEventListener('DOMContentLoaded', async () => {
    * @param {string} jobId The ID of the job to delete.
    */
   function handleJobDelete(jobId) {
-    const component = jobItemComponents.get(jobId);
-    if (component) {
-      component.destroy();
-      jobItemComponents.delete(jobId);
-    }
-
-    deletedJobIds.add(jobId);
-    saveDeletedState();
-
-    if (jobId === appState.getSelectedJobId()) {
-      jobDetailsComponent.showInitialMessage('Job removed. Select another job.');
-      appState.setSelectedJobId(null);
-    }
-
-    // Also remove from the master list in storage
-    StorageManager.getRecentFoundJobs().then(currentJobs => {
-      const updatedJobs = currentJobs.filter(j => j.id !== jobId);
-      StorageManager.setRecentFoundJobs(updatedJobs);
-    });
+    // The component will be destroyed and removed from the DOM when
+    // the list re-renders via the state subscriber.
+    // We just need to trigger the state change.
+    appState.deleteJob(jobId);
   }
 
   /**
@@ -243,7 +203,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function displayRecentJobs(jobs = []) {
     console.log("Popup: displayRecentJobs called with:", jobs);
 
-    const jobsToDisplay = jobs.filter(job => job && job.id && !deletedJobIds.has(job.id));
+    const jobsToDisplay = jobs.filter(job => job && job.id && !appState.getDeletedJobIds().has(job.id));
 
     // --- 1. Handle Empty List ---
     if (jobsToDisplay.length === 0) {
@@ -299,36 +259,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupIntersectionObserver(Array.from(jobItemComponents.values()).map(c => c.element));
   }
 
-  // Refactored loadStoredData to use StorageManager
-  async function loadStoredData() {
-    console.log("Popup: loadStoredData called.");
-    try {
-      const [monitorStatus, lastCheckTimestamp, currentUserQuery, recentFoundJobs, loadedDeletedIds] = await Promise.all([
-        StorageManager.getMonitorStatus(),
-        StorageManager.getLastCheckTimestamp(),
-        StorageManager.getCurrentUserQuery(),
-        StorageManager.getRecentFoundJobs(),
-        StorageManager.getDeletedJobIds()
-      ]);
+  /**
+   * Initializes the UI with data from the already-loaded AppState.
+   * This is called once after the initial state load.
+   */
+  function initializeUIFromState() {
+    console.log("Popup: Initializing UI from state.");
+    const state = appState.getState();
 
-      const currentQuery = currentUserQuery || config.DEFAULT_USER_QUERY; // Use config default if storage is empty
-      userQueryInput.value = currentQuery; // Set input value
-      deletedJobIds = loadedDeletedIds; // Update in-memory sets
-      // Update UI elements
-      updateConsolidatedStatusDisplay({ monitorStatusText: monitorStatus, lastCheckTimestamp: lastCheckTimestamp, deletedJobsCount: deletedJobIds.size });
-      updatePopupTitleLink(currentQuery); // Update title link
+    userQueryInput.value = state.currentUserQuery;
+    updatePopupTitleLink(state.currentUserQuery);
+    displayRecentJobs(state.jobs);
 
-      displayRecentJobs(recentFoundJobs); // Display jobs
-
-    } catch (error) {
-      console.error("Popup: Error in loadStoredData Promise.all:", error, error.stack ? error.stack : '(no stack trace)');
-      updateConsolidatedStatusDisplay({ monitorStatusText: 'Error loading status' });
-      recentJobsListDiv.innerHTML = '<p class="job-list__no-jobs">Error loading job data.</p>';
-    }
+    // Initial renders are now handled by subscribers, but we can call them
+    // once here to ensure the UI is populated immediately without waiting for a "change".
+    updateThemeUI();
+    renderStatusHeader();
   }
 
   async function triggerCheck(queryToUse) { // Made async
-    updateConsolidatedStatusDisplay({ monitorStatusText: 'Checking...' });
+    // Update the state, which will trigger the UI update via the subscriber.
+    appState.updateMonitorStatus('Checking...');
     console.log("Popup: Triggering check with query:", queryToUse);
 
     try {
@@ -338,7 +289,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // We can reflect the immediate response from background here if needed.
     } catch (error) {
       console.error("Popup: Error sending manual check message:", error.message);
-      loadStoredData(); // Attempt to refresh with current state on error
+      appState.loadFromStorage(); // Attempt to refresh with current state on error
     }
   }
 
@@ -377,21 +328,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Listen for messages from background script to update the display
   browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "updatePopupDisplay") {
+    if (request.action === "updatePopupDisplay") { 
       console.log("Popup: Received updatePopupDisplay message from background. Refreshing data.");
-      loadStoredData();
+      // Reload state from storage. This will trigger all necessary UI updates
+      // via the subscribers, ensuring a consistent, state-driven refresh.
+      appState.loadFromStorage();
       if (sendResponse) sendResponse({ status: "Popup display refreshed."});
       return true; 
     }
   });
 
-  // Subscribe to theme changes for reactive UI updates
-  appState.subscribeToSelector('theme', updateThemeUI);
-
-  // Subscribe to selected job changes for reactive UI updates
-  appState.subscribeToSelector('selectedJobId', (newValue, prevValue) => {
-    updateJobSelectionUI(newValue, prevValue);
+  // --- AppState Subscribers ---
+  // Centralized setup for all reactive UI updates.
+  appState.subscribeToSelector('theme', updateThemeUI); // For theme changes
+  appState.subscribeToSelector('selectedJobId', updateJobSelectionUI); // For job selection highlighting
+  appState.subscribeToSelector('deletedJobIds', () => { // For job deletion
+    renderStatusHeader(); // Update header for deleted count
+    // Re-render the job list using the jobs currently in the state
+    displayRecentJobs(appState.getJobs());
   });
+  // For status header text changes
+  appState.subscribeToSelector('monitorStatus', renderStatusHeader);
+  appState.subscribeToSelector('lastCheckTimestamp', renderStatusHeader);
 
   // --- IntersectionObserver for Pre-fetching Job Details for Tooltips ---
   let jobItemObserver = null;
@@ -444,7 +402,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     console.log("Popup: DOMContentLoaded complete. Loading stored data...");
 
-  await loadStoredData(); // Initial load
+  initializeUIFromState(); // Initial UI setup from loaded state
 
   // Initialize UI enhancements like scroll hints
   UJM_UI.initializeScrollHints(jobListContainerEl, recentJobsListDiv);

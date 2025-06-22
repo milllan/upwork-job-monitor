@@ -369,7 +369,7 @@ class AppState {
       await Promise.all([
         StorageManager.setUiTheme(this.state.theme),
         StorageManager.setCollapsedJobIds(Array.from(this.state.collapsedJobIds)),
-        StorageManager.addDeletedJobIds(Array.from(this.state.deletedJobIds)),
+        StorageManager.setDeletedJobIds(Array.from(this.state.deletedJobIds)),
         StorageManager.setCurrentUserQuery(this.state.currentUserQuery)
       ]);
     } catch (error) {
