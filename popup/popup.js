@@ -25,10 +25,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ensure this string is identical to DEFAULT_USER_QUERY in service-worker.js.
   let jobItemComponents = new Map(); // Map of job ID -> JobItem component instance
 
-  // In-memory state for UI elements that are updated partially, to avoid reading from the DOM.
-  const jobDetailsCache = new Map();
-  const CACHE_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes in milliseconds
-
   function updatePopupTitleLink(currentQuery) {
     if (popupTitleLinkEl) {
       const url = constructUpworkSearchURL(
@@ -85,16 +81,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Function to fetch job details with caching
   async function fetchJobDetailsWithCache(jobCiphertext) {
-    // Check if we have a valid cached version
-    const cachedData = jobDetailsCache.get(jobCiphertext);
-    if (cachedData && (Date.now() - cachedData.timestamp < CACHE_EXPIRY_MS)) {
+    const cachedData = appState.getCachedJobDetails(jobCiphertext);
+    if (cachedData) {
       console.log(`Popup: Using cached job details for ${jobCiphertext}`);
-      return cachedData.data;
-    }
-
-    // If not cached or expired, fetch fresh data
-    console.log(`Popup: Fetching fresh job details for ${jobCiphertext}`);
-    try {
+      return cachedData;
+    } else {
+      console.log(`Popup: Fetching fresh job details for ${jobCiphertext}`);
       const response = await browser.runtime.sendMessage({
         action: "getJobDetails",
         jobCiphertext: jobCiphertext
@@ -102,18 +94,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (response && response.jobDetails) {
         // Cache the result with timestamp
-        jobDetailsCache.set(jobCiphertext, {
-          data: response.jobDetails,
-          timestamp: Date.now()
-        });
+        appState.setCachedJobDetails(jobCiphertext, response.jobDetails);
         return response.jobDetails;
       } else {
         console.error("Popup: Failed to get job details from background", response?.error);
         throw new Error(response?.error || "Failed to fetch job details");
       }
-    } catch (error) {
-      console.error("Popup: Error fetching job details:", error);
-      throw error;
     }
   }
 
@@ -371,12 +357,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (entry.isIntersecting) {
           const jobItem = entry.target;
           const jobCiphertext = jobItem.dataset.ciphertextForTooltip;
-          if (jobCiphertext) {
-            const cachedData = jobDetailsCache.get(jobCiphertext);
-            if (!cachedData || (Date.now() - cachedData.timestamp >= CACHE_EXPIRY_MS)) {
-              console.log(`Popup (Observer): Pre-fetching details for visible job ${jobCiphertext}`);
-              try { await fetchJobDetailsWithCache(jobCiphertext); } catch (err) { /* silent fail */ }
-            }
+          if (jobCiphertext && !appState.getCachedJobDetails(jobCiphertext)) {
+            console.log(`Popup (Observer): Pre-fetching details for visible job ${jobCiphertext}`);
+            try { await fetchJobDetailsWithCache(jobCiphertext); } catch (err) { /* silent fail */ }
           }
         }
       }
