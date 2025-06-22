@@ -83,6 +83,18 @@ class JobDetails {
       });
     }
 
+    setSectionVisibility('contractor-history', vm.showContractorHistory);
+    if (vm.showContractorHistory) {
+      const list = clone.querySelector('[data-field="contractor-history-list"]');
+      if (list) {
+        vm.contractorHistory.forEach(name => {
+          const li = document.createElement('li');
+          li.textContent = name;
+          list.appendChild(li);
+        });
+      }
+    }
+
     setSectionVisibility('description', vm.showDescription);
     if (vm.showDescription) {
       populateField('description-content', vm.descriptionHTML, true);
@@ -97,6 +109,7 @@ class JobDetails {
       clientJobsPosted: null, clientHours: null, clientFeedbackCount: null, showClientInfo: false,
       activityApplicants: null, activityInterviews: null, activityHired: null, activityLastActiveHTML: null, showJobActivity: false,
       bidAvg: null, bidRange: null, showBidStats: false,
+      contractorHistory: [], showContractorHistory: false,
       questions: [], showQuestions: false,
       descriptionHTML: null, showDescription: false,
     };
@@ -130,6 +143,20 @@ class JobDetails {
       vm.bidAvg = `Avg: $${(avgBid || 0).toFixed(1)}`;
       vm.bidRange = `Range: $${minBid || 0} - $${maxBid || 0}`;
       vm.showBidStats = true;
+    }
+
+    const workHistory = details?.buyer?.workHistory || [];
+    if (workHistory.length > 0) {
+      // Use a Set to get unique names, filter out null/undefined names
+      const names = new Set(
+        workHistory
+          .map(h => h.contractorInfo?.contractorName)
+          .filter(Boolean)
+      );
+      if (names.size > 0) {
+        vm.contractorHistory = Array.from(names);
+        vm.showContractorHistory = true;
+      }
     }
 
     const questions = details?.opening?.questions || [];

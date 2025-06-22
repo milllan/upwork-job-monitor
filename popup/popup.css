@@ -404,6 +404,26 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
   border-top: 1px solid var(--up-gray-80);
 }
 
+.details-panel__contractor-history {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--up-gray-80);
+}
+
+.details-panel__contractor-history ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin: 4px 0 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.details-panel__contractor-history li {
+  background-color: var(--up-gray-80);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
 .details-panel__description {
   margin-top: 10px; /* Reduced top margin */
   padding-top: 10px; /* Reduced top padding */

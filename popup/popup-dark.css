@@ -249,6 +249,7 @@ hr { margin: 12px 0; border: 0; border-top: 1px solid var(--up-border-color); }
 
 .details-panel__job-activity,
 /*.details-panel__bids,*/
+.details-panel__contractor-history,
 .details-panel__questions,
 .details-panel__description {
   margin: 0; padding-top: 16px; border-top: 1px solid var(--up-border-color);
@@ -259,6 +260,22 @@ hr { margin: 12px 0; border: 0; border-top: 1px solid var(--up-border-color); }
   display: flex; flex-direction: column; gap: 8px;
 }
 
+/* --- Contractor History --- */
+.details-panel__contractor-history ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin: 8px 0 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.details-panel__contractor-history li {
+  background-color: var(--up-page-bg);
+  border: 1px solid var(--up-border-color);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
 /* --- Layout & Scroll --- */
 .job-list__no-jobs, .details-panel__no-jobs {
   text-align: center; color: var(--up-text-muted); padding: 20px; font-size: 13px;
