@@ -424,6 +424,16 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
   padding: 2px 6px;
   border-radius: 4px;
 }
+
+.details-panel__contractor-history li a {
+  color: var(--up-black);
+  text-decoration: none;
+}
+
+.details-panel__contractor-history li a:hover {
+  color: var(--up-link-color);
+  text-decoration: underline;
+}
 .details-panel__description {
   margin-top: 10px; /* Reduced top margin */
   padding-top: 10px; /* Reduced top padding */

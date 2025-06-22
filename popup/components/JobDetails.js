@@ -87,9 +87,14 @@ class JobDetails {
     if (vm.showContractorHistory) {
       const list = clone.querySelector('[data-field="contractor-history-list"]');
       if (list) {
-        vm.contractorHistory.forEach(name => {
+        vm.contractorHistory.forEach(contractor => {
           const li = document.createElement('li');
-          li.textContent = name;
+          const a = document.createElement('a');
+          a.href = `https://www.upwork.com/freelancers/${contractor.ciphertext}`;
+          a.textContent = contractor.name;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          li.appendChild(a);
           list.appendChild(li);
         });
       }
@@ -147,14 +152,17 @@ class JobDetails {
 
     const workHistory = details?.buyer?.workHistory || [];
     if (workHistory.length > 0) {
-      // Use a Set to get unique names, filter out null/undefined names
-      const names = new Set(
-        workHistory
-          .map(h => h.contractorInfo?.contractorName)
-          .filter(Boolean)
-      );
-      if (names.size > 0) {
-        vm.contractorHistory = Array.from(names);
+      // Use a Map to get unique contractors by their ciphertext, ensuring no duplicates.
+      const contractors = new Map();
+      workHistory.forEach(h => {
+        const info = h.contractorInfo;
+        // Ensure we have a name and a ciphertext to build the link, and that the contractor is not already in our list.
+        if (info && info.contractorName && info.ciphertext && !contractors.has(info.ciphertext)) {
+          contractors.set(info.ciphertext, info.contractorName);
+        }
+      });
+      if (contractors.size > 0) {
+        vm.contractorHistory = Array.from(contractors, ([ciphertext, name]) => ({ name, ciphertext }));
         vm.showContractorHistory = true;
       }
     }

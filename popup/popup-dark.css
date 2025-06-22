@@ -276,6 +276,16 @@ hr { margin: 12px 0; border: 0; border-top: 1px solid var(--up-border-color); }
   padding: 2px 8px;
   border-radius: 6px;
 }
+
+.details-panel__contractor-history li a {
+  color: var(--up-text-secondary);
+  text-decoration: none;
+  transition: color 0.1s ease;
+}
+
+.details-panel__contractor-history li a:hover {
+  color: var(--up-link-color);
+}
 /* --- Layout & Scroll --- */
 .job-list__no-jobs, .details-panel__no-jobs {
   text-align: center; color: var(--up-text-muted); padding: 20px; font-size: 13px;

@@ -275,6 +275,7 @@ async function fetchJobDetails(bearerToken, jobCiphertext) {
           }
           contractorInfo {
             contractorName
+            ciphertext
           }
           feedback {
             score
