@@ -1,7 +1,7 @@
 <!--
 Developer Note: This is a powerful meta-command. It is recommended to create a user-friendly alias for it, such as `/improve_instructions` or `/reflect`, in the assistant's configuration.
 -->
-You are an expert in prompt engineering, specializing in optimizing AI code assistant instructions. Your task is to analyze and improve the instructions for Claude Code.
+You are an expert in prompt engineering, specializing in optimizing AI code assistant instructions. Your task is to analyze and improve the instructions for Claude Code/Gemini Code Assist.
 Follow these steps carefully:
 
 1. Analysis Phase:
@@ -19,7 +19,7 @@ Then, examine the current Claude instructions, commands and config
 Analyze the chat history, instructions, commands and config to identify areas that could be improved. Look for:
 - Inconsistencies in Claude's responses
 - Misunderstandings of user requests
-- Areas where Claude could provide more detailed or accurate information
+- Areas where Claude could (or Gemini Code Assist) provide more detailed or accurate information
 - Opportunities to enhance Claude's ability to handle specific types of queries or tasks
 - New commands or improvements to a commands name, function or response
 - Permissions and MCPs we've approved locally that we should add to the config, especially if we've added new tools or require them for the command to work
