@@ -28,9 +28,8 @@ For any request that involves code changes, file creation, or architectural deci
 #### Refactoring Integrity Check
 
 When a request involves refactoring state or data flow, you must perform an integrity check before providing the code. Mentally trace the full lifecycle of any modified variable or state property:
--   Identify **all** locations where it is read.
--   Identify **all** locations where it is written or updated.
--   If in a reactive system, identify **all** necessary subscribers that must be updated or added.
+-   **Read/Write Analysis:** Identify **all** locations where it is read and written.
+-   **Reactive System Analysis:** Identify **all** necessary subscribers that must be updated or added.
+-   **Lifecycle & Persistence Analysis:** Consider the full application lifecycle, including initialization, user interaction, and termination (e.g., closing a popup, navigating away). How does this affect state persistence and pending asynchronous operations (like debounced saves or API calls)?
 
 Your proposed solution must account for all of these points to prevent silent failures or incomplete refactoring.
-
