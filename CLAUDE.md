@@ -37,6 +37,14 @@ When a request involves refactoring state or data flow, you must perform an inte
 
 Your proposed solution must account for all of these points to prevent silent failures or incomplete refactoring.
 
+### Application Bootstrap (`DOMContentLoaded`)
+
+The `DOMContentLoaded` listener in the main script (e.g., `popup.js`) serves as the application's primary bootstrap. Its role should be strictly limited to:
+- Initializing the central `AppState` manager.
+- Instantiating and initializing top-level UI components, passing them necessary `AppState` instances or relevant callbacks.
+- Setting up global event listeners that orchestrate component interactions (e.g., `browser.runtime.onMessage`).
+It should **avoid** containing detailed UI rendering logic, complex data fetching, or direct manipulation of individual UI elements that are managed by components.
+
 #### Handling Meta-Instructions
 
 When you receive a request to analyze or modify these core instructions (a "meta-instruction," often identified by a prompt asking you to act as a prompt engineer), you should:
