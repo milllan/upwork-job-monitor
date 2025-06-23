@@ -26,6 +26,15 @@ For any request that involves code changes, file creation, or architectural deci
 
 ### Special Instructions
 
+#### Component-Based Architecture Interaction
+
+The project's UI is built using a component-based architecture with a central state manager (`AppState`). When responding to requests involving UI changes, you must adhere to the following rules:
+
+1.  **Identify the Component:** First, identify which component is responsible for the UI element in question (e.g., `JobItem`, `JobDetails`, `StatusHeader`).
+2.  **Prioritize ViewModel/Render Methods:** All display logic and data formatting should be handled within the component's `_prepareViewModel` and `render` methods. Do not add procedural DOM manipulation code to the main `popup.js` file for elements managed by a component.
+3.  **Use State Actions:** All state changes must be performed by calling the appropriate action on the `AppState` instance (e.g., `appState.deleteJob(jobId)`, `appState.setTheme('dark')`). Do not mutate state directly from the UI or event handlers.
+4.  **Respect Data Flow:** Data flows from the `AppState` to the components. Components receive data and render it. User interactions within a component trigger callbacks that execute actions on the `AppState`, which in turn updates the state and causes the relevant components to re-render. Your suggestions must respect this unidirectional data flow.
+
 #### Refactoring Integrity Check
 
 When a request involves refactoring state or data flow, you must perform an integrity check before providing the code. Mentally trace the full lifecycle of any modified variable or state property:
