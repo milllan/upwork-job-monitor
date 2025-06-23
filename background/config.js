@@ -40,7 +40,8 @@ const config = {
     "Graphic Designer",
     "Full Website Redisign",
     "Logo Designer",
-    "Unity Performance Specialist"
+    "Unity Performance Specialist",
+    "Specialist for TikTok",
     // Add more strings to exclude as needed
   ].map(s => s.toLowerCase()),
 

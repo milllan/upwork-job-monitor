@@ -23,7 +23,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // This DEFAULT_QUERY is used if no query is in storage.
   // For the link to match the service-worker's DEFAULT_USER_QUERY initially (if no user query is set),
   // ensure this string is identical to DEFAULT_USER_QUERY in service-worker.js.
-  let jobItemComponents = new Map(); // Map of job ID -> JobItem component instance
 
   function updatePopupTitleLink(currentQuery) {
     if (popupTitleLinkEl) {
@@ -186,10 +185,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  function displayRecentJobs(jobs = []) {
-    console.log("Popup: displayRecentJobs called with:", jobs);
-
-    const jobsToDisplay = jobs.filter(job => job && job.id && !appState.getDeletedJobIds().has(job.id));
+  function displayRecentJobs() {
+    console.log("Popup: displayRecentJobs called.");
+    const jobsToDisplay = appState.getVisibleJobs();
 
     // --- 1. Handle Empty List ---
     if (jobsToDisplay.length === 0) {
@@ -197,8 +195,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       mainContentArea.classList.add('empty-list');
       jobDetailsComponent.showInitialMessage('No jobs to display.');
       appState.setSelectedJobId(null);
-      jobItemComponents.forEach(c => c.destroy());
-      jobItemComponents.clear();
+      appState.clearJobComponents();
       setupIntersectionObserver([]);
       return;
     }
@@ -206,8 +203,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     mainContentArea.classList.remove('empty-list');
 
     // --- 2. Destroy old components and prepare for new render ---
-    jobItemComponents.forEach(c => c.destroy());
-    jobItemComponents.clear();
+    appState.clearJobComponents(); // Destroys old components and clears map in state
     const fragment = document.createDocumentFragment();
     let firstNonFilteredJob = null;
 
@@ -227,7 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         onSelect: handleJobSelect,
       });
 
-      jobItemComponents.set(job.id, jobComponent);
+      appState.setJobComponent(job.id, jobComponent);
       fragment.appendChild(jobComponent.render());
     });
 
@@ -242,7 +238,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- 5. Re-initialize Intersection Observer ---
-    setupIntersectionObserver(Array.from(jobItemComponents.values()).map(c => c.element));
+    setupIntersectionObserver(Array.from(appState.getJobComponents().values()).map(c => c.element));
   }
 
   /**
@@ -255,7 +251,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     userQueryInput.value = state.currentUserQuery;
     updatePopupTitleLink(state.currentUserQuery);
-    displayRecentJobs(state.jobs);
+    displayRecentJobs();
 
     // Initial renders are now handled by subscribers, but we can call them
     // once here to ensure the UI is populated immediately without waiting for a "change".
@@ -330,9 +326,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   appState.subscribeToSelector('selectedJobId', updateJobSelectionUI); // For job selection highlighting
   appState.subscribeToSelector('deletedJobIds', () => { // For job deletion
     renderStatusHeader(); // Update header for deleted count
-    // Re-render the job list using the jobs currently in the state
-    displayRecentJobs(appState.getJobs());
+    displayRecentJobs();
   });
+  // When the master job list is updated (e.g., from a background refresh)
+  appState.subscribeToSelector('jobs', displayRecentJobs);
   // For status header text changes
   appState.subscribeToSelector('monitorStatus', renderStatusHeader);
   appState.subscribeToSelector('lastCheckTimestamp', renderStatusHeader);

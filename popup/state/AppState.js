@@ -267,6 +267,20 @@ class AppState {
     this.setState({ jobComponents }, { skipPersistence: true });
   }
 
+  /**
+   * Clear all job components, destroying them first.
+   * This is typically called by the view layer before a full re-render.
+   */
+  clearJobComponents() {
+    const currentComponents = this.getJobComponents(); // gets a copy
+    currentComponents.forEach(component => {
+      if (component && typeof component.destroy === 'function') {
+        component.destroy();
+      }
+    });
+    this.setState({ jobComponents: new Map() }, { skipPersistence: true });
+  }
+
   // === Persistence ===
 
   /**
