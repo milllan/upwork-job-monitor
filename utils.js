@@ -141,3 +141,30 @@ function formatBudget(budget) {
 
   return 'N/A';
 }
+
+/**
+ * Initializes scroll hint shadows for a scrollable list within a container.
+ * A top shadow appears when scrolled down, and a bottom shadow disappears when scrolled to the end.
+ * @param {HTMLElement} containerEl The container element that will have the pseudo-elements for shadows.
+ * @param {HTMLElement} listEl The scrollable list element inside the container.
+ */
+function initializeScrollHints(containerEl, listEl) {
+  if (!containerEl || !listEl) {
+    console.warn("Scroll hints not initialized: container or list element not found.");
+    return;
+  }
+
+  const updateHints = () => {
+    // Top shadow: visible only if scrolled down from the top
+    const isScrolledFromTop = listEl.scrollTop > 10;
+    containerEl.classList.toggle('job-list-container--scrolled', isScrolledFromTop);
+
+    // Bottom shadow: hidden if scrolled to the very end (or if not scrollable)
+    const isScrolledToEnd = listEl.scrollHeight - listEl.scrollTop - listEl.clientHeight < 1;
+    containerEl.classList.toggle('job-list-container--scrolled-to-end', isScrolledToEnd);
+  };
+
+  listEl.addEventListener('scroll', updateHints);
+  updateHints(); // Initial check
+}
+}

@@ -384,6 +384,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initializeUIFromState(); // Initial UI setup from loaded state
 
-  // Initialize UI enhancements like scroll hints
-  UJM_UI.initializeScrollHints(jobListContainerEl, recentJobsListDiv);
+  // Initialize UI enhancements like scroll hints (now a global function from utils.js)
+  initializeScrollHints(jobListContainerEl, recentJobsListDiv);
 });
