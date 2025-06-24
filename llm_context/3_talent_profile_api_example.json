@@ -1,0 +1,78 @@
+{
+  "request": {
+    "endpoint": "https://www.upwork.com/api/graphql/v1?alias=getDetails",
+    "payload": {
+      "query": "query GetTalentProfile($profileUrl: String, $jobProposalId: ID, $openingId: ID, $viewerMode: Boolean, $freeText: String, $skillIds: [ID!], $occupationIds: [ID!]) {\n    talentVPDAuthProfile(\n      filter: {\n        profileUrl: $profileUrl,\n        jobProposalId: $jobProposalId,\n        openingId: $openingId,\n        viewerMode: $viewerMode,\n        freeText: $freeText,\n        skillIds: $skillIds,\n        occupationIds: $occupationIds,\n        excludePortfolio: true,\n        excludeAgencies: false\n      }\n    ) {\n      ...ProfileResponseFragment\n    }\n  }\n  fragment ProfileResponseFragment on TalentVPDProfileResponse {\n  vettedBadge {\n    vetted\n  }\n  vanityUrl\n  vettedTalentBadge {\n    badge\n  }\n  pibStatus {\n    active\n  }\n  identity {\n    uid: id\n    id\n    userId\n    ciphertext\n    recno\n    legacyCiphertext\n    edcUserId\n    owner\n  }\n  profile {\n    name\n    firstName\n    shortName\n    title\n    description\n    location {\n      country\n      city\n      state\n      countryTimezone\n      worldRegion\n      timezoneOffset\n      countryCodeIso2\n      countryCodeIso3\n    }\n    portrait {\n      portrait\n      bigPortrait\n      smallPortrait\n      originalPortrait\n      portrait500\n    }\n    skills {\n      node {\n        uid: id\n        id\n        name\n        prettyName\n        active\n        rank\n        description\n        externalUrl\n        certificates {\n          uid: id\n          id\n          name\n          description\n          provider\n          logoUrl\n          verifier\n        }\n      }\n    }\n    visibility\n    disabled\n    affiliated\n    looking\n    lookingWeek\n    exposeFullName\n    confidentialityBound\n    consoleViewable\n    agencyRef\n    idVerified\n    exposeBillings\n    pci {\n      action\n      actionCredit\n      actual\n      timeStamp\n      display\n    }\n    phoneVerified\n    state\n    hideAgencyEarnings\n    contractorTier\n    exclusiveAgencyContractor\n    hideJss\n    idBadgeStatus\n    contractToHire\n    agencyId\n  }\n  stats {\n    totalHours\n    totalHoursRecent\n    totalFeedback\n    totalFeedbackRecent\n    totalJobsWorked\n    totalJobsWorkedRecent\n    rating\n    ratingRecent\n    hourlyRate {\n      node {\n        currencyCode\n        amount\n      }\n    }\n    totalPortfolioItems\n    englishLevel\n    memberSince\n    lastWorkedOn\n    hireAgainPercentage\n    totalHourlyJobs\n    totalHourlyJobsRecent\n    totalFixedJobs\n    totalFixedJobsRecent\n    recommended\n    responsiveState\n    privateFeedbackHireAgain\n    scores\n    totalRevenue\n    skillTestsPassed\n    activeInterviews\n    activeAssignments\n    nSS100BwScore\n    topRatedStatus\n    totalHoursActual\n    edcAssignments\n    totalEarnings\n    recentEarnings\n    averageRecentEarnings\n    recentCharge\n    averageRecentCharge\n    topRatedPlusStatus\n    contractorEarnings\n    totalDraftPortfolioItems\n    nssLastCalculated\n  }\n  groups {\n    uid: id\n    id\n    name\n    logo\n    uniqueName\n  }\n  agencies {\n    name\n    logo\n    recentHours\n    score\n    recno\n    scoreRecent\n    totalFeedback\n    totalHours\n    agencyRate {\n      node {\n        currencyCode\n        amount\n      }\n    }\n    nSS100BwScore\n    topRatedStatus\n    topRatedPlusStatus\n    hideEacEarnings\n    ciphertext\n    uid: id\n    id\n    defaultAgency\n  }\n\n  portfolios {\n    node {\n      uid: id\n      id\n      title\n      description\n      rank\n      url\n      image\n      thumbnail\n      completedOn\n      projectUrl\n      videoUrl\n      occupationId\n      role\n      projectGoal\n      solution\n      primaryImageId\n      highlighted\n      visibility\n    }\n  }\n  availability {\n    uid: id\n    id\n    source\n    availabilityTimeStamp\n    capacity {\n      uid: id\n      id\n      name\n    }\n    creationTimeStamp\n    minHours\n    maxHours\n    availableDays\n  }\n  clientRelationship {\n    type\n    title\n    startDate\n    endDate\n    contractRid: contractId\n  }\n  languages {\n    uid: id\n    id\n    language {\n      iso639Code,\n      active,\n      englishName\n    }\n    proficiencyLevel {\n      code\n      proficiencyTitle\n      rank\n      description\n    }\n    verified\n    verifiedByCertificate\n    verifiedByFeedback\n  }\n  certificates {\n    node {\n      uid: id\n      id\n      certificate {\n        uid: id\n        id\n        name\n        description\n        verificationGuideline\n        provider\n        certificateSkills {\n          uid: id\n          id\n          skill\n          prettyName\n          description\n          externalLink\n        }\n        logoUrl\n        verificationRequired\n        highlighted\n        verified\n        verifier\n      }\n      dateEarned\n      verified\n      url\n      active\n      submissionCode\n      expirationDate\n    }\n  }\n  employmentHistory {\n    uid: id\n    id\n    companyName\n    jobTitle\n    startDate\n    endDate\n    description\n    city\n    country\n  }\n  education {\n    uid: id\n    id\n    institutionName\n    areaOfStudy\n    degree\n    dateStarted\n    dateEnded\n    comment\n  }\n  otherExperiences {\n    uid: id\n    id\n    subject\n    description\n    active\n    creationTimeStamp\n    lastUpdateTimeStamp\n  }\n  esn {\n    esnName\n    esnId\n    esnUserProfile\n    public\n    revokedOn\n  }\n  jobCategories {\n    groupId\n    groupName\n    selectedCategories {\n      uid: id\n      id\n      name\n    }\n  }\n  projectCategories {\n    uid: id\n    id\n    level1\n    level2\n    seoLink\n  }\n  specializedProfilesInfo {\n    profileId\n    rank\n    status\n    occupations {\n      node {\n        occupationId\n        prefLabel\n      }\n    }\n    selectedSkills {\n      node {\n        skillId\n        freetextAnswer\n      }\n    }\n    otherSkills {\n      node {\n        skillId\n        freetextAnswer\n      }\n    }\n  }\n  communityCertificates {\n    uid: id\n    id\n    businessName\n    expirationDate\n    certificate {\n      uid: id\n      id\n      name\n      provider\n    }\n  }\n  jobProposal {\n    openingId\n    openingSkills {\n      name\n    }\n  }\n  video\n  hideEarnings\n}",
+      "variables": {
+        "profileUrl": "~015b528c4e0e721c2d"
+      }
+    }
+  },
+  "response": {
+    "data": {
+      "talentVPDAuthProfile": {
+        "identity": {
+          "uid": "424157129698689024",
+          "ciphertext": "~015b528c4e0e721c2d"
+        },
+        "profile": {
+          "name": "Aminur R.",
+          "title": "Wordpress Speed Optimization Expert | PageSpeed GTmetrix 95+ score",
+          "description": "Do you want to increase your wordpress site's speed? \nYes, I can improve your wordpress / WooCommerce site's Mobile and Desktop both speed around 95/100 according to Google PageSpeed Insights...",
+          "location": {
+            "country": "Bangladesh",
+            "city": "Habiganj"
+          },
+          "skills": [
+            {
+              "node": {
+                "uid": "1052162208999198724",
+                "prettyName": "WordPress",
+                "rank": 1
+              }
+            },
+            {
+              "node": {
+                "uid": "1204836482932654080",
+                "prettyName": "Website Optimization",
+                "rank": 2
+              }
+            }
+          ],
+          "contractorTier": 3
+        },
+        "stats": {
+          "totalHours": 6025.333332,
+          "totalJobsWorked": 1034,
+          "rating": 4.873408616,
+          "hourlyRate": {
+            "node": {
+              "currencyCode": "USD",
+              "amount": 25
+            }
+          },
+          "memberSince": "2010-07-04T12:20:03Z",
+          "hireAgainPercentage": 83.51063829787235,
+          "topRatedStatus": "top_rated",
+          "totalEarnings": 306802.02
+        },
+        "employmentHistory": [
+          {
+            "companyName": "Theme-Plugins",
+            "jobTitle": "Web development",
+            "startDate": "2015-07-01",
+            "endDate": null,
+            "description": "Wordpress Speed Optimization Expert"
+          }
+        ],
+        "education": [
+          {
+            "institutionName": "Shahjalal University of Science and Technology",
+            "areaOfStudy": "Computer Science & Engineering",
+            "degree": "Bachelors"
+          }
+        ]
+      }
+    }
+  }
+}
