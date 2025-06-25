@@ -69,6 +69,7 @@ The `DOMContentLoaded` listener in the main script (e.g., `popup.js`) serves as 
 -   **Initialize** the central `AppState` manager.
 -   **Instantiate** all top-level UI components (`StatusHeader`, `SearchForm`, `JobList`, `JobDetails`).
 -   **Connect** components to `AppState` by setting up subscribers that call component update methods.
+-   **Ensure Initialization Order:** Components must be instantiated and fully ready *before* any `AppState` subscribers or initial UI setup functions attempt to call their methods or access their properties.
 -   **Set up** global event listeners (like `browser.runtime.onMessage`) that trigger actions on `AppState`.
 The `popup.js` file should **avoid** containing any direct DOM manipulation, data formatting, or complex business logic. Its complexity should decrease over time as logic is properly encapsulated within components and services.
 
