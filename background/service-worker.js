@@ -304,28 +304,41 @@ browser.notifications.onClicked.addListener(async (notificationId) => { // Made 
   } catch (e) { console.error("MV2: Error handling notification click:", e); }
 });
 
+// --- Message Handlers ---
 
-// Updated onMessage listener to use async/await for responses
-browser.runtime.onMessage.addListener(async (request, sender) => { // Consolidated listener
-  if (request.action === "manualCheck") {
-    const queryFromPopup = request.userQuery || config.DEFAULT_USER_QUERY; // Use config
+async function _handleManualCheck(request) {
+  const queryFromPopup = request.userQuery || config.DEFAULT_USER_QUERY;
+  await StorageManager.setCurrentUserQuery(queryFromPopup);
+  await runJobCheck(queryFromPopup);
+  return { status: "Manual check initiated and processing." };
+}
+
+async function _handleGetJobDetails(request) {
+  if (!request.jobCiphertext) {
+    throw new Error("jobCiphertext is required for getJobDetails action.");
+  }
+  console.log("MV2: Received getJobDetails request for:", request.jobCiphertext);
+  const jobDetails = await _fetchAndProcessJobDetails(request.jobCiphertext);
+  return { jobDetails: jobDetails };
+}
+
+const messageHandlers = {
+  manualCheck: _handleManualCheck,
+  getJobDetails: _handleGetJobDetails,
+};
+
+browser.runtime.onMessage.addListener(async (request, sender) => {
+  const handler = messageHandlers[request.action];
+  if (handler) {
     try {
-      await StorageManager.setCurrentUserQuery(queryFromPopup);
-      await runJobCheck(queryFromPopup);
-      return { status: "Manual check initiated and processing." }; // This is the response
+      return await handler(request);
     } catch (error) {
-      console.error("Background: Error during manual check:", error.message, error.stack);
-      return { error: `Error during manual job check execution: ${error.message}` };
+      console.error(`Background: Error handling action "${request.action}":`, error.message, error.stack);
+      return { error: `Error during ${request.action} execution: ${error.message}` };
     }
-  } else if (request.action === "getJobDetails" && request.jobCiphertext) {
-    console.log("MV2: Received getJobDetails request for:", request.jobCiphertext);
-    try {
-      const jobDetails = await _fetchAndProcessJobDetails(request.jobCiphertext);
-      return { jobDetails: jobDetails }; // This will be the response to the popup
-    } catch (error) {
-      console.error("MV2: Error processing getJobDetails in background:", error.message);
-      return { jobDetails: null, error: error.message || "Failed to fetch job details" };
-    }
+  } else if (request.action) {
+    console.warn(`MV2: No message handler found for action: ${request.action}`);
+    return { error: `Unknown action: ${request.action}` };
   }
   // Return true for other async messages if sendResponse is used, or let it be undefined.
   // For the above, returning the promise from async function handles it.
