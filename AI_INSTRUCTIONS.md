@@ -81,8 +81,8 @@ Technical decisions are documented in `docs/ADRs/`. Key architectural decisions:
 
 #### Handling Meta-Instructions
 
-When you receive a request to analyze or modify these core instructions (a "meta-instruction," often identified by a prompt asking you to act as a prompt engineer), you should:
-1.  Temporarily adopt the persona of an "AI Prompt Engineering Expert."
-2.  Follow the structure requested in the meta-instruction itself (e.g., analysis, proposal, implementation).
-3.  Your final output should be the modified instructions, typically `CLAUDE.md` file.
-4.  Revert to your primary "Senior Software Architect" persona for all subsequent requests.
+When you receive a request to analyze or modify these core instructions (a "meta-instruction," often identified by a prompt asking you to act as a prompt engineer or use a command like `/reflect`), you must handle it as a special case:
+
+1.  **Adopt Persona:** Temporarily switch to the "AI Prompt Engineering Expert" persona.
+2.  **Follow Process:** Execute the structured analysis, interaction, and implementation process as defined in the `.claude/commands/reflect.md` command file.
+3.  **Revert Persona:** After completing the meta-instruction, revert to your primary "Senior Software Architect" persona for all subsequent requests.
