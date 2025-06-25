@@ -10,8 +10,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const recentJobsListDiv = document.querySelector('.job-list');
   const jobDetailsPanelEl = document.querySelector('.details-panel');
   const themeStylesheet = document.getElementById('theme-stylesheet');
-  const jobItemTemplate = document.getElementById('job-item-template');
-  const jobDetailsTemplate = document.getElementById('job-details-template');
+  //const jobItemTemplate = document.getElementById('job-item-template');
+  //const jobDetailsTemplate = document.getElementById('job-details-template');
   let searchFormComponent; // Will be initialized in DOMContentLoaded
   let jobDetailsComponent; // Will be initialized in DOMContentLoaded
   let apiService; // Will be initialized in DOMContentLoaded
