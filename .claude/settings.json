@@ -1,0 +1,10 @@
+{
+  "instructions": "AI_INSTRUCTIONS.md",
+  "commands": [
+    {
+      "name": "reflect",
+      "description": "Analyze conversation and improve instructions.",
+      "file": ".claude/commands/reflect.md"
+    }
+  ]
+}
