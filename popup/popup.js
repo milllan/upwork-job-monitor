@@ -234,9 +234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       deletedJobsCount: appState.getDeletedJobsCount()
     });
     // Initial renders are now handled by subscribers, but we can call them
-    // once here to ensure the UI is populated immediately without waiting for a "change".
     updateThemeUI();
-    renderStatusHeader();
   }
 
   async function triggerCheck(queryToUse) { // Made async

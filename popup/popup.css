@@ -583,3 +583,8 @@ body::-webkit-scrollbar-thumb,
 .main-content.empty-list {
   height: 90px; /* Adjust height when the job list is empty */
 }
+
+/* --- Utility Classes --- */
+.hidden {
+  display: none !important;
+}

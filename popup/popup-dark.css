@@ -345,3 +345,8 @@ body::-webkit-scrollbar-thumb {
   background: linear-gradient(to top, var(--up-page-bg), transparent);
 }
 .job-list-container.job-list-container--scrolled-to-end::after { opacity: 0; }
+
+/* --- Utility Classes --- */
+.hidden {
+  display: none !important;
+}

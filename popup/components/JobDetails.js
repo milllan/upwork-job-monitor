@@ -37,27 +37,31 @@ class JobDetails {
     const vm = this._prepareViewModel(details);
     const clone = this.template.content.cloneNode(true);
 
-    // --- Helper to populate a field ---
-    const populateField = (fieldName, content, isHtml = false) => {
-      const field = clone.querySelector(`[data-field="${fieldName}"]`);
-      if (field && content) {
-        if (isHtml) field.innerHTML = content; else field.textContent = content;
+    // --- Helper to populate a field, now also handles hiding the parent section ---
+    const populateField = (fieldName, content, isHtml = false, sectionName = null) => {
+        const field = clone.querySelector(`[data-field="${fieldName}"]`);
+        const section = sectionName ? clone.querySelector(`[data-section="${sectionName}"]`) : field?.closest('[data-section]');
+        
+        if (field && content) {
+            if (isHtml) field.innerHTML = content; else field.textContent = content;
+            if (section) section.classList.remove('hidden');
+        } else if (section) {
+            section.classList.add('hidden');
+        }
+    };
+
+    // --- Helper to set visibility of a section based on a boolean ---
+    const setSectionVisibility = (sectionName, isVisible) => {
+      const section = clone.querySelector(`[data-section="${sectionName}"]`);
+      if (section) {
+        section.classList.toggle('hidden', !isVisible);
       }
     };
 
-    // --- Helper to set section visibility ---
-    const setSectionVisibility = (sectionName, isVisible) => {
-      const section = clone.querySelector(`[data-section="${sectionName}"]`);
-      if (section) section.style.display = isVisible ? '' : 'none';
-    };
-
     // --- Populate from ViewModel ---
-    setSectionVisibility('client-info', vm.showClientInfo);
-    if (vm.showClientInfo) {
-      populateField('client-jobs-posted', vm.clientJobsPosted);
-      populateField('client-hours', vm.clientHours);
-      populateField('client-feedback-count', vm.clientFeedbackCount);
-    }
+    populateField('client-jobs-posted', vm.clientJobsPosted, false, 'client-info');
+    populateField('client-hours', vm.clientHours, false, 'client-info');
+    populateField('client-feedback-count', vm.clientFeedbackCount, false, 'client-info');
 
     setSectionVisibility('job-activity', vm.showJobActivity);
     if (vm.showJobActivity) {
@@ -67,45 +71,41 @@ class JobDetails {
       populateField('activity-last-active', vm.activityLastActiveHTML, true);
     }
 
-    setSectionVisibility('bid-stats', vm.showBidStats);
-    if (vm.showBidStats) {
-      populateField('bid-avg', vm.bidAvg);
-      populateField('bid-range', vm.bidRange);
-    }
+    populateField('bid-avg', vm.bidAvg, false, 'bid-stats');
+    populateField('bid-range', vm.bidRange, false, 'bid-stats');
 
-    setSectionVisibility('questions', vm.showQuestions);
-    if (vm.showQuestions) {
-      const list = clone.querySelector('[data-field="questions-list"]');
-      vm.questions.forEach(qText => {
-        const li = document.createElement('li');
-        li.textContent = qText;
-        list.appendChild(li);
-      });
-    }
-
-    setSectionVisibility('contractor-history', vm.showContractorHistory);
-    if (vm.showContractorHistory) {
-      const list = clone.querySelector('[data-field="contractor-history-list"]');
-      if (list) {
-        vm.contractorHistory.forEach(contractor => {
-          const li = document.createElement('li');
-          const a = document.createElement('a');
-          const firstName = contractor.name.split(' ')[0]; // Only take the first name for a cleaner look.
-
-          a.href = `https://www.upwork.com/freelancers/${contractor.ciphertext}`;
-          a.textContent = firstName;
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-          li.appendChild(a);
-          list.appendChild(li);
+    const questionsList = clone.querySelector('[data-field="questions-list"]');
+    const questionsSection = clone.querySelector('[data-section="questions"]');
+    if (vm.questions.length > 0) {
+        vm.questions.forEach(qText => {
+            const li = document.createElement('li');
+            li.textContent = qText;
+            questionsList.appendChild(li);
         });
-      }
+        questionsSection.classList.remove('hidden');
+    } else {
+        questionsSection.classList.add('hidden');
     }
 
-    setSectionVisibility('description', vm.showDescription);
-    if (vm.showDescription) {
-      populateField('description-content', vm.descriptionHTML, true);
+    const contractorList = clone.querySelector('[data-field="contractor-history-list"]');
+    const contractorSection = clone.querySelector('[data-section="contractor-history"]');
+    if (vm.contractorHistory.length > 0) {
+        vm.contractorHistory.forEach(contractor => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = `https://www.upwork.com/freelancers/${contractor.ciphertext}`;
+            a.textContent = contractor.name.split(' ')[0]; // Only first name
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            li.appendChild(a);
+            contractorList.appendChild(li);
+        });
+        contractorSection.classList.remove('hidden');
+    } else {
+        contractorSection.classList.add('hidden');
     }
+
+    populateField('description-content', vm.descriptionHTML, true, 'description');
 
     this.container.innerHTML = '';
     this.container.appendChild(clone);
@@ -113,72 +113,60 @@ class JobDetails {
 
   _prepareViewModel(details) {
     const vm = {
-      clientJobsPosted: null, clientHours: null, clientFeedbackCount: null, showClientInfo: false,
-      activityApplicants: null, activityInterviews: null, activityHired: null, activityLastActiveHTML: null, showJobActivity: false,
-      bidAvg: null, bidRange: null, showBidStats: false,
-      contractorHistory: [], showContractorHistory: false,
-      questions: [], showQuestions: false,
-      descriptionHTML: null, showDescription: false,
+      clientJobsPosted: null, clientHours: null, clientFeedbackCount: null,
+      activityApplicants: null, activityInterviews: null, activityHired: null, activityLastActiveHTML: null,
+      bidAvg: null, bidRange: null,
+      contractorHistory: [],
+      questions: [],
+      descriptionHTML: null,
+      showJobActivity: false,
     };
 
     const clientStats = details?.buyer?.info?.stats || {};
-    if (Object.keys(clientStats).length > 0) {
-      vm.clientJobsPosted = `Jobs: ${clientStats.totalAssignments || 0}`;
-      if (clientStats.hoursCount > 0) vm.clientHours = `${Math.round(clientStats.hoursCount).toLocaleString()} h total`;
-      if (clientStats.feedbackCount > 0) vm.clientFeedbackCount = `Feedback: ${clientStats.feedbackCount}`;
-      vm.showClientInfo = true;
-    }
+    vm.clientJobsPosted = clientStats.totalAssignments ? `Jobs: ${clientStats.totalAssignments}` : null;
+    vm.clientHours = clientStats.hoursCount > 0 ? `${Math.round(clientStats.hoursCount).toLocaleString()} h total` : null;
+    vm.clientFeedbackCount = clientStats.feedbackCount > 0 ? `Feedback: ${clientStats.feedbackCount}` : null;
 
     const clientActivity = details?.opening?.job?.clientActivity || {};
-    if (Object.keys(clientActivity).length > 0) {
-      if (clientActivity.lastBuyerActivity) {
+    if (clientActivity.lastBuyerActivity) {
         const lastActivityDate = new Date(clientActivity.lastBuyerActivity);
         const fullTimestamp = `${lastActivityDate.toLocaleDateString()} ${lastActivityDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
         vm.activityLastActiveHTML = `<span title="${fullTimestamp}">${timeAgo(lastActivityDate)}</span>`;
-      }
-      vm.activityApplicants = `Applicants: ${clientActivity.totalApplicants || 0}`;
-      vm.activityInterviews = `Interviews: ${clientActivity.totalInvitedToInterview || 0}`;
-      vm.activityHired = `Hired: ${clientActivity.totalHired || 0}/${clientActivity.numberOfPositionsToHire || 1}`;
-      vm.showJobActivity = true;
     }
+    vm.activityApplicants = clientActivity.totalApplicants ? `Applicants: ${clientActivity.totalApplicants}` : null;
+    vm.activityInterviews = clientActivity.totalInvitedToInterview ? `Interviews: ${clientActivity.totalInvitedToInterview}` : null;
+    vm.activityHired = `Hired: ${clientActivity.totalHired || 0}/${clientActivity.numberOfPositionsToHire || 1}`;
+
+    // Determine if the job activity section should be shown
+    vm.showJobActivity = !!(vm.activityApplicants || vm.activityInterviews || vm.activityHired || vm.activityLastActiveHTML);
 
     const bidStats = details?.applicantsBidsStats || {};
     const avgBid = bidStats.avgRateBid?.amount;
     const minBid = bidStats.minRateBid?.amount;
     const maxBid = bidStats.maxRateBid?.amount;
     if (avgBid || minBid || maxBid) {
-      vm.bidAvg = `Avg: $${(avgBid || 0).toFixed(1)}`;
-      vm.bidRange = `Range: $${minBid || 0} - $${maxBid || 0}`;
-      vm.showBidStats = true;
+        vm.bidAvg = `Avg: $${(avgBid || 0).toFixed(1)}`;
+        vm.bidRange = `Range: $${minBid || 0} - $${maxBid || 0}`;
     }
 
     const workHistory = details?.buyer?.workHistory || [];
     if (workHistory.length > 0) {
-      // Use a Map to get unique contractors by their ciphertext, ensuring no duplicates.
       const contractors = new Map();
       workHistory.forEach(h => {
         const info = h.contractorInfo;
-        // Ensure we have a name and a ciphertext to build the link, and that the contractor is not already in our list.
         if (info && info.contractorName && info.ciphertext && !contractors.has(info.ciphertext)) {
           contractors.set(info.ciphertext, info.contractorName);
         }
       });
-      if (contractors.size > 0) {
-        vm.contractorHistory = Array.from(contractors, ([ciphertext, name]) => ({ name, ciphertext }));
-        vm.showContractorHistory = true;
-      }
+      vm.contractorHistory = Array.from(contractors, ([ciphertext, name]) => ({ name, ciphertext }));
     }
 
     const questions = details?.opening?.questions || [];
-    if (questions.length > 0) {
-      vm.questions = questions.map(q => q.question);
-      vm.showQuestions = true;
-    }
+    vm.questions = questions.map(q => q.question);
 
     const jobDescription = details?.opening?.job?.description;
     if (jobDescription && jobDescription.trim().length > 0) {
       vm.descriptionHTML = jobDescription.replace(/<\/?[^>]+(>|$)/g, "").trim().replace(/\n/g, '<br>');
-      vm.showDescription = true;
     }
 
     return vm;
