@@ -215,9 +215,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const jobComponent = new JobItem(job, {
         // A job is collapsed if it's marked as low-priority/filtered (default state),
-        // OR if the user has manually collapsed it via the toggle.
-        isCollapsed: job.isLowPriorityBySkill || job.isLowPriorityByClientCountry ||
-                       job.isExcludedByTitleFilter || appState.getCollapsedJobIds().has(job.id),
+        // This state is now solely determined by the appState's collapsedJobIds set.
+        isCollapsed: appState.getCollapsedJobIds().has(job.id),
         onToggle: handleJobToggle,
         onDelete: handleJobDelete,
         onSelect: handleJobSelect,
@@ -325,6 +324,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   appState.subscribeToSelector('theme', updateThemeUI); // For theme changes
   appState.subscribeToSelector('selectedJobId', updateJobSelectionUI); // For job selection highlighting
   appState.subscribeToSelector('deletedJobIds', () => { // For job deletion
+    // This is a combined listener for deletedJobIds, as it affects both status header and job list display.
     renderStatusHeader(); // Update header for deleted count
     displayRecentJobs();
   });
@@ -332,6 +332,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   appState.subscribeToSelector('jobs', displayRecentJobs);
   // For status header text changes
   appState.subscribeToSelector('monitorStatus', renderStatusHeader);
+  // For job item collapsing/expanding
+  appState.subscribeToSelector('collapsedJobIds', displayRecentJobs);
   appState.subscribeToSelector('lastCheckTimestamp', renderStatusHeader);
 
   // --- IntersectionObserver for Pre-fetching Job Details for Tooltips ---

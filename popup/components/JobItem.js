@@ -45,21 +45,6 @@ class JobItem {
   }
 
   /**
-   * Sets the collapsed state of the job item
-   * @param {boolean} isCollapsed - Whether the item should be collapsed
-   */
-  setCollapsed(isCollapsed) {
-    this.options.isCollapsed = isCollapsed;
-    if (this.element) {
-      this.element.classList.toggle('job-item--collapsed', isCollapsed);
-      const toggleButton = this.element.querySelector('.job-item__toggle');
-      if (toggleButton) {
-        toggleButton.textContent = isCollapsed ? '+' : '-';
-      }
-    }
-  }
-
-  /**
    * Gets the job ID
    * @returns {string} The job ID
    */
@@ -114,7 +99,6 @@ class JobItem {
       toggleButton.addEventListener('click', (e) => {
         e.stopPropagation();
         const newCollapsedState = !this.options.isCollapsed;
-        this.setCollapsed(newCollapsedState);
         if (this.options.onToggle) {
           this.options.onToggle(this.getId(), newCollapsedState);
         }
@@ -144,10 +128,11 @@ class JobItem {
    * Updates the element content with current data
    * @private
    */
-  _updateElement() {
+  _updateElement() { // This method is called by render() and update()
     if (!this.element) return;
 
-    this.viewModel = this._createViewModel();
+    // Prepare the ViewModel
+    this.viewModel = this._prepareViewModel();
     this._populateFromViewModel();
     this._updateClasses();
     this._updateDataAttributes();
@@ -157,8 +142,9 @@ class JobItem {
    * Creates a view model from the job data
    * @private
    */
-  _createViewModel() {
+  _prepareViewModel() { // Renamed from _createViewModel for consistency
     const job = this.jobData;
+    const hasSkills = job.skills && job.skills.length > 0;
     const isLowPriority = job.isLowPriorityBySkill || job.isLowPriorityByClientCountry;
     
     let priorityTagHTML = '';
@@ -188,6 +174,7 @@ class JobItem {
       timeAgo: postedOnDate ? timeAgo(postedOnDate) : 'N/A',
 
       // HTML snippets
+      hasSkills: hasSkills, // New boolean flag for skills section visibility
       appliedIconHTML: job.applied ? `<span class="job-item__applied-icon" title="You applied to this job"><img src="icons/applied-icon.svg" alt="Applied to job" class="air3-icon sm" data-test="UpCIcon" /></span>` : '',
       priorityTagHTML: priorityTagHTML,
 
@@ -210,14 +197,9 @@ class JobItem {
     // Populate text content
     this.element.querySelector('[data-field="budget"]').textContent = vm.budget;
     this.element.querySelector('[data-field="client-info"]').innerHTML = vm.clientInfo;
-    
+
     const skillsElement = this.element.querySelector('[data-field="skills"]');
-    if (vm.skills) {
-      skillsElement.textContent = vm.skills;
-      skillsElement.parentElement.style.display = '';
-    } else {
-      skillsElement.parentElement.style.display = 'none';
-    }
+    skillsElement.textContent = vm.skills; // Set text content regardless of whether there are skills
     
     this.element.querySelector('[data-field="posted-on"]').textContent = vm.postedOn;
     this.element.querySelector('[data-field="time-ago"]').textContent = vm.timeAgo;
@@ -249,6 +231,7 @@ class JobItem {
     this.element.classList.toggle('job-item--low-priority', vm.isLowPriority);
     this.element.classList.toggle('job-item--excluded', vm.isExcludedByTitleFilter);
     this.element.classList.toggle('job-item--applied', vm.isApplied);
+    this.element.classList.toggle('job-item--has-skills', vm.hasSkills); // New class for skills visibility
     this.element.classList.toggle('job-item--high-rating', vm.isHighRating);
     this.element.classList.toggle('job-item--high-spent', vm.isHighSpent);
   }
