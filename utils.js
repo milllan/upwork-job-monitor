@@ -58,6 +58,7 @@ function timeAgo(dateInput) {
 
 /**
  * Formats client information into an HTML string for display in a job item.
+ * This function generates HTML directly, intended for use with element.innerHTML.
  * @param {object} client The client object from a job.
  * @returns {string} The formatted HTML string for client info.
  */
