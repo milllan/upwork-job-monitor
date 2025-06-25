@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const jobItemTemplate = document.getElementById('job-item-template');
   const jobDetailsTemplate = document.getElementById('job-details-template');
   let jobDetailsComponent; // Will be initialized in DOMContentLoaded
+  let statusHeaderComponent; // Will be initialized in DOMContentLoaded
 
   // Initialize AppState for centralized state management
   const appState = new AppState();
@@ -51,31 +52,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       themeToggleButton.textContent = '🌙'; // Moon icon for switching to dark mode
       themeToggleButton.title = "Switch to Dark Mode";
     }
-  }
-
-  /**
-   * Renders the consolidated status display in the header based on the current AppState.
-   * This function is called by AppState subscribers.
-   */
-  function renderStatusHeader() {
-    if (!consolidatedStatusEl) return;
-
-    // 1. Read all required data directly from AppState.
-    const statusText = appState.getMonitorStatus() || 'Idle';
-    const deletedCount = appState.getDeletedJobsCount();
-    const lastCheckTimestamp = appState.getLastCheckTimestamp();
-    let lastCheckDisplay = 'N/A';
-    if (lastCheckTimestamp) {
-      const lastCheckDate = new Date(lastCheckTimestamp);
-      const timeString = lastCheckDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      lastCheckDisplay = `${timeString} (${timeAgo(lastCheckDate)})`;
-    }
-
-    // 3. Render the UI from the state.
-    consolidatedStatusEl.innerHTML =
-      `<span class="app-header__status-tag" title="Current monitor status">${statusText}</span>` +
-      `<span class="app-header__status-tag" title="Last successful check time">Last: ${lastCheckDisplay}</span>` +
-      `<span class="app-header__status-tag" title="Jobs you've deleted from the list">Del: ${deletedCount}</span>`;
   }
 
   // Function to fetch job details with caching
@@ -251,7 +227,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     userQueryInput.value = state.currentUserQuery;
     updatePopupTitleLink(state.currentUserQuery);
     displayRecentJobs();
-
+    
+    statusHeaderComponent.update({
+      statusText: appState.getMonitorStatus(),
+      lastCheckTimestamp: appState.getLastCheckTimestamp(),
+      deletedJobsCount: appState.getDeletedJobsCount()
+    });
     // Initial renders are now handled by subscribers, but we can call them
     // once here to ensure the UI is populated immediately without waiting for a "change".
     updateThemeUI();
@@ -322,19 +303,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   // --- AppState Subscribers ---
   // Centralized setup for all reactive UI updates.
   appState.subscribeToSelector('theme', updateThemeUI); // For theme changes
-  appState.subscribeToSelector('selectedJobId', updateJobSelectionUI); // For job selection highlighting
+  appState.subscribeToSelector('selectedJobId', updateJobSelectionUI); // For job selection highlighting (in job list)
   appState.subscribeToSelector('deletedJobIds', () => { // For job deletion
     // This is a combined listener for deletedJobIds, as it affects both status header and job list display.
-    renderStatusHeader(); // Update header for deleted count
+    statusHeaderComponent.update({ deletedJobsCount: appState.getDeletedJobIds().size }); // Update header for deleted count
     displayRecentJobs();
   });
   // When the master job list is updated (e.g., from a background refresh)
   appState.subscribeToSelector('jobs', displayRecentJobs);
   // For status header text changes
-  appState.subscribeToSelector('monitorStatus', renderStatusHeader);
+  appState.subscribeToSelector('monitorStatus', (newStatus) => {
+    statusHeaderComponent.update({ statusText: newStatus });
+  });
   // For job item collapsing/expanding
   appState.subscribeToSelector('collapsedJobIds', displayRecentJobs);
-  appState.subscribeToSelector('lastCheckTimestamp', renderStatusHeader);
+  appState.subscribeToSelector('lastCheckTimestamp', (newTimestamp) => {
+    statusHeaderComponent.update({ lastCheckTimestamp: newTimestamp });
+  });
 
   // --- IntersectionObserver for Pre-fetching Job Details for Tooltips ---
   let jobItemObserver = null;
@@ -372,6 +357,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Initialize StatusHeader component
+  if (typeof StatusHeader === 'undefined') {
+    console.error("Initialization Error: StatusHeader class is not defined. Please ensure popup/components/StatusHeader.js is loaded correctly and without errors.");
+    if (consolidatedStatusEl) {
+      consolidatedStatusEl.innerHTML = '<p class="app-header__status-tag app-header__status-tag--error">Error: Status component missing.</p>';
+    }
+    return; // Stop further execution if a critical component is missing
+  }
+  statusHeaderComponent = new StatusHeader(consolidatedStatusEl);
+
+  // Initialize JobDetails component
+  // This must be initialized before any calls to updateDetailsPanel or handleJobSelect
+  // as these functions directly interact with jobDetailsComponent.
+  if (typeof JobDetails === 'undefined') {
+    console.error("Initialization Error: JobDetails class is not defined. Please ensure popup/components/JobDetails.js is loaded correctly and without errors.");
+    if (jobDetailsPanelEl) {
+      jobDetailsPanelEl.innerHTML = '<p class="details-panel__error">Initialization failed: Job details component missing. Try reloading the extension.</p>';
+    }
+    return; // Stop further execution if a critical component is missing
+  }
+  jobDetailsComponent = new JobDetails(jobDetailsPanelEl);
+
     // Initialize JobDetails component
     if (typeof JobDetails === 'undefined') {
       console.error("Initialization Error: JobDetails class is not defined. Please ensure popup/components/JobDetails.js is loaded correctly and without errors.");
@@ -380,10 +387,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       return; // Stop further execution if a critical component is missing
     }
-    jobDetailsComponent = new JobDetails(jobDetailsPanelEl);
-
-    console.log("Popup: DOMContentLoaded complete. Loading stored data...");
-
   initializeUIFromState(); // Initial UI setup from loaded state
 
   // Initialize UI enhancements like scroll hints (now a global function from utils.js)
