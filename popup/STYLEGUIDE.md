@@ -37,6 +37,25 @@ The main header for the popup UI.
 
 ---
 
+### `query-section`
+
+The section containing the user's search query input and save button. Managed by the `SearchForm.js` component.
+
+- **Block**: `.query-section`
+- **Elements**:
+    - `.query-section__input`: The text input field.
+    - `.query-section__button`: The save/search button.
+
+**Example:**
+```html
+<div class="query-section">
+  <input type="text" class="query-section__input" placeholder="Enter Upwork search query...">
+  <button class="query-section__button btn btn--icon btn--muted" title="Save & Check">&#x1F50D;</button>
+</div>
+```
+
+---
+
 ### Layout Blocks
 
 These blocks structure the main layout of the popup.
@@ -67,25 +86,6 @@ These blocks structure the main layout of the popup.
 
 ---
 
-### `query-section`
-
-The section containing the user's search query input and save button.
-
-- **Block**: `.query-section`
-- **Elements**:
-    - `.query-section__input`: The text input field.
-    - `.query-section__button`: The save/search button.
-
-**Example:**
-```html
-<div class="query-section">
-  <input type="text" class="query-section__input" placeholder="Enter Upwork search query...">
-  <button class="query-section__button btn btn--icon btn--muted" title="Save & Check">&#x1F50D;</button>
-</div>
-```
-
----
-
 ### `btn`
 
 A generic, reusable button component. It can be modified for different appearances and contexts.
@@ -107,12 +107,6 @@ A generic, reusable button component. It can be modified for different appearanc
 <!-- Primary Text Button -->
 <button class="btn btn--primary">Save</button>
 ```
-
----
-
-## Future Components
-
-As we continue the refactoring, new components will be added here. The next major component to be refactored is the `job-item`, which will have its own set of elements (e.g., `job-item__title`, `job-item__details`) and modifiers (e.g., `job-item--selected`, `job-item--low-priority`).
 
 ---
 

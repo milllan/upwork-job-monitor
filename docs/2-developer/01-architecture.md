@@ -29,16 +29,24 @@ The extension is structured for clarity and maintainability, with all configurat
      - Manual job check
      - Query customization
      - Recent jobs list
-   - **Architecture**: The popup is built using a modern component-based architecture, orchestrated by `popup.js` and managed by a central state object, `AppState`. Components are designed to be "dumb" renderers, receiving data from `AppState` and emitting events for user interactions.
+   - **Architecture**: The popup is built using a modern component-based architecture, orchestrated by `popup.js` and managed by a central state object, `AppState`. Components are designed to be "dumb" renderers, receiving data from `AppState` and emitting events for user interactions. Its key components include `StatusHeader.js`, `SearchForm.js`, `JobItem.js`, and `JobDetails.js`.
 
-4. **Storage Manager**
+4. **Service Layer (`popup/services/ApiService.js`)**
+    - **Location**: `popup/services/ApiService.js`
+    - **Responsibilities**:
+        - Encapsulates all `browser.runtime.sendMessage` calls to the background script.
+        - Decouples the UI components from the implementation details of background communication.
+        - Manages the caching logic for data fetched from the background (e.g., job details).
+        - Exposes a clean, promise-based API for the rest of the popup to use (e.g., `apiService.fetchJobDetails()`).
+
+5. **Storage Manager**
    - Location: `storage/storage-manager.js`
    - Manages:
      - Seen job IDs
      - Deleted job IDs
      - User preferences
 
-5. **UpworkAPI**
+6. **UpworkAPI**
    - Location: `api/upwork-api.js`
    - Handles:
      - Token retrieval and prioritization
@@ -51,7 +59,7 @@ The extension is structured for clarity and maintainability, with all configurat
 
 The project's UI is built using a component-based architecture with a central state manager (`AppState`). This approach promotes separation of concerns, reusability, and maintainability.
 
--   **Component Identification**: Each distinct UI element (e.g., `JobItem`, `JobDetails`, `StatusHeader`) is encapsulated in its own component class.
+-   **Component Identification**: Each distinct UI element (e.g., `JobItem`, `JobDetails`, `StatusHeader`, `SearchForm`) is encapsulated in its own component class.
 -   **State-Driven UI**: All UI updates in response to state changes **must** be handled by `AppState` subscribers that call component methods (e.g., `.update()`). Direct DOM manipulation from the main `popup.js` script is forbidden for elements managed by components.
 -   **Unidirectional Data Flow**: Data flows from `AppState` to the components. User interactions within a component trigger callbacks that execute actions on `AppState`, which in turn updates the state and causes the relevant components to re-render.
 
@@ -80,9 +88,10 @@ The ViewModel pattern is used to separate data preparation from rendering logic.
 The `DOMContentLoaded` listener in `popup.js` serves as the application's primary **orchestrator**. Its role is strictly limited to:
 
 1.  Initializing the central `AppState` manager.
-2.  Instantiating all top-level UI components (`StatusHeader`, `SearchForm`, `JobList`, `JobDetails`).
-3.  Connecting components to `AppState` by setting up subscribers.
-4.  Setting up global event listeners that trigger actions on `AppState`.
+2.  Instantiating the `ApiService` to handle all background communication.
+3.  Instantiating all top-level UI components (`StatusHeader`, `SearchForm`, `JobItem`, `JobDetails`).
+4.  Connecting components to `AppState` by setting up subscribers.
+5.  Setting up global event listeners that trigger actions on `AppState`.
 
 The `popup.js` file should **avoid** containing any direct DOM manipulation, data formatting, or complex business logic for component-managed elements.
 
