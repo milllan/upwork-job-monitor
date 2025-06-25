@@ -70,6 +70,15 @@ The `DOMContentLoaded` listener in the main script (e.g., `popup.js`) serves as 
 -   **Set up** global event listeners (like `browser.runtime.onMessage`) that trigger actions on `AppState`.
 The `popup.js` file should **avoid** containing any direct DOM manipulation, data formatting, or complex business logic. Its complexity should decrease over time as logic is properly encapsulated within components and services.
 
+
+### Architectural Decision Records (ADRs)
+Technical decisions are documented in `docs/ADRs/`. Key architectural decisions:
+- **ADR-001**: Example ADR
+
+**AI Assistant Directive**: When discussing architecture or making technical decisions, always reference relevant ADRs. If a new architectural decision is made during development, create or update an ADR to document it. This ensures all technical decisions have clear rationale and can be revisited if needed.
+
+
+
 #### Handling Meta-Instructions
 
 When you receive a request to analyze or modify these core instructions (a "meta-instruction," often identified by a prompt asking you to act as a prompt engineer), you should:

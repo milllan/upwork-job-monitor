@@ -167,4 +167,3 @@ function initializeScrollHints(containerEl, listEl) {
   listEl.addEventListener('scroll', updateHints);
   updateHints(); // Initial check
 }
-}
