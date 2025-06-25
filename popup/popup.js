@@ -4,9 +4,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const popupTitleLinkEl = document.querySelector('.app-header__title');
   const consolidatedStatusEl = document.querySelector('.app-header__status');
   const manualCheckButton = document.querySelector('.app-header__button');
-  const themeToggleButton = document.getElementById('theme-toggle-button');
-  const userQueryInput = document.querySelector('.query-section__input');
-  const saveQueryButton = document.querySelector('.query-section__button');
+  const themeToggleButton = document.getElementById('theme-toggle-button'); // Keep this, it's not part of SearchForm
   const mainContentArea = document.querySelector('.main-content');
   const jobListContainerEl = document.querySelector('.job-list-container');
   const recentJobsListDiv = document.querySelector('.job-list');
@@ -14,7 +12,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const themeStylesheet = document.getElementById('theme-stylesheet');
   const jobItemTemplate = document.getElementById('job-item-template');
   const jobDetailsTemplate = document.getElementById('job-details-template');
+  let searchFormComponent; // Will be initialized in DOMContentLoaded
   let jobDetailsComponent; // Will be initialized in DOMContentLoaded
+  let apiService; // Will be initialized in DOMContentLoaded
   let statusHeaderComponent; // Will be initialized in DOMContentLoaded
 
   // Initialize AppState for centralized state management
@@ -51,30 +51,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       themeStylesheet.href = 'popup.css';
       themeToggleButton.textContent = '🌙'; // Moon icon for switching to dark mode
       themeToggleButton.title = "Switch to Dark Mode";
-    }
-  }
-
-  // Function to fetch job details with caching
-  async function fetchJobDetailsWithCache(jobCiphertext) {
-    const cachedData = appState.getCachedJobDetails(jobCiphertext);
-    if (cachedData) {
-      console.log(`Popup: Using cached job details for ${jobCiphertext}`);
-      return cachedData;
-    } else {
-      console.log(`Popup: Fetching fresh job details for ${jobCiphertext}`);
-      const response = await browser.runtime.sendMessage({
-        action: "getJobDetails",
-        jobCiphertext: jobCiphertext
-      });
-
-      if (response && response.jobDetails) {
-        // Cache the result with timestamp
-        appState.setCachedJobDetails(jobCiphertext, response.jobDetails);
-        return response.jobDetails;
-      } else {
-        console.error("Popup: Failed to get job details from background", response?.error);
-        throw new Error(response?.error || "Failed to fetch job details");
-      }
     }
   }
 
@@ -122,7 +98,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setSelectedJobItem(jobCiphertext); // Highlight the item in the list
 
     try {
-      const details = await fetchJobDetailsWithCache(jobCiphertext);
+      const details = await apiService.fetchJobDetailsWithCache(jobCiphertext);
       jobDetailsComponent.render(details);
     } catch (error) {
       jobDetailsComponent.showError(error);
@@ -224,7 +200,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log("Popup: Initializing UI from state.");
     const state = appState.getState();
 
-    userQueryInput.value = state.currentUserQuery;
+    searchFormComponent.setQuery(state.currentUserQuery);
     updatePopupTitleLink(state.currentUserQuery);
     displayRecentJobs();
     
@@ -236,48 +212,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initial renders are now handled by subscribers, but we can call them
     updateThemeUI();
   }
-
-  async function triggerCheck(queryToUse) { // Made async
+  // Callback for SearchForm component when a query is submitted
+  async function handleSearchSubmit(query) {
+    // The SearchForm component itself handles the alert for empty queries.
+    // This function handles the valid query submission.
+    appState.setCurrentUserQuery(query); // Update AppState, which handles persistence
+    updatePopupTitleLink(query); // Update title link
+    console.log("Popup: Query saved:", query);
+    
     // Update the state, which will trigger the UI update via the subscriber.
     appState.updateMonitorStatus('Checking...');
-    console.log("Popup: Triggering check with query:", queryToUse);
-
     try {
-      const response = await browser.runtime.sendMessage({ action: "manualCheck", userQuery: queryToUse });
+      const response = await apiService.triggerCheck(query);
       console.log("Popup: Manual check message sent, background responded:", response);
-      // Background will now send "updatePopupDisplay" when it's truly done.
-      // We can reflect the immediate response from background here if needed.
     } catch (error) {
       console.error("Popup: Error sending manual check message:", error.message);
       appState.loadFromStorage(); // Attempt to refresh with current state on error
     }
   }
 
-  saveQueryButton.addEventListener('click', () => {
-    const query = userQueryInput.value.trim();
-    if (query) { // Use StorageManager
-      StorageManager.setCurrentUserQuery(query).then(() => {
-        updatePopupTitleLink(query); // Update title link
-        console.log("Popup: Query saved:", query);
-        triggerCheck(query);
-      });
-    } else { // Handle empty query case
-      alert("Please enter a search query.");
-      userQueryInput.value = config.DEFAULT_USER_QUERY; // Use centralized default
-    }
-  });
-// Add Enter key support for search input
-  userQueryInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      saveQueryButton.click(); // Trigger save & check
-    }
-  });
-
   manualCheckButton.addEventListener('click', () => {
-    const currentQueryInInput = userQueryInput.value.trim(); // Use config default if input is empty
-    const queryToUse = currentQueryInInput || config.DEFAULT_USER_QUERY; // Use centralized default
+    const queryToUse = searchFormComponent.getQuery() || config.DEFAULT_USER_QUERY; // Get query from component
     updatePopupTitleLink(queryToUse); // Update title link
-    triggerCheck(queryToUse);
+    handleSearchSubmit(queryToUse); // Reuse the same logic as the search button
   });
 
   themeToggleButton.addEventListener('click', () => {
@@ -341,7 +298,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const jobCiphertext = jobItem.dataset.ciphertextForTooltip;
           if (jobCiphertext && !appState.getCachedJobDetails(jobCiphertext)) {
             console.log(`Popup (Observer): Pre-fetching details for visible job ${jobCiphertext}`);
-            try { await fetchJobDetailsWithCache(jobCiphertext); } catch (err) { /* silent fail */ }
+            try { await apiService.fetchJobDetailsWithCache(jobCiphertext); } catch (err) { /* silent fail */ }
           }
         }
       }
@@ -376,6 +333,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     return; // Stop further execution if a critical component is missing
   }
   jobDetailsComponent = new JobDetails(jobDetailsPanelEl);
+  
+  // Initialize SearchForm component
+  if (typeof SearchForm === 'undefined') {
+    console.error("Initialization Error: SearchForm class is not defined. Please ensure popup/components/SearchForm.js is loaded correctly and without errors.");
+    const querySectionEl = document.querySelector('.query-section');
+    if (querySectionEl) {
+      querySectionEl.innerHTML = '<p class="query-section__error">Initialization failed: Search form component missing.</p>';
+    }
+    return; // Stop further execution if a critical component is missing
+  }
+  searchFormComponent = new SearchForm(document.querySelector('.query-section'), handleSearchSubmit);
+
+  // Initialize ApiService
+  apiService = new ApiService(appState);
+
 
     // Initialize JobDetails component
     if (typeof JobDetails === 'undefined') {
