@@ -521,7 +521,7 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
   /* Flex properties moved from .job-list to control the container's size in the main layout */
   flex-grow: 0;
   flex-shrink: 0;
-  flex-basis: 385px;
+  flex-basis: 365px;
   min-width: 300px;
 }
 .job-list-container::before,

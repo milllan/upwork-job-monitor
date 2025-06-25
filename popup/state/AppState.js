@@ -362,7 +362,7 @@ class AppState {
       const newValue = newState[selector];
       const prevValue = prevState[selector];
       
-      if (newValue !== prevValue) {
+      if (this._hasSelectorChanged(selector, newValue, prevValue)) {
         listeners.forEach(listener => {
           try {
             listener(newValue, prevValue);
@@ -372,6 +372,64 @@ class AppState {
         });
       }
     });
+  }
+
+  /**
+   * Determines if a selector's value has truly changed, handling Set and Map comparisons.
+   * @private
+   * @param {string} selector - The name of the state property.
+   * @param {*} newValue - The new value of the property.
+   * @param {*} prevValue - The previous value of the property.
+   * @returns {boolean} True if the value has changed, false otherwise.
+   */
+  _hasSelectorChanged(selector, newValue, prevValue) {
+    // Handle primitive types and object references (default behavior)
+    if (newValue !== prevValue) {
+      // If they are not the same reference, but are both Sets or Maps,
+      // we need to do a deeper comparison.
+      if (newValue instanceof Set && prevValue instanceof Set) {
+        return !this._areSetsEqual(newValue, prevValue);
+      }
+      if (newValue instanceof Map && prevValue instanceof Map) {
+        return !this._areMapsEqual(newValue, prevValue);
+      }
+      // For other types (primitives, arrays, plain objects), reference inequality means a change.
+      return true;
+    }
+    // If references are strictly equal, no change.
+    return false;
+  }
+
+  /**
+   * Compares two Sets for equality of their elements.
+   * @private
+   * @param {Set} set1
+   * @param {Set} set2
+   * @returns {boolean} True if the sets contain the same elements, false otherwise.
+   */
+  _areSetsEqual(set1, set2) {
+    if (set1.size !== set2.size) return false;
+    for (const item of set1) {
+      if (!set2.has(item)) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Compares two Maps for equality of their key-value pairs.
+   * @private
+   * @param {Map} map1
+   * @param {Map} map2
+   * @returns {boolean} True if the maps contain the same key-value pairs, false otherwise.
+   */
+  _areMapsEqual(map1, map2) {
+    if (map1.size !== map2.size) return false;
+    for (const [key, value] of map1) {
+      if (!map2.has(key) || map2.get(key) !== value) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
