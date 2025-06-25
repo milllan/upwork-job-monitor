@@ -85,7 +85,7 @@ const config = {
   MAX_SEEN_IDS: 500, // Limit for seenJobIds storage (historical)
   MAX_DELETED_IDS: 200, // Limit for deletedJobIds storage (user-deleted)
   FETCH_ALARM_NAME: "fetchUpworkJobsAlarm_MV2",
-  FETCH_INTERVAL_MINUTES: 3, // How often to check for new jobs
+  FETCH_INTERVAL_MINUTES: 4, // How often to check for new jobs
   API_FETCH_COUNT: 12, // Number of jobs to fetch per API request, upwork.com website defaults to 10
 
   // Specific headers for webRequest modification

@@ -20,7 +20,7 @@ async function runJobCheck(triggeredByUserQuery) {
     successfulToken = apiResult.token;
   } else {
     console.error("MV2: Failed to fetch jobs after trying all tokens.", apiResult?.message);
-    await StorageManager.setMonitorStatus("Error: All tokens failed.");
+    await StorageManager.setMonitorStatus("Error: All tokens failed // Authentication failed. Please ensure you are logged into Upwork in another tab and then click 'Check Now.");
     // Open Upwork search page to help re-establish tokens
     try {
       const searchUrl = constructUpworkSearchURL(userQueryToUse, config.DEFAULT_CONTRACTOR_TIERS_GQL, config.DEFAULT_SORT_CRITERIA);
