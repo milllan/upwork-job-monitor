@@ -1,6 +1,6 @@
-<!--
-Developer Note: This is a powerful meta-command, aliased as `/reflect`. It allows the assistant to improve its own instructions.
--->
+# AI Assistant Command: Reflect
+
+<!-- Developer Note: This is a powerful meta-command, aliased as `/reflect`. It allows the assistant to improve its own instructions. -->
 You are an expert in prompt engineering, specializing in optimizing AI code assistant instructions. Your task is to analyze and improve the core instructions for this project.
 Follow these steps carefully:
 
@@ -9,8 +9,8 @@ Review the chat history in your context window.
 
 Then, examine the current instructions, commands, and configuration:
 <instructions_to_review>
-/docs/3-ai/instructions.md
-/docs/3-ai/commands/*
+/docs/3-ai/instructions.md # Core instructions for this persona
+/llm_context/commands/* # AI-specific commands
 .claude/settings.json
 .claude/settings.local.json
 </instructions_to_review>

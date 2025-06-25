@@ -48,7 +48,7 @@ After editing `config.js`, you must reload the extension from the `chrome://exte
 
 ## Usage Guide
 ### Popup Interface
-!Popup Interface
+![Popup Interface](https://github.com/milllan/upwork-job-monitor/assets/198157/e615e4f4-5555-4675-81e0-745a70992348)
 
 1. **Status Display**: Shows monitoring status, last check time, and deleted jobs count
 2. **Search Query**: Customize your job search parameters

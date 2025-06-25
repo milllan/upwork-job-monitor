@@ -30,7 +30,6 @@ The Upwork Job Monitor is a browser extension (Chrome/Firefox) that monitors Upw
 
 ## Usage
 
-For detailed usage instructions, see the [**User Guide**](USER_GUIDE.md).
 For detailed usage instructions, see the [**User Guide**](docs/1-user/guide.md).
 
 ## Documentation

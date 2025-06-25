@@ -6,7 +6,7 @@ The extension is structured for clarity and maintainability, with all configurat
 
 ## Core Components
 
-1. **Background Service Worker**
+1. **Background Service Worker (`background/service-worker.js`)**
    - Location: `background/service-worker.js`
    - Responsibilities:
      - Periodic job checks
@@ -14,6 +14,7 @@ The extension is structured for clarity and maintainability, with all configurat
      - API requests using prioritized tokens
      - Notifications
      - Storage coordination (via `StorageManager`)
+     - Dispatches messages to dedicated handlers (Command Handler pattern).
      - Loads configuration from `background/config.js`
 
 2. **Configuration**
@@ -22,13 +23,13 @@ The extension is structured for clarity and maintainability, with all configurat
 
 3. **Popup Interface**
    - HTML: `popup/popup.html`
-   - JavaScript: `popup/popup.js`
+   - JavaScript: `popup/popup.js` (Orchestrator)
    - Features:
      - Current status display
      - Manual job check
      - Query customization
      - Recent jobs list
-   - **Architecture**: The popup is built using a modern component-based architecture, orchestrated by `popup.js` and managed by a central state object, `AppState`.
+   - **Architecture**: The popup is built using a modern component-based architecture, orchestrated by `popup.js` and managed by a central state object, `AppState`. Components are designed to be "dumb" renderers, receiving data from `AppState` and emitting events for user interactions.
 
 4. **Storage Manager**
    - Location: `storage/storage-manager.js`
@@ -72,6 +73,7 @@ The ViewModel pattern is used to separate data preparation from rendering logic.
 -   **ViewModel Responsibility**: The `_prepareViewModel()` method is responsible for transforming raw data into a display-ready object. This ViewModel should primarily contain *data* (strings, numbers, booleans, arrays of data). It can also contain pre-formatted HTML snippets for simple cases.
 -   **Render Method Responsibility**: The public `render()` method should be a "dumb" function that only maps the ViewModel to the DOM. It should contain minimal conditional logic.
 -   **Template Interaction**: Components should primarily interact with their HTML templates using `data-field` and `data-section` attributes. These attributes serve as stable hooks for populating content and controlling section visibility, decoupling JavaScript from specific HTML tag names or complex DOM structures.
+-   **Declarative Rendering**: For visibility, prefer toggling CSS classes (e.g., `.hidden`) based on ViewModel properties rather than direct `element.style.display` manipulation. This centralizes visual control in CSS.
 
 ### Application Bootstrap (`popup.js`)
 

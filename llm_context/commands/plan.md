@@ -1,4 +1,4 @@
-# AI Assistant Sprint Planning Command
+# AI Assistant Command: Sprint Planning
 
 This document contains the prompt to be used with an AI Assistant (e.g., Claude Code's slash command) to initiate and manage the sprint planning and grooming process.
 
