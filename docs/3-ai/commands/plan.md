@@ -11,7 +11,7 @@ You are tasked with guiding the Product Owner through the sprint planning and gr
 **Follow these steps:**
 
 1.  **Identify Current Sprint**: Read the `Current Sprint` value from `/CLAUDE.md`. This is the target sprint for grooming.
-2.  **Review Process**: Refer to `/docs/04-Execution/06-Sprint-Grooming-Process.md` for the detailed steps of "Epic Grooming (Iterative Discussion)".
+2.  **Review Process**: Refer to `docs/4-archive/sprint-grooming-process.md` for the detailed steps of "Epic Grooming (Iterative Discussion)".
 3.  **Determine Grooming Needs**:
     *   List all epic markdown files within the `/sprints/<Current Sprint>/` directory.
     *   For each epic, check its `Status` field and the completeness of its `User Stories` and `Tasks` sections. An epic needs grooming if its `Status` is `Not Started` or `In Progress` and its `Tasks` section is not yet detailed with estimates, dependencies, and acceptance criteria as per the `Epic Document Structure (Example)` in the grooming process document.

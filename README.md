@@ -31,12 +31,13 @@ The Upwork Job Monitor is a browser extension (Chrome/Firefox) that monitors Upw
 ## Usage
 
 For detailed usage instructions, see the [**User Guide**](USER_GUIDE.md).
+For detailed usage instructions, see the [**User Guide**](docs/1-user/guide.md).
 
 ## Documentation
 
-- [User Guide](USER_GUIDE.md) - Installation, usage, and troubleshooting.
-- [Component Documentation](USER_GUIDE.md#architecture) - Technical architecture details.
-- [Development Plan](DEVELOPMENT_PLAN.md) - Original project planning documentation.
+- [User Guide](docs/1-user/guide.md) - Installation, usage, and troubleshooting.
+- [Developer Documentation](docs/2-developer/01-architecture.md) - Technical architecture, API reference, and development process.
+- [Archived Development Plan](docs/4-archive/original-development-plan.md) - Original project planning documentation.
 
 ## License
 

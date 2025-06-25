@@ -9,8 +9,8 @@ Review the chat history in your context window.
 
 Then, examine the current instructions, commands, and configuration:
 <instructions_to_review>
-/AI_INSTRUCTIONS.md
-/.claude/commands/*
+/docs/3-ai/instructions.md
+/docs/3-ai/commands/*
 .claude/settings.json
 .claude/settings.local.json
 </instructions_to_review>
@@ -52,7 +52,7 @@ Present your final output in the following structure:
 </improvements>
 
 <final_instructions>
-[Present the complete, updated set of instructions, typically for `AI_INSTRUCTIONS.md`, incorporating all approved changes]
+[Present the complete, updated set of instructions, typically for `docs/3-ai/instructions.md`, incorporating all approved changes]
 </final_instructions>
 
 Remember, your goal is to enhance your performance and consistency while maintaining the core functionality and purpose of the AI assistant. Be thorough in your analysis, clear in your explanations, and precise in your implementations.

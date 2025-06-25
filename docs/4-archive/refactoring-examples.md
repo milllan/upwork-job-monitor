@@ -1,6 +1,12 @@
-# Refactoring Example: From Procedural to Component-Based
+# Refactoring Examples
 
-## Before: Current Approach (popup.js)
+This document contains examples of refactoring from a procedural style to a more modern, component-based, and state-managed architecture.
+
+---
+
+## Example 1: From Procedural to Component-Based
+
+### Before: Procedural Approach (popup.js)
 
 ```javascript
 // Current approach - procedural with mixed concerns
@@ -38,9 +44,9 @@ recentJobsListDiv.addEventListener('click', (event) => {
 });
 ```
 
-## After: Component-Based Approach
+### After: Component-Based Approach
 
-### 1. Using the JobItem Component
+#### 1. Using the JobItem Component
 
 ```javascript
 // In popup.js - much cleaner and focused
@@ -107,7 +113,7 @@ class PopupApp {
 }
 ```
 
-### 2. State Management Example
+#### 2. State Management Example
 
 ```javascript
 // popup/state/AppState.js
@@ -172,7 +178,7 @@ class AppState {
 }
 ```
 
-### 3. Service Layer Example
+#### 3. Service Layer Example
 
 ```javascript
 // popup/services/JobService.js
@@ -236,15 +242,15 @@ class JobService {
 }
 ```
 
-## Benefits of This Approach
+### Benefits of This Approach
 
-### 1. **Separation of Concerns**
+1. **Separation of Concerns**
 - **JobItem**: Handles individual job rendering and interactions
 - **AppState**: Manages application state
 - **JobService**: Handles data operations
 - **PopupApp**: Orchestrates components and services
 
-### 2. **Easier Testing**
+2. **Easier Testing**
 ```javascript
 // Easy to unit test components
 describe('JobItem', () => {
@@ -268,19 +274,19 @@ describe('JobItem', () => {
 });
 ```
 
-### 3. **Better Maintainability**
+3. **Better Maintainability**
 - Each component has a single responsibility
 - Changes to job item rendering only affect the JobItem component
 - State changes are predictable and centralized
 - Easy to add new features without touching existing code
 
-### 4. **Improved Developer Experience**
+4. **Improved Developer Experience**
 - Smaller, focused files are easier to understand
 - Clear interfaces between components
 - Easier to debug issues
 - Better code reuse opportunities
 
-## Migration Strategy
+### Migration Strategy
 
 1. **Start with JobItem** - Replace `_populateJobItemElement` with the JobItem component
 2. **Add State Management** - Gradually move state to AppState
@@ -288,3 +294,224 @@ describe('JobItem', () => {
 4. **Create More Components** - Break down other large functions into components
 
 This approach maintains all existing functionality while making the code much more maintainable and testable.
+
+---
+---
+
+## Example 2: Migrating Theme State to AppState
+
+This shows exactly how to migrate the theme state from the current popup.js to AppState.
+
+### Current Code (popup.js lines 27, 63-77)
+
+```javascript
+// Current global variable
+let currentTheme = 'light'; // Default state, will be updated from storage
+
+// Current setTheme function
+function setTheme(theme) {
+  if (!themeStylesheet || !themeToggleButton) return;
+
+  if (theme === 'dark') {
+    themeStylesheet.href = 'popup-dark.css';
+    themeToggleButton.textContent = '☀️'; // Sun icon for switching to light mode
+    themeToggleButton.title = "Switch to Light Mode";
+  } else { // Default to light
+    themeStylesheet.href = 'popup.css';
+    themeToggleButton.textContent = '🌙'; // Moon icon for switching to dark mode
+    themeToggleButton.title = "Switch to Dark Mode";
+  }
+  currentTheme = theme;
+  StorageManager.setUiTheme(theme);
+}
+
+// Current theme toggle event listener (line 509-512)
+themeToggleButton.addEventListener('click', () => {
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  setTheme(newTheme);
+});
+
+// Current theme loading in loadStoredData (line 453)
+setTheme(loadedTheme); // Apply the theme
+```
+
+### After Migration
+
+#### Step 1: Add AppState to popup.html
+
+```html
+<!-- In popup.html, add before popup.js -->
+<script src="state/AppState.js"></script>
+<script src="popup.js"></script>
+```
+
+#### Step 2: Initialize AppState in popup.js
+
+```javascript
+// Add at the top of DOMContentLoaded, after DOM element selection
+document.addEventListener('DOMContentLoaded', async () => {
+  // ... existing DOM element selection ...
+  
+  // Initialize AppState
+  const appState = new AppState();
+  await appState.loadFromStorage();
+  
+  // Remove this line:
+  // let currentTheme = 'light';
+  
+  // ... rest of the code ...
+```
+
+#### Step 3: Update setTheme function
+
+```javascript
+// Replace the current setTheme function with:
+function setTheme(theme) {
+  if (!themeStylesheet || !themeToggleButton) return;
+
+  // Update AppState (this will trigger persistence automatically)
+  appState.setTheme(theme);
+  
+  // Update UI based on AppState
+  updateThemeUI();
+}
+
+// New function to update UI based on AppState
+function updateThemeUI() {
+  const theme = appState.getTheme();
+  
+  if (theme === 'dark') {
+    themeStylesheet.href = 'popup-dark.css';
+    themeToggleButton.textContent = '☀️';
+    themeToggleButton.title = "Switch to Light Mode";
+  } else {
+    themeStylesheet.href = 'popup.css';
+    themeToggleButton.textContent = '🌙';
+    themeToggleButton.title = "Switch to Dark Mode";
+  }
+}
+```
+
+#### Step 4: Update theme toggle event listener
+
+```javascript
+// Replace the current event listener with:
+themeToggleButton.addEventListener('click', () => {
+  const currentTheme = appState.getTheme();
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  setTheme(newTheme);
+});
+```
+
+#### Step 5: Update loadStoredData function
+
+```javascript
+// In loadStoredData, replace:
+// setTheme(loadedTheme);
+
+// With:
+updateThemeUI(); // Theme is already loaded in AppState
+```
+
+#### Step 6: Add reactive theme updates (Optional)
+
+```javascript
+// Add after AppState initialization for automatic UI updates
+appState.subscribeToSelector('theme', (newTheme, prevTheme) => {
+  console.log(`Theme changed from ${prevTheme} to ${newTheme}`);
+  updateThemeUI();
+});
+```
+
+### Complete Migrated Code
+
+```javascript
+document.addEventListener('DOMContentLoaded', async () => {
+  // DOM element selection (unchanged)
+  const popupTitleLinkEl = document.querySelector('.app-header__title');
+  const themeToggleButton = document.getElementById('theme-toggle-button');
+  const themeStylesheet = document.getElementById('theme-stylesheet');
+  // ... other elements ...
+
+  // Initialize AppState
+  const appState = new AppState();
+  await appState.loadFromStorage();
+
+  // Theme management functions
+  function updateThemeUI() {
+    const theme = appState.getTheme();
+    
+    if (!themeStylesheet || !themeToggleButton) return;
+    
+    if (theme === 'dark') {
+      themeStylesheet.href = 'popup-dark.css';
+      themeToggleButton.textContent = '☀️';
+      themeToggleButton.title = "Switch to Light Mode";
+    } else {
+      themeStylesheet.href = 'popup.css';
+      themeToggleButton.textContent = '🌙';
+      themeToggleButton.title = "Switch to Dark Mode";
+    }
+  }
+
+  function setTheme(theme) {
+    appState.setTheme(theme);
+    updateThemeUI();
+  }
+
+  // Event listeners
+  themeToggleButton.addEventListener('click', () => {
+    const currentTheme = appState.getTheme();
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+  });
+
+  // Reactive updates (optional)
+  appState.subscribeToSelector('theme', () => {
+    updateThemeUI();
+  });
+
+  // Initial UI setup
+  updateThemeUI();
+
+  // ... rest of existing code unchanged ...
+});
+```
+
+### Testing This Migration
+
+1. **Load the extension** - Should work exactly as before
+2. **Toggle theme** - Should switch between light/dark
+3. **Close and reopen popup** - Theme should persist
+4. **Check console** - Should see AppState logs
+5. **No errors** - Browser console should be clean
+
+### Benefits After This Step
+
+1. **Theme state is centralized** in AppState
+2. **Automatic persistence** - No manual StorageManager calls
+3. **Reactive updates** - UI updates automatically
+4. **Better debugging** - State changes are logged
+5. **Foundation for next steps** - AppState is ready for more state
+
+### What's Removed
+
+- ❌ `let currentTheme = 'light';` global variable
+- ❌ `StorageManager.setUiTheme(theme);` manual call
+- ❌ Direct theme variable access
+
+### What's Added
+
+- ✅ `appState.getTheme()` getter
+- ✅ `appState.setTheme(theme)` setter
+- ✅ `updateThemeUI()` function
+- ✅ Automatic state persistence
+- ✅ Optional reactive updates
+
+This migration is **low risk** because:
+- Theme state is isolated
+- No complex dependencies
+- Easy to test and verify
+- Easy to rollback if needed
+
+After this step works, you can proceed to migrate the next state variable (selectedJobId).
