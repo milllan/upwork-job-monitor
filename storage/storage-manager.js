@@ -118,11 +118,9 @@ async function getRecentFoundJobs() {
 }
 
 async function setRecentFoundJobs(jobs) {
-  // Filter out deleted jobs before storing recent jobs
-  const deletedIds = await getDeletedJobIds();
-  const jobsToStore = jobs.filter(job => job && job.id && !deletedIds.has(job.id));
   // Limit the number of recent jobs stored
-  await setStorage({ [STORAGE_KEYS.RECENT_FOUND_JOBS]: jobsToStore.slice(0, MAX_RECENT_JOBS) });
+  // The jobs array passed to this function is expected to be already filtered for deleted jobs.
+  await setStorage({ [STORAGE_KEYS.RECENT_FOUND_JOBS]: jobs.slice(0, MAX_RECENT_JOBS) });
 }
 
 async function getCollapsedJobIds() {

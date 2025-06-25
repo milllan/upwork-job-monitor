@@ -58,6 +58,130 @@ browser.webRequest.onBeforeSendHeaders.addListener(
 
 let isJobCheckRunning = false; // Flag to prevent concurrent runs
 
+/**
+ * Applies client-side filtering rules (title exclusion, skill/country low-priority)
+ * to a list of jobs.
+ * @param {Array<Object>} jobs - The array of job objects to process.
+ * @returns {Object} An object containing the processed jobs and counts of filtered jobs.
+ */
+function _applyClientSideFilters(jobs) {
+  let titleExcludedCount = 0;
+  let skillLowPriorityCount = 0;
+  let clientCountryLowPriorityCount = 0;
+
+  const processedJobs = jobs.map(job => {
+    let newJobData = { ...job, isExcludedByTitleFilter: false, isLowPriorityBySkill: false, isLowPriorityByClientCountry: false };
+
+    // 1. Apply TITLE based exclusion
+    const titleLower = (job.title || "").toLowerCase(); // Ensure title is lowercase for comparison
+    if (config.TITLE_EXCLUSION_STRINGS.length > 0 && config.TITLE_EXCLUSION_STRINGS.some(excludeString => titleLower.includes(excludeString))) {
+      newJobData.isExcludedByTitleFilter = true;
+      titleExcludedCount++;
+    }
+
+    // 2. Apply SKILL based low-priority marking
+    if (Array.isArray(job.ontologySkills) && job.ontologySkills.length > 0 && config.SKILL_LOW_PRIORITY_TERMS.length > 0) {
+      for (const skill of job.ontologySkills) {
+        if (skill && skill.prefLabel && config.SKILL_LOW_PRIORITY_TERMS.includes(skill.prefLabel.toLowerCase())) {
+          newJobData.isLowPriorityBySkill = true;
+          skillLowPriorityCount++;
+          break; // Found a matching low-priority skill, no need to check further for this job
+        }
+      }
+    }
+
+    // 3. Apply CLIENT COUNTRY based low-priority marking
+    if (job.client && job.client.country && config.CLIENT_COUNTRY_LOW_PRIORITY.length > 0) {
+      if (config.CLIENT_COUNTRY_LOW_PRIORITY.includes(job.client.country.toLowerCase())) {
+        newJobData.isLowPriorityByClientCountry = true;
+        clientCountryLowPriorityCount++;
+      }
+    }
+    return newJobData;
+  });
+
+  return {
+    processedJobs,
+    titleExcludedCount,
+    skillLowPriorityCount,
+    clientCountryLowPriorityCount
+  };
+}
+
+/**
+ * Processes fetched jobs for deduplication, updates seen/collapsed IDs, and sends notifications.
+ * @param {Array<Object>} fetchedJobs - The jobs fetched from the API, already processed by client-side filters.
+ * @param {Set<string>} historicalSeenJobIds - Set of job IDs seen historically.
+ * @param {Set<string>} deletedJobIds - Set of job IDs deleted by the user.
+ * @param {Set<string>} currentCollapsedJobIds - Current set of collapsed job IDs.
+ * @returns {Promise<Object>} An object containing counts of new/notifiable jobs and the updated collapsed job IDs.
+ */
+async function _processAndNotifyNewJobs(fetchedJobs, historicalSeenJobIds, deletedJobIds, currentCollapsedJobIds) {
+  // Filter out jobs that are already seen OR have been explicitly deleted by the user from the *fetched* list
+  const allNewOrUpdatedJobs = fetchedJobs.filter(job =>
+    job && job.id && !historicalSeenJobIds.has(job.id) && !deletedJobIds.has(job.id)
+  );
+  // From these, determine which are truly new AND notifiable (not excluded by title filter)
+  const notifiableNewJobs = allNewOrUpdatedJobs.filter(job =>
+    !job.isExcludedByTitleFilter && !job.isLowPriorityBySkill && !job.isLowPriorityByClientCountry && job.applied !== true
+  );
+
+  const newJobIdsToMarkSeen = [];
+  fetchedJobs.forEach(job => {
+    if (job && job.id && !historicalSeenJobIds.has(job.id)) {
+      newJobIdsToMarkSeen.push(job.id);
+      // If it's a new, low-priority job OR a new "Filtered" (excluded by title) job,
+      // add to collapsedJobIds so it starts collapsed in the popup.
+      if ((job.isLowPriorityBySkill || job.isLowPriorityByClientCountry || job.isExcludedByTitleFilter) && !currentCollapsedJobIds.has(job.id)) {
+        currentCollapsedJobIds.add(job.id);
+      }
+    }
+  });
+  await StorageManager.addSeenJobIds(newJobIdsToMarkSeen);
+
+  if (notifiableNewJobs.length > 0) {
+    notifiableNewJobs.forEach(job => sendNotification(job));
+  }
+
+  return {
+    allNewOrUpdatedJobsCount: allNewOrUpdatedJobs.length,
+    notifiableNewJobsCount: notifiableNewJobs.length,
+    updatedCollapsedJobIds: currentCollapsedJobIds
+  };
+}
+
+// Helper to send message to popup if open
+async function _sendPopupUpdateMessage() {
+  try {
+    const popupViews = browser.extension.getViews({ type: "popup" });
+    if (popupViews && popupViews.length > 0) {
+      await browser.runtime.sendMessage({ action: "updatePopupDisplay" });
+    } else {
+      console.log("MV2: Popup not open, skipping updatePopupDisplay message.");
+    }
+  } catch (e) {
+    console.warn("MV2: Error during conditional send of updatePopupDisplay message:", e);
+  }
+}
+
+// --- Storage Update Helper ---
+/**
+ * Updates various storage items after a job check.
+ * @param {number} notifiableNewJobsCount - Number of new, notifiable jobs found.
+ * @param {Array<Object>} fetchedJobs - All jobs fetched from the API (after client-side filtering).
+ * @param {Set<string>} updatedCollapsedJobIds - The set of collapsed job IDs, including newly collapsed ones.
+ * @param {Set<string>} deletedJobIds - The set of job IDs deleted by the user.
+ */
+async function _updateStorageAfterCheck(notifiableNewJobsCount, fetchedJobs, updatedCollapsedJobIds, deletedJobIds) {
+  await StorageManager.setMonitorStatus(`Checked. New (notifiable): ${notifiableNewJobsCount}`);
+  await StorageManager.setNewJobsInLastRun(notifiableNewJobsCount);
+  await StorageManager.setLastCheckTimestamp(Date.now());
+  // Filter out deleted jobs before storing recent jobs
+  const jobsToStore = fetchedJobs ? fetchedJobs.filter(job => job && job.id && !deletedJobIds.has(job.id)) : [];
+  await StorageManager.setRecentFoundJobs(jobsToStore);
+  await StorageManager.setCollapsedJobIds(Array.from(updatedCollapsedJobIds)); // Save updated collapsed IDs
+}
+
 // --- Main Job Checking Logic (runJobCheck) ---
 async function runJobCheck(triggeredByUserQuery) {
   if (isJobCheckRunning) {
@@ -94,120 +218,44 @@ async function runJobCheck(triggeredByUserQuery) {
       try {
         const searchUrl = constructUpworkSearchURL(userQueryToUse, config.DEFAULT_CONTRACTOR_TIERS_GQL, config.DEFAULT_SORT_CRITERIA);
         await browser.tabs.create({ url: searchUrl });
-        const popupViewsOnError = browser.extension.getViews({ type: "popup" });
-        if (popupViewsOnError && popupViewsOnError.length > 0) {
-          await browser.runtime.sendMessage({ action: "updatePopupDisplay" });
-        } else {
-          console.log("MV2: Popup not open, skipping updatePopupDisplay message after API token failure.");
-        }
+        await _sendPopupUpdateMessage(); // Notify popup of error state
       } catch (e) { console.warn("MV2: Error trying to open tab or send updatePopupDisplay message:", e); }
       return; // Exit runJobCheck; 'finally' block will execute before returning
     }
     
     // Apply client-side title exclusion and skill-based low-priority marking
     if (fetchedJobs && fetchedJobs.length > 0) {
-      const originalJobCount = fetchedJobs.length;
-      let titleExcludedCount = 0;
-      let skillLowPriorityCount = 0;
-      let clientCountryLowPriorityCount = 0;
-
-      fetchedJobs = fetchedJobs.map(job => {
-        let newJobData = { ...job, isExcludedByTitleFilter: false, isLowPriorityBySkill: false, isLowPriorityByClientCountry: false };
-
-        // 1. Apply TITLE based exclusion
-        const titleLower = (job.title || "").toLowerCase(); // Ensure title is lowercase for comparison
-        if (config.TITLE_EXCLUSION_STRINGS.length > 0 && config.TITLE_EXCLUSION_STRINGS.some(excludeString => titleLower.includes(excludeString))) {
-          newJobData.isExcludedByTitleFilter = true;
-          titleExcludedCount++;
-        }
-
-        // 2. Apply SKILL based low-priority marking
-        // Ensure job.ontologySkills is an array and has items.
-        // The API response shows skills under job.ontologySkills, each skill object has a prefLabel.
-        if (Array.isArray(job.ontologySkills) && job.ontologySkills.length > 0 && config.SKILL_LOW_PRIORITY_TERMS.length > 0) {
-          for (const skill of job.ontologySkills) {
-            if (skill && skill.prefLabel && config.SKILL_LOW_PRIORITY_TERMS.includes(skill.prefLabel.toLowerCase())) {
-              newJobData.isLowPriorityBySkill = true;
-              skillLowPriorityCount++;
-              break; // Found a matching low-priority skill, no need to check further for this job
-            }
-          }
-        }
-
-        // 3. Apply CLIENT COUNTRY based low-priority marking
-        if (job.client && job.client.country && config.CLIENT_COUNTRY_LOW_PRIORITY.length > 0) {
-          if (config.CLIENT_COUNTRY_LOW_PRIORITY.includes(job.client.country.toLowerCase())) {
-            newJobData.isLowPriorityByClientCountry = true;
-            clientCountryLowPriorityCount++;
-          }
-        }
-
-        return newJobData;
-      });
-      console.log(`MV2: Processed ${originalJobCount} jobs. Marked ${titleExcludedCount} as excluded by title. Marked ${skillLowPriorityCount} as low-priority by skill. Marked ${clientCountryLowPriorityCount} as low-priority by client country.`);
+      const originalJobCount = fetchedJobs.length; // Store original count before processing
+      const processedJobsResult = _applyClientSideFilters(fetchedJobs);
+      fetchedJobs = processedJobsResult.processedJobs; // Update fetchedJobs with processed ones
+      console.log(`MV2: Processed ${originalJobCount} jobs. Marked ${processedJobsResult.titleExcludedCount} as excluded by title. Marked ${processedJobsResult.skillLowPriorityCount} as low-priority by skill. Marked ${processedJobsResult.clientCountryLowPriorityCount} as low-priority by client country.`);
     }
 
-
-    // --- Deduplication and Notification (using fetchedJobs) ---
+    // Deduplication, Notification, and Collapsed ID Management
     const historicalSeenJobIds = await StorageManager.getSeenJobIds();
     const deletedJobIds = await StorageManager.getDeletedJobIds();
     let currentCollapsedJobIds = await StorageManager.getCollapsedJobIds(); // Get current collapsed IDs
 
-    // Filter out jobs that are already seen OR have been explicitly deleted by the user from the *fetched* list
-    const allNewOrUpdatedJobs = fetchedJobs.filter(job =>
-      job && job.id && !historicalSeenJobIds.has(job.id) && !deletedJobIds.has(job.id)
+    const processResult = await _processAndNotifyNewJobs(fetchedJobs, historicalSeenJobIds, deletedJobIds, currentCollapsedJobIds);
+
+    console.log(`MV2 DirectBG: Token Loop. Found ${processResult.allNewOrUpdatedJobsCount} new/updated jobs, ${processResult.notifiableNewJobsCount} are notifiable.`);
+
+    // Update storage
+    await _updateStorageAfterCheck(
+      processResult.notifiableNewJobsCount,
+      fetchedJobs,
+      processResult.updatedCollapsedJobIds,
+      deletedJobIds
     );
-    // From these, determine which are truly new AND notifiable (not excluded by title filter)
-    const notifiableNewJobs = allNewOrUpdatedJobs.filter(job =>
-      !job.isExcludedByTitleFilter && !job.isLowPriorityBySkill && !job.isLowPriorityByClientCountry && job.applied !== true
-    );
 
-    // Update seenJobIds if any jobs were fetched
-    if (fetchedJobs && fetchedJobs.length > 0) {
-      const newJobIdsToMarkSeen = [];
-      fetchedJobs.forEach(job => {
-        if (job && job.id && !historicalSeenJobIds.has(job.id)) {
-          newJobIdsToMarkSeen.push(job.id);
-          // If it's a new, low-priority job OR a new "Filtered" (excluded by title) job,
-          // add to collapsedJobIds so it starts collapsed in the popup.
-          if (
-              (job.isLowPriorityBySkill || job.isLowPriorityByClientCountry || job.isExcludedByTitleFilter) &&
-              !currentCollapsedJobIds.has(job.id)) {
-            currentCollapsedJobIds.add(job.id);
-          }
-        }
-      });
-      await StorageManager.addSeenJobIds(newJobIdsToMarkSeen);
-    }
-    if (notifiableNewJobs.length > 0) {
-      notifiableNewJobs.forEach(job => sendNotification(job));
-    }
-    console.log(`MV2 DirectBG: Token Loop. Found ${allNewOrUpdatedJobs.length} new/updated jobs, ${notifiableNewJobs.length} are notifiable.`);
-
-    // Update storage using StorageManager
-    await StorageManager.setMonitorStatus(`Checked. New (notifiable): ${notifiableNewJobs.length}`);
-    await StorageManager.setNewJobsInLastRun(notifiableNewJobs.length);
-    await StorageManager.setLastCheckTimestamp(Date.now());
-    await StorageManager.setRecentFoundJobs(fetchedJobs ? fetchedJobs.filter(job => job && job.id && !deletedJobIds.has(job.id)) : []);
-    await StorageManager.setCollapsedJobIds(Array.from(currentCollapsedJobIds)); // Save updated collapsed IDs
-
-    // Send message to popup at the end of successful processing
-    try {
-      // Check if the popup is open before trying to send a message.
-      const popupViewsOnSuccess = browser.extension.getViews({ type: "popup" });
-      if (popupViewsOnSuccess && popupViewsOnSuccess.length > 0) {
-        await browser.runtime.sendMessage({ action: "updatePopupDisplay" });
-      } else {
-        console.log("MV2: Popup not open, skipping updatePopupDisplay message after job check.");
-      }
-    } catch (e) { console.warn("MV2: Error during conditional send of updatePopupDisplay message post-check:", e); }
+    // Send message to popup
+    await _sendPopupUpdateMessage();
 
   } finally {
     isJobCheckRunning = false;
     console.log("MV2: runJobCheck finished. isJobCheckRunning set to false.");
   }
 }
-
 
 // --- Test Function, onInstalled, Alarms, Notifications, onMessage (remain the same) ---
 async function testFetchJobs() {
