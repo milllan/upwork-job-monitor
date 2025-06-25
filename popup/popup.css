@@ -214,6 +214,14 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
   margin-top: 2px;
 }
 
+/* Toggle button content */
+.job-item__toggle::before {
+  content: '+';
+}
+.job-item--collapsed .job-item__toggle::before {
+  content: '-';
+}
+
 .job-item__title-container {
   margin: 0;
   font-size: 14px;
@@ -227,7 +235,7 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
 
 .job-item__applied-icon {
   margin: 0 4px 0 0;
-  display: inline-flex;
+  display: none;
   align-items: center;
   width: 36px;
   height: 16px;
@@ -235,7 +243,7 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
 }
 
 .job-item__priority-tag {
-  display: inline-block;
+  display: none;
   background-color: var(--up-gray-80);
   color: var(--up-gray-10);
   padding: 2px 6px;
@@ -246,6 +254,16 @@ hr { margin: 8px 0; border: 0; border-top: 1px solid var(--up-gray-80); }
   margin-right: 6px;
   line-height: 1.2;
   vertical-align: middle;
+}
+/* Show when parent .job-item has the 'applied' class */
+.job-item--applied .job-item__applied-icon,
+.job-item--has-applied-icon .job-item__applied-icon {
+  display: inline-flex; /* Based on existing style */
+  
+}
+.job-item--priority .job-item__priority-tag,
+.job-item--has-priority-tag .job-item__priority-tag {
+  display: inline-block; /* Based on existing style */
 }
 
 .job-item__title {

@@ -48,11 +48,13 @@
   <template id="job-item-template">
     <div class="job-item" data-job-id="">
       <div class="job-item__header">
-        <span class="job-item__toggle">+</span>
+        <span class="job-item__toggle"></span>
         <h3 class="job-item__title-container">
-          <!-- applied-icon will be prepended here -->
-          <!-- priority-tag will be prepended here -->
-          <a href="#" target="_blank" data-ciphertext="" class="job-item__title"></a>
+          <span class="job-item__applied-icon" title="You applied to this job">
+            <img src="icons/applied-icon.svg" alt="Applied to job" class="air3-icon sm" data-test="UpCIcon" />
+          </span>
+          <span class="job-item__priority-tag"><span data-field="priority-tag-text"></span></span>
+          <a href="#" target="_blank" class="job-item__title"></a>
         </h3>
         <span class="job-item__delete-btn" title="Remove from list">×</span>
       </div>

@@ -135,7 +135,7 @@ class JobItem {
     this.viewModel = this._prepareViewModel();
     this._populateFromViewModel();
     this._updateClasses();
-    this._updateDataAttributes();
+    //this._updateDataAttributes();
   }
 
   /**
@@ -144,20 +144,20 @@ class JobItem {
    */
   _prepareViewModel() { // Renamed from _createViewModel for consistency
     const job = this.jobData;
-    const hasSkills = job.skills && job.skills.length > 0;
     const isLowPriority = job.isLowPriorityBySkill || job.isLowPriorityByClientCountry;
     
-    let priorityTagHTML = '';
+    let priorityTagText = '';
     if (job.isExcludedByTitleFilter) {
-      priorityTagHTML = '<span class="job-item__priority-tag">Filtered</span>';
+      priorityTagText = 'Filtered';
     } else if (job.isLowPriorityByClientCountry && job.client && job.client.country) {
       const countryName = job.client.country.charAt(0).toUpperCase() + job.client.country.slice(1).toLowerCase();
-      priorityTagHTML = `<span class="job-item__priority-tag">${countryName}</span>`;
+      priorityTagText = countryName;
     } else if (job.isLowPriorityBySkill) {
-      priorityTagHTML = '<span class="job-item__priority-tag">Skill</span>';
+      priorityTagText = 'Skill';
     }
 
     const postedOnDate = job.postedOn ? new Date(job.postedOn) : null;
+    const hasSkills = job.skills && job.skills.length > 0;
 
     return {
       // Raw data
@@ -174,9 +174,9 @@ class JobItem {
       timeAgo: postedOnDate ? timeAgo(postedOnDate) : 'N/A',
 
       // HTML snippets
-      hasSkills: hasSkills, // New boolean flag for skills section visibility
-      appliedIconHTML: job.applied ? `<span class="job-item__applied-icon" title="You applied to this job"><img src="icons/applied-icon.svg" alt="Applied to job" class="air3-icon sm" data-test="UpCIcon" /></span>` : '',
-      priorityTagHTML: priorityTagHTML,
+      hasSkills: hasSkills,
+      priorityTagText: priorityTagText, // Just the text, not HTML
+      hasPriorityTag: !!priorityTagText, // Boolean flag for priority tag visibility
 
       // Boolean flags for classes
       isLowPriority: isLowPriority,
@@ -201,23 +201,16 @@ class JobItem {
     const skillsElement = this.element.querySelector('[data-field="skills"]');
     skillsElement.textContent = vm.skills; // Set text content regardless of whether there are skills
     
+    this.element.querySelector('[data-field="priority-tag-text"]').textContent = vm.priorityTagText;
+
     this.element.querySelector('[data-field="posted-on"]').textContent = vm.postedOn;
     this.element.querySelector('[data-field="time-ago"]').textContent = vm.timeAgo;
     
     // Update title link
     const titleLink = this.element.querySelector('.job-item__title');
     titleLink.href = vm.jobUrl;
-    titleLink.dataset.ciphertext = vm.ciphertext;
+    this.element.dataset.ciphertextForTooltip = vm.ciphertext; // Moved from _updateDataAttributes for consistency
     titleLink.textContent = vm.title;
-
-    // Handle HTML snippets
-    const titleContainer = this.element.querySelector('.job-item__title-container');
-    titleContainer.querySelectorAll('.job-item__applied-icon, .job-item__priority-tag').forEach(el => el.remove());
-    if (vm.priorityTagHTML) titleContainer.insertAdjacentHTML('afterbegin', vm.priorityTagHTML);
-    if (vm.appliedIconHTML) titleContainer.insertAdjacentHTML('afterbegin', vm.appliedIconHTML);
-
-    // Update toggle button
-    this.element.querySelector('.job-item__toggle').textContent = this.options.isCollapsed ? '+' : '-';
   }
 
   /**
@@ -230,21 +223,11 @@ class JobItem {
     this.element.classList.toggle('job-item--collapsed', this.options.isCollapsed);
     this.element.classList.toggle('job-item--low-priority', vm.isLowPriority);
     this.element.classList.toggle('job-item--excluded', vm.isExcludedByTitleFilter);
-    this.element.classList.toggle('job-item--applied', vm.isApplied);
-    this.element.classList.toggle('job-item--has-skills', vm.hasSkills); // New class for skills visibility
+    this.element.classList.toggle('job-item--applied', vm.isApplied); // Controls applied icon visibility via CSS
+    this.element.classList.toggle('job-item--has-skills', vm.hasSkills);
+    this.element.classList.toggle('job-item--has-priority-tag', vm.hasPriorityTag); // Controls priority tag visibility via CSS
     this.element.classList.toggle('job-item--high-rating', vm.isHighRating);
     this.element.classList.toggle('job-item--high-spent', vm.isHighSpent);
-  }
-
-  /**
-   * Updates data attributes
-   * @private
-   */
-  _updateDataAttributes() {
-    const vm = this.viewModel;
-    
-    this.element.dataset.jobId = vm.id;
-    this.element.dataset.ciphertextForTooltip = vm.ciphertext;
   }
 }
 
