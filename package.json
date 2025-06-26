@@ -11,8 +11,9 @@
     "lib": "lib"
   },
   "scripts": {
-    "lint": "eslint .",
-    "test": "test"
+    "lint": "eslint . --ext .js",
+    "lint:fix": "eslint . --ext .js --fix",
+    "format": "prettier --write \"**/*.{js,json,html,css,md}\""
   },
   "repository": {
     "type": "git",
