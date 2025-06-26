@@ -1,0 +1,3 @@
+node_modules/
+# Ignore the minified browser polyfill as it's third-party and minified
+lib/browser-polyfill.min.js

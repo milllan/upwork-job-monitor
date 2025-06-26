@@ -1,5 +1,38 @@
 {
   "dependencies": {
     "webextension-polyfill": "^0.12.0"
+  },
+  "name": "upwork-job-monitor",
+  "version": "1.0.0",
+  "description": "Upwork Job Monitor Browser Extension",
+  "main": "manifest.json",
+  "directories": {
+    "doc": "docs",
+    "lib": "lib"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/milllan/upwork-job-monitor.git"
+  },
+  "keywords": [
+    "upwork"
+  ],
+  "author": "Milan Petrović",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/milllan/upwork-job-monitor/issues"
+  },
+  "homepage": "https://github.com/milllan/upwork-job-monitor#readme",
+  "devDependencies": {
+    "@eslint/js": "^9.29.0",
+    "eslint": "^9.29.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-prettier": "^5.5.1",
+    "globals": "^16.2.0",
+    "prettier": "^3.6.1"
   }
 }
