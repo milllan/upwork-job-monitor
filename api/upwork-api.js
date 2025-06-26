@@ -1,3 +1,4 @@
+/* exported UpworkAPI */
 /**
  * Handles all interactions with the Upwork API.
  * This includes token retrieval, GraphQL payload construction, and fetch requests.

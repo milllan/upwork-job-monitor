@@ -1,3 +1,4 @@
+/* exported config */
 /**
  * Centralized configuration and constants for the Upwork Job Monitor background script.
  */

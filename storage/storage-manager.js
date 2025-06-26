@@ -1,3 +1,4 @@
+/* exported StorageManager */
 /**
  * Manages all interactions with chrome.storage.local.
  * Centralizes storage logic and provides a clean API for other parts of the extension.

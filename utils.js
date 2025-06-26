@@ -1,3 +1,4 @@
+/* exported constructUpworkSearchURL, timeAgo, formatClientInfo, formatSkills, formatBudget, initializeScrollHints */
 // utils.js
 
 /**
