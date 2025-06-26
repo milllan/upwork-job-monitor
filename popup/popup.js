@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
    */
   function updateThemeUI() {
     const theme = appState.getTheme();
-    if (!themeStylesheet || !themeToggleButton) return;
+    if (!themeStylesheet || !themeToggleButton) {return;}
 
     if (theme === 'dark') {
       themeStylesheet.href = 'popup-dark.css';
@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
    * @param {string} jobCiphertext - The ciphertext ID of the job.
    */
   async function updateDetailsPanel(jobCiphertext) {
-    if (!jobDetailsComponent) return;
+    if (!jobDetailsComponent) {return;}
     jobDetailsComponent.showLoading();
     
     setSelectedJobItem(jobCiphertext); // Highlight the item in the list
@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Reload state from storage. This will trigger all necessary UI updates
       // via the subscribers, ensuring a consistent, state-driven refresh.
       appState.loadFromStorage();
-      if (sendResponse) sendResponse({ status: "Popup display refreshed."});
+      if (sendResponse) {sendResponse({ status: "Popup display refreshed."});}
       return true; 
     }
   });
@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       jobItemObserver.disconnect(); // Disconnect previous observer if any
     }
 
-    if (elementsToObserve.length === 0) return;
+    if (elementsToObserve.length === 0) {return;}
 
     const observerOptions = {
       root: recentJobsListDiv, // Observe within the scrollable job list container

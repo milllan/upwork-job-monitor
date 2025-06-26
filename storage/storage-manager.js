@@ -24,9 +24,9 @@ async function getStorage(keyOrKeys) {
   } catch (error) {
     console.error("StorageManager: Error getting storage:", error.message);
     // Return a default structure similar to what a successful call might return with no data
-    if (typeof keyOrKeys === 'string') return { [keyOrKeys]: undefined };
-    if (Array.isArray(keyOrKeys)) return keyOrKeys.reduce((acc, key) => { acc[key] = undefined; return acc; }, {});
-    if (keyOrKeys === null || typeof keyOrKeys === 'object') return {}; // For get(null) or get({})
+    if (typeof keyOrKeys === 'string') {return { [keyOrKeys]: undefined };}
+    if (Array.isArray(keyOrKeys)) {return keyOrKeys.reduce((acc, key) => { acc[key] = undefined; return acc; }, {});}
+    if (keyOrKeys === null || typeof keyOrKeys === 'object') {return {};} // For get(null) or get({})
     return {}; // Fallback
   }
 }

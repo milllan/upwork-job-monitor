@@ -45,7 +45,7 @@ class SearchForm {
   _attachEventListeners() {
     this.buttonEl.addEventListener('click', () => this._handleSearch());
     this.inputEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') this._handleSearch();
+      if (e.key === 'Enter') {this._handleSearch();}
     });
   }
 

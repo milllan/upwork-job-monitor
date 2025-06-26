@@ -91,7 +91,7 @@ class JobItem {
    * @private
    */
   _attachEventListeners() {
-    if (!this.element) return;
+    if (!this.element) {return;}
 
     // Toggle button
     const toggleButton = this.element.querySelector('.job-item__toggle');
@@ -129,7 +129,7 @@ class JobItem {
    * @private
    */
   _updateElement() { // This method is called by render() and update()
-    if (!this.element) return;
+    if (!this.element) {return;}
 
     // Prepare the ViewModel
     this.viewModel = this._prepareViewModel();

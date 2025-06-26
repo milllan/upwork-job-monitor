@@ -43,8 +43,8 @@ class JobDetails {
         const section = sectionName ? clone.querySelector(`[data-section="${sectionName}"]`) : field?.closest('[data-section]');
         
         if (field && content) {
-            if (isHtml) field.innerHTML = content; else field.textContent = content;
-            if (section) section.classList.remove('hidden');
+            if (isHtml) {field.innerHTML = content;} else {field.textContent = content;}
+            if (section) {section.classList.remove('hidden');}
         } else if (section) {
             section.classList.add('hidden');
         }

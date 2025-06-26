@@ -17,7 +17,7 @@ async function getAllPotentialApiTokens() {
       return [];
     }
 
-    let allOAuthTokens = [];
+    const allOAuthTokens = [];
     for (const cookie of cookies) {
       if (cookie.value && cookie.value.startsWith("oauth2v2_")) {
         allOAuthTokens.push({ name: cookie.name, value: cookie.value });
@@ -29,7 +29,7 @@ async function getAllPotentialApiTokens() {
       return [];
     }
 
-    let candidateTokens = [];
+    const candidateTokens = [];
 
     // 1. Prioritize 'oauth2_global_js_token' as it's often the active one for UI GQL calls
     const globalJsToken = allOAuthTokens.find(t => t.name === "oauth2_global_js_token");
@@ -131,7 +131,7 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
       return { error: true, graphqlErrors: data.errors };
     }
     if (data.data?.search?.universalSearchNuxt?.userJobSearchV1?.results) {
-      let jobsData = data.data.search.universalSearchNuxt.userJobSearchV1.results;
+      const jobsData = data.data.search.universalSearchNuxt.userJobSearchV1.results;
       return jobsData.map(job => ({
         id: job.jobTile.job.ciphertext || job.jobTile.job.id, // Prefer ciphertext from jobTile
         ciphertext: job.jobTile.job.ciphertext,
@@ -226,7 +226,7 @@ async function _executeApiCallWithStickyTokenRotation(apiCallFunction, ...params
  */
 async function fetchJobsWithTokenRotation(userQuery) {
   const apiResponse = await _executeApiCallWithStickyTokenRotation(fetchUpworkJobsDirectly, userQuery);
-  if (apiResponse.error) return apiResponse; // Propagate error
+  if (apiResponse.error) {return apiResponse;} // Propagate error
   return { jobs: apiResponse.result, token: apiResponse.token };
 }
 
@@ -349,7 +349,7 @@ async function fetchJobDetails(bearerToken, jobCiphertext) {
  */
 async function fetchJobDetailsWithTokenRotation(jobCiphertext) {
   const apiResponse = await _executeApiCallWithStickyTokenRotation(fetchJobDetails, jobCiphertext);
-  if (apiResponse.error) return apiResponse; // Propagate error
+  if (apiResponse.error) {return apiResponse;} // Propagate error
   return { jobDetails: apiResponse.result, token: apiResponse.token };
 }
 

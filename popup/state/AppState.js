@@ -217,7 +217,7 @@ class AppState {
    */
   getCachedJobDetails(ciphertext) {
     const cached = this.state.jobDetailsCache.get(ciphertext);
-    if (!cached) return null;
+    if (!cached) {return null;}
     
     if (Date.now() - cached.timestamp >= this.state.cacheExpiryMs) {
       // Remove expired cache
@@ -408,9 +408,9 @@ class AppState {
    * @returns {boolean} True if the sets contain the same elements, false otherwise.
    */
   _areSetsEqual(set1, set2) {
-    if (set1.size !== set2.size) return false;
+    if (set1.size !== set2.size) {return false;}
     for (const item of set1) {
-      if (!set2.has(item)) return false;
+      if (!set2.has(item)) {return false;}
     }
     return true;
   }
@@ -423,7 +423,7 @@ class AppState {
    * @returns {boolean} True if the maps contain the same key-value pairs, false otherwise.
    */
   _areMapsEqual(map1, map2) {
-    if (map1.size !== map2.size) return false;
+    if (map1.size !== map2.size) {return false;}
     for (const [key, value] of map1) {
       if (!map2.has(key) || map2.get(key) !== value) {
         return false;

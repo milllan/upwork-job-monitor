@@ -39,9 +39,9 @@ function constructUpworkSearchURL(userQuery, contractorTiersGraphQL, sortBy) {
  * @returns {string} A string representing the time ago.
  */
 function timeAgo(dateInput) {
-  if (!dateInput) return 'N/A';
+  if (!dateInput) {return 'N/A';}
   const date = (typeof dateInput === 'string' || typeof dateInput === 'number') ? new Date(dateInput) : dateInput;
-  if (isNaN(date.getTime())) return 'Invalid Date';
+  if (isNaN(date.getTime())) {return 'Invalid Date';}
 
   const now = new Date();
   const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
@@ -49,11 +49,11 @@ function timeAgo(dateInput) {
   const hours = Math.round(minutes / 60);
   const days = Math.round(hours / 24);
 
-  if (seconds < 5) return 'just now';
-  if (seconds < 60) return `${seconds} sec ago`;
-  if (minutes < 60) return `${minutes} min ago`;
-  if (hours < 24) return `${hours} hr ago`;
-  if (days === 1) return `1 day ago`;
+  if (seconds < 5) {return 'just now';}
+  if (seconds < 60) {return `${seconds} sec ago`;}
+  if (minutes < 60) {return `${minutes} min ago`;}
+  if (hours < 24) {return `${hours} hr ago`;}
+  if (days === 1) {return `1 day ago`;}
   return `${days} days ago`;
 }
 
@@ -122,7 +122,7 @@ function formatSkills(skills) {
  * @returns {string} The formatted budget string (e.g., "$20 - $40/hr", "$500").
  */
 function formatBudget(budget) {
-  if (!budget) return 'N/A';
+  if (!budget) {return 'N/A';}
 
   const { type, minAmount, maxAmount } = budget;
 

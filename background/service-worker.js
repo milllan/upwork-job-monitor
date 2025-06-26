@@ -37,7 +37,7 @@ browser.webRequest.onBeforeSendHeaders.addListener(
     }
 
     // Filter out unwanted headers
-    let newHeaders = details.requestHeaders.filter(header => {
+    const newHeaders = details.requestHeaders.filter(header => {
       return !HEADERS_TO_REMOVE.includes(header.name.toLowerCase());
     });
 
@@ -70,7 +70,7 @@ function _applyClientSideFilters(jobs) {
   let clientCountryLowPriorityCount = 0;
 
   const processedJobs = jobs.map(job => {
-    let newJobData = { ...job, isExcludedByTitleFilter: false, isLowPriorityBySkill: false, isLowPriorityByClientCountry: false };
+    const newJobData = { ...job, isExcludedByTitleFilter: false, isLowPriorityBySkill: false, isLowPriorityByClientCountry: false };
 
     // 1. Apply TITLE based exclusion
     const titleLower = (job.title || "").toLowerCase(); // Ensure title is lowercase for comparison
@@ -234,7 +234,7 @@ async function runJobCheck(triggeredByUserQuery) {
     // Deduplication, Notification, and Collapsed ID Management
     const historicalSeenJobIds = await StorageManager.getSeenJobIds();
     const deletedJobIds = await StorageManager.getDeletedJobIds();
-    let currentCollapsedJobIds = await StorageManager.getCollapsedJobIds(); // Get current collapsed IDs
+    const currentCollapsedJobIds = await StorageManager.getCollapsedJobIds(); // Get current collapsed IDs
 
     const processResult = await _processAndNotifyNewJobs(fetchedJobs, historicalSeenJobIds, deletedJobIds, currentCollapsedJobIds);
 
