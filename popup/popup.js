@@ -12,9 +12,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const themeStylesheet = document.getElementById('theme-stylesheet');
   //const jobItemTemplate = document.getElementById('job-item-template');
   //const jobDetailsTemplate = document.getElementById('job-details-template');
+  // eslint-disable-next-line prefer-const
   let searchFormComponent; // Will be initialized in DOMContentLoaded
+  // eslint-disable-next-line prefer-const
   let jobDetailsComponent; // Will be initialized in DOMContentLoaded
+  // eslint-disable-next-line prefer-const
   let apiService; // Will be initialized in DOMContentLoaded
+  // eslint-disable-next-line prefer-const
   let statusHeaderComponent; // Will be initialized in DOMContentLoaded
 
   // Initialize AppState for centralized state management
@@ -110,9 +114,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   /**
    * Handles the toggle event from a JobItem component.
    * @param {string} jobId The ID of the job being toggled.
-   * @param {boolean} isNowCollapsed The new collapsed state.
+   * @param {boolean} _isNowCollapsed The new collapsed state.
    */
-  function handleJobToggle(jobId, isNowCollapsed) {
+  function handleJobToggle(jobId, _isNowCollapsed) {
     appState.toggleJobCollapse(jobId);
   }
 
@@ -291,14 +295,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       threshold: 0.1 // Trigger when 10% of the item is visible
     };
 
-    jobItemObserver = new IntersectionObserver(async (entries, observer) => {
+    jobItemObserver = new IntersectionObserver(async (entries, _observer) => {
       for (const entry of entries) {
         if (entry.isIntersecting) {
           const jobItem = entry.target;
           const jobCiphertext = jobItem.dataset.ciphertextForTooltip;
           if (jobCiphertext && !appState.getCachedJobDetails(jobCiphertext)) {
             console.log(`Popup (Observer): Pre-fetching details for visible job ${jobCiphertext}`);
-            try { await apiService.fetchJobDetailsWithCache(jobCiphertext); } catch (err) { /* silent fail */ }
+            try { await apiService.fetchJobDetailsWithCache(jobCiphertext); } catch (_err) { /* silent fail */ }
           }
         }
       }

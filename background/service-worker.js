@@ -258,10 +258,10 @@ async function runJobCheck(triggeredByUserQuery) {
 }
 
 // --- Test Function, onInstalled, Alarms, Notifications, onMessage (remain the same) ---
-async function testFetchJobs() {
-  console.log("MV2: Running testFetchJobs (Direct Background Attempt)...");
-  await runJobCheck();
-}
+// async function testFetchJobs() {
+//   console.log("MV2: Running testFetchJobs (Direct Background Attempt)...");
+//   await runJobCheck();
+// }
 
 browser.runtime.onInstalled.addListener(async (details) => { // Made async
   console.log("MV2: Extension installed or updated:", details.reason);
@@ -286,7 +286,7 @@ async function sendNotification(job) { // Made async
   const jobUrl = `https://www.upwork.com/jobs/${job.ciphertext || job.id}`;
   const notificationOptions = {
     type: "basic", iconUrl: "icons/icon48.png", title: "New Upwork Job!",
-    message: `${job.title}\nBudget: ${(job.budget && job.budget.amount != null) ? job.budget.amount + ' ' + (job.budget.currencyCode || '') : 'N/A'}`,
+    message: `${job.title}\nBudget: ${(job.budget && job.budget.amount !== null) ? job.budget.amount + ' ' + (job.budget.currencyCode || '') : 'N/A'}`,
     priority: 2
   };
   try {
@@ -327,7 +327,7 @@ const messageHandlers = {
   getJobDetails: _handleGetJobDetails,
 };
 
-browser.runtime.onMessage.addListener(async (request, sender) => {
+browser.runtime.onMessage.addListener(async (request, _sender) => {
   const handler = messageHandlers[request.action];
   if (handler) {
     try {
@@ -352,7 +352,7 @@ async function _fetchAndProcessJobDetails(jobCiphertext) {
   const apiResult = await UpworkAPI.fetchJobDetailsWithTokenRotation(jobCiphertext);
 
   if (apiResult && !apiResult.error) {
-    const jobDetails = apiResult.jobDetails;
+    //const jobDetails = apiResult.jobDetails; // removed unused variable
     console.log("MV2: Successfully fetched job details");
 
     // Check if popup is open before sending

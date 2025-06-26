@@ -69,14 +69,14 @@ function formatClientInfo(client) {
     clientInfo = `Client: ${client.country || 'N/A'}`;
 
     // Client Rating
-    if (client.rating != null) {
+    if (client.rating !== null) {
       const rating = parseFloat(client.rating);
       const ratingClass = rating >= 4.9 ? ' job-item__client-rating--positive' : '';
       clientInfo += ` | <span class="job-item__client-rating${ratingClass}" title="Client Rating">Rating: ${rating.toFixed(2)}</span>`;
     }
 
     // Client Total Spent
-    if (client.totalSpent != null && Number(client.totalSpent) > 0) {
+    if (client.totalSpent !== null && Number(client.totalSpent) > 0) {
       const spentAmount = Number(client.totalSpent);
       const spentClass = spentAmount > 10000 ? ' job-item__client-spent--positive' : ''; // Threshold for high spender
       clientInfo += ` | <span class="job-item__client-spent${spentClass}" title="Client Spend">Spent: $${spentAmount.toFixed(0)}</span>`;

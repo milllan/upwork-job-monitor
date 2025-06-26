@@ -36,7 +36,6 @@ export default [
       globals: {
         ...globals.browser,
         ...globals.webextensions,
-
         // Your custom globals
         config: 'readonly',
         UpworkAPI: 'readonly',
@@ -54,16 +53,11 @@ export default [
         formatBudget: 'readonly',
         initializeScrollHints: 'readonly',
         sendNotification: 'readonly',
-        
-        // Add 'module' as a global for the UMD pattern in your components
-        module: 'readonly', 
+        module: 'readonly',
       },
     },
     rules: {
-      // For MV2, scripts are loaded into a shared global scope.
-      // We declare globals that are defined in one file and used in another.
-      // This rule must be turned off to allow, for example, 'const config = {}' in config.js
-      // without ESLint thinking we are redeclaring the 'config' global.
+      // Required for MV2 global script architecture
       'no-redeclare': 'off',
       
       'no-var': 'warn',
@@ -72,7 +66,18 @@ export default [
       curly: ['warn', 'all'],
       'no-prototype-builtins': 'warn',
       'no-console': ['warn', { allow: ['warn', 'error', 'info', 'debug', 'log'] }],
-      'no-unused-vars': ['warn', { args: 'after-used', vars: 'all', argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      
+      'no-unused-vars': [
+        'warn',
+        {
+          args: 'after-used',
+          vars: 'all',
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          // Add this line to handle unused catch variables like _err
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
     },
   },
 ];

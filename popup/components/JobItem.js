@@ -183,7 +183,7 @@ class JobItem {
       isExcludedByTitleFilter: job.isExcludedByTitleFilter,
       isApplied: !!job.applied,
       isHighRating: job.client && parseFloat(job.client.rating) >= 4.9,
-      isHighSpent: job.client && job.client.totalSpent != null && Number(job.client.totalSpent) > 10000,
+      isHighSpent: job.client && job.client.totalSpent !== null && Number(job.client.totalSpent) > 10000,
     };
   }
 
