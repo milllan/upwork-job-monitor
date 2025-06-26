@@ -13,18 +13,6 @@ function upsertHeader(headers, name, value) {
   }
 }
 
-// Headers to remove from the request (case-insensitive)
-const HEADERS_TO_REMOVE = [
-  'sec-fetch-site',
-  'sec-fetch-mode',
-  'sec-fetch-dest',
-  'origin',
-  'referer',
-  'x-upwork-api-tenantid',
-  'x-upwork-accept-language',
-  'dnt',
-];
-
 browser.webRequest.onBeforeSendHeaders.addListener(
   function (details) {
     // Check if the request matches the target GraphQL endpoint and method
@@ -39,7 +27,8 @@ browser.webRequest.onBeforeSendHeaders.addListener(
 
     // Filter out unwanted headers
     const newHeaders = details.requestHeaders.filter((header) => {
-      return !HEADERS_TO_REMOVE.includes(header.name.toLowerCase());
+      // Use config for headers to remove
+      return !config.WEBREQUEST_HEADERS.HEADERS_TO_REMOVE.includes(header.name.toLowerCase());
     });
 
     // Add/Update required headers using the helper function and config values

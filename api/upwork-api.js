@@ -74,11 +74,6 @@ async function getAllPotentialApiTokens() {
  *                                      or an error object {error: true, ...} on failure.
  */
 async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
-  // --- START: Temporary block due to persistent permission errors ---
-  // console.warn("API: fetchUpworkJobsDirectly - The 'userJobSearchV1' GraphQL endpoint appears to be inaccessible due to token permissions, even for minimal queries. Skipping job search attempt via this method.");
-  // return { error: true, message: "Skipping job search: 'userJobSearchV1' endpoint permission issue.", permissionIssue: true };
-  // --- END: Temporary block ---
-
   const endpoint = `${config.UPWORK_GRAPHQL_ENDPOINT_BASE}?alias=userJobSearch`;
   const fullRawQueryString = `
   query UserJobSearch($requestVariables: UserJobSearchV1Request!) {

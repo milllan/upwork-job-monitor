@@ -94,5 +94,16 @@ const config = {
       'en-US,en;q=0.9,hr;q=0.8,sr-Latn-RS;q=0.7,sr;q=0.6,sh;q=0.5,sr-Cyrl-RS;q=0.4,sr-Cyrl-BA;q=0.3,en-GB;q=0.2',
     X_UPWORK_ACCEPT_LANGUAGE: 'en-US',
     DNT: '1',
+    // Headers to remove from the request (case-insensitive)
+    HEADERS_TO_REMOVE: [
+      'sec-fetch-site',
+      'sec-fetch-mode',
+      'sec-fetch-dest',
+      'origin',
+      'referer',
+      'x-upwork-api-tenantid',
+      'x-upwork-accept-language',
+      'dnt',
+    ],
   },
 };
