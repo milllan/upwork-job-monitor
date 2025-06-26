@@ -39,7 +39,10 @@ class StatusHeader {
 
     if (lastCheckTimestamp) {
       const lastCheckDate = new Date(lastCheckTimestamp);
-      const timeString = lastCheckDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const timeString = lastCheckDate.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
       // timeAgo function is expected to be globally available from utils.js
       lastCheckDisplay = `${timeString} (${timeAgo(lastCheckDate)})`;
     }

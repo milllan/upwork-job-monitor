@@ -3,7 +3,7 @@
  * Manages all interactions with chrome.storage.local.
  * Centralizes storage logic and provides a clean API for other parts of the extension.
  */
-console.log("Storage manager loaded.");
+console.log('Storage manager loaded.');
 
 // Use constants from the global config object
 // Assumes config.js is loaded before storage-manager.js
@@ -22,11 +22,20 @@ async function getStorage(keyOrKeys) {
     const result = await browser.storage.local.get(keyOrKeys);
     return result;
   } catch (error) {
-    console.error("StorageManager: Error getting storage:", error.message);
+    console.error('StorageManager: Error getting storage:', error.message);
     // Return a default structure similar to what a successful call might return with no data
-    if (typeof keyOrKeys === 'string') {return { [keyOrKeys]: undefined };}
-    if (Array.isArray(keyOrKeys)) {return keyOrKeys.reduce((acc, key) => { acc[key] = undefined; return acc; }, {});}
-    if (keyOrKeys === null || typeof keyOrKeys === 'object') {return {};} // For get(null) or get({})
+    if (typeof keyOrKeys === 'string') {
+      return { [keyOrKeys]: undefined };
+    }
+    if (Array.isArray(keyOrKeys)) {
+      return keyOrKeys.reduce((acc, key) => {
+        acc[key] = undefined;
+        return acc;
+      }, {});
+    }
+    if (keyOrKeys === null || typeof keyOrKeys === 'object') {
+      return {};
+    } // For get(null) or get({})
     return {}; // Fallback
   }
 }
@@ -40,7 +49,7 @@ async function setStorage(items) {
   try {
     await browser.storage.local.set(items);
   } catch (error) {
-    console.error("StorageManager: Error setting storage:", error.message);
+    console.error('StorageManager: Error setting storage:', error.message);
     // The original implementation resolved even on error. We'll mimic this by catching.
   }
 }
@@ -54,7 +63,7 @@ async function getSeenJobIds() {
 
 async function addSeenJobIds(newJobIdsArray) {
   const currentSeenIds = await getSeenJobIds();
-  newJobIdsArray.forEach(id => currentSeenIds.add(id));
+  newJobIdsArray.forEach((id) => currentSeenIds.add(id));
   const prunedSeenJobIdsArray = Array.from(currentSeenIds).slice(-MAX_SEEN_IDS);
   await setStorage({ [STORAGE_KEYS.SEEN_JOB_IDS]: prunedSeenJobIdsArray });
 }
@@ -70,11 +79,11 @@ async function setDeletedJobIds(deletedIdsArray) {
 }
 
 async function removeDeletedJobId(jobId) {
-    const currentDeletedIds = await getDeletedJobIds();
-    if (currentDeletedIds.has(jobId)) {
-        currentDeletedIds.delete(jobId);
-        await setStorage({ [STORAGE_KEYS.DELETED_JOB_IDS]: Array.from(currentDeletedIds) });
-    }
+  const currentDeletedIds = await getDeletedJobIds();
+  if (currentDeletedIds.has(jobId)) {
+    currentDeletedIds.delete(jobId);
+    await setStorage({ [STORAGE_KEYS.DELETED_JOB_IDS]: Array.from(currentDeletedIds) });
+  }
 }
 
 async function getMonitorStatus() {
@@ -96,12 +105,12 @@ async function setLastCheckTimestamp(timestamp) {
 }
 
 async function getNewJobsInLastRun() {
-    const result = await getStorage(STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN);
-    return result[STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN] || 0;
+  const result = await getStorage(STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN);
+  return result[STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN] || 0;
 }
 
 async function setNewJobsInLastRun(count) {
-    await setStorage({ [STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN]: count });
+  await setStorage({ [STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN]: count });
 }
 
 async function getCurrentUserQuery() {
@@ -125,12 +134,12 @@ async function setRecentFoundJobs(jobs) {
 }
 
 async function getCollapsedJobIds() {
-    const result = await getStorage(STORAGE_KEYS.COLLAPSED_JOB_IDS);
-    return new Set(result[STORAGE_KEYS.COLLAPSED_JOB_IDS] || []);
+  const result = await getStorage(STORAGE_KEYS.COLLAPSED_JOB_IDS);
+  return new Set(result[STORAGE_KEYS.COLLAPSED_JOB_IDS] || []);
 }
 
 async function setCollapsedJobIds(collapsedIdsArray) {
-    await setStorage({ [STORAGE_KEYS.COLLAPSED_JOB_IDS]: collapsedIdsArray });
+  await setStorage({ [STORAGE_KEYS.COLLAPSED_JOB_IDS]: collapsedIdsArray });
 }
 
 async function getLastKnownGoodToken() {
@@ -162,18 +171,18 @@ async function setUiTheme(theme) {
  * @param {string} defaultUserQuery The default query to set initially.
  */
 async function initializeStorage(defaultUserQuery) {
-     await setStorage({
-        [STORAGE_KEYS.MONITOR_STATUS]: "Initializing...",
-        [STORAGE_KEYS.LAST_CHECK_TIMESTAMP]: null,
-        [STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN]: 0,
-        [STORAGE_KEYS.SEEN_JOB_IDS]: [],
-        [STORAGE_KEYS.DELETED_JOB_IDS]: [],
-        [STORAGE_KEYS.RECENT_FOUND_JOBS]: [],
-        [STORAGE_KEYS.COLLAPSED_JOB_IDS]: [],
-        [STORAGE_KEYS.CURRENT_USER_QUERY]: defaultUserQuery, // Set initial default query
-        [STORAGE_KEYS.LAST_KNOWN_GOOD_TOKEN]: null,
-        [STORAGE_KEYS.UI_THEME]: 'light' // Default theme
-     });
+  await setStorage({
+    [STORAGE_KEYS.MONITOR_STATUS]: 'Initializing...',
+    [STORAGE_KEYS.LAST_CHECK_TIMESTAMP]: null,
+    [STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN]: 0,
+    [STORAGE_KEYS.SEEN_JOB_IDS]: [],
+    [STORAGE_KEYS.DELETED_JOB_IDS]: [],
+    [STORAGE_KEYS.RECENT_FOUND_JOBS]: [],
+    [STORAGE_KEYS.COLLAPSED_JOB_IDS]: [],
+    [STORAGE_KEYS.CURRENT_USER_QUERY]: defaultUserQuery, // Set initial default query
+    [STORAGE_KEYS.LAST_KNOWN_GOOD_TOKEN]: null,
+    [STORAGE_KEYS.UI_THEME]: 'light', // Default theme
+  });
 }
 
 // Make StorageManager globally available in the background page and popup (if loaded)
@@ -200,5 +209,5 @@ const StorageManager = {
   getUiTheme,
   setUiTheme,
   initializeStorage,
-  STORAGE_KEYS // Expose keys for direct access if needed (e.g., in popup load)
+  STORAGE_KEYS, // Expose keys for direct access if needed (e.g., in popup load)
 };

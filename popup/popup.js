@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const url = constructUpworkSearchURL(
         currentQuery,
         config.DEFAULT_CONTRACTOR_TIERS_GQL, // Use from config
-        config.DEFAULT_SORT_CRITERIA       // Use from config
+        config.DEFAULT_SORT_CRITERIA // Use from config
       );
       popupTitleLinkEl.href = url;
     }
@@ -45,16 +45,18 @@ document.addEventListener('DOMContentLoaded', async () => {
    */
   function updateThemeUI() {
     const theme = appState.getTheme();
-    if (!themeStylesheet || !themeToggleButton) {return;}
+    if (!themeStylesheet || !themeToggleButton) {
+      return;
+    }
 
     if (theme === 'dark') {
       themeStylesheet.href = 'popup-dark.css';
       themeToggleButton.textContent = '☀️'; // Sun icon for switching to light mode
-      themeToggleButton.title = "Switch to Light Mode";
+      themeToggleButton.title = 'Switch to Light Mode';
     } else {
       themeStylesheet.href = 'popup.css';
       themeToggleButton.textContent = '🌙'; // Moon icon for switching to dark mode
-      themeToggleButton.title = "Switch to Dark Mode";
+      themeToggleButton.title = 'Switch to Dark Mode';
     }
   }
 
@@ -76,7 +78,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   function updateJobSelectionUI(newJobId, oldJobId) {
     // Remove selection from previously selected item
     if (oldJobId) {
-      const prevSelectedElement = recentJobsListDiv.querySelector(`.job-item[data-job-id="${oldJobId}"]`);
+      const prevSelectedElement = recentJobsListDiv.querySelector(
+        `.job-item[data-job-id="${oldJobId}"]`
+      );
       if (prevSelectedElement) {
         prevSelectedElement.classList.remove('job-item--selected');
       }
@@ -84,7 +88,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Add selection to the new item
     if (newJobId) {
-      const newSelectedElement = recentJobsListDiv.querySelector(`.job-item[data-job-id="${newJobId}"]`);
+      const newSelectedElement = recentJobsListDiv.querySelector(
+        `.job-item[data-job-id="${newJobId}"]`
+      );
       if (newSelectedElement) {
         newSelectedElement.classList.add('job-item--selected');
       }
@@ -96,9 +102,11 @@ document.addEventListener('DOMContentLoaded', async () => {
    * @param {string} jobCiphertext - The ciphertext ID of the job.
    */
   async function updateDetailsPanel(jobCiphertext) {
-    if (!jobDetailsComponent) {return;}
+    if (!jobDetailsComponent) {
+      return;
+    }
     jobDetailsComponent.showLoading();
-    
+
     setSelectedJobItem(jobCiphertext); // Highlight the item in the list
 
     try {
@@ -142,7 +150,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function displayRecentJobs() {
-    console.log("Popup: displayRecentJobs called.");
+    console.log('Popup: displayRecentJobs called.');
     const jobsToDisplay = appState.getVisibleJobs();
 
     // --- 1. Handle Empty List ---
@@ -164,7 +172,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let firstNonFilteredJob = null;
 
     // --- 3. Create and Render New Components ---
-    jobsToDisplay.forEach(job => {
+    jobsToDisplay.forEach((job) => {
       if (!firstNonFilteredJob && !job.isExcludedByTitleFilter) {
         firstNonFilteredJob = job;
       }
@@ -193,7 +201,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- 5. Re-initialize Intersection Observer ---
-    setupIntersectionObserver(Array.from(appState.getJobComponents().values()).map(c => c.element));
+    setupIntersectionObserver(
+      Array.from(appState.getJobComponents().values()).map((c) => c.element)
+    );
   }
 
   /**
@@ -201,17 +211,17 @@ document.addEventListener('DOMContentLoaded', async () => {
    * This is called once after the initial state load.
    */
   function initializeUIFromState() {
-    console.log("Popup: Initializing UI from state.");
+    console.log('Popup: Initializing UI from state.');
     const state = appState.getState();
 
     searchFormComponent.setQuery(state.currentUserQuery);
     updatePopupTitleLink(state.currentUserQuery);
     displayRecentJobs();
-    
+
     statusHeaderComponent.update({
       statusText: appState.getMonitorStatus(),
       lastCheckTimestamp: appState.getLastCheckTimestamp(),
-      deletedJobsCount: appState.getDeletedJobsCount()
+      deletedJobsCount: appState.getDeletedJobsCount(),
     });
     // Initial renders are now handled by subscribers, but we can call them
     updateThemeUI();
@@ -222,15 +232,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     // This function handles the valid query submission.
     appState.setCurrentUserQuery(query); // Update AppState, which handles persistence
     updatePopupTitleLink(query); // Update title link
-    console.log("Popup: Query saved:", query);
-    
+    console.log('Popup: Query saved:', query);
+
     // Update the state, which will trigger the UI update via the subscriber.
     appState.updateMonitorStatus('Checking...');
     try {
       const response = await apiService.triggerCheck(query);
-      console.log("Popup: Manual check message sent, background responded:", response);
+      console.log('Popup: Manual check message sent, background responded:', response);
     } catch (error) {
-      console.error("Popup: Error sending manual check message:", error.message);
+      console.error('Popup: Error sending manual check message:', error.message);
       appState.loadFromStorage(); // Attempt to refresh with current state on error
     }
   }
@@ -249,13 +259,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Listen for messages from background script to update the display
   browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "updatePopupDisplay") { 
-      console.log("Popup: Received updatePopupDisplay message from background. Refreshing data.");
+    if (request.action === 'updatePopupDisplay') {
+      console.log('Popup: Received updatePopupDisplay message from background. Refreshing data.');
       // Reload state from storage. This will trigger all necessary UI updates
       // via the subscribers, ensuring a consistent, state-driven refresh.
       appState.loadFromStorage();
-      if (sendResponse) {sendResponse({ status: "Popup display refreshed."});}
-      return true; 
+      if (sendResponse) {
+        sendResponse({ status: 'Popup display refreshed.' });
+      }
+      return true;
     }
   });
 
@@ -263,7 +275,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Centralized setup for all reactive UI updates.
   appState.subscribeToSelector('theme', updateThemeUI); // For theme changes
   appState.subscribeToSelector('selectedJobId', updateJobSelectionUI); // For job selection highlighting (in job list)
-  appState.subscribeToSelector('deletedJobIds', () => { // For job deletion
+  appState.subscribeToSelector('deletedJobIds', () => {
+    // For job deletion
     // This is a combined listener for deletedJobIds, as it affects both status header and job list display.
     statusHeaderComponent.update({ deletedJobsCount: appState.getDeletedJobIds().size }); // Update header for deleted count
     displayRecentJobs();
@@ -287,12 +300,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       jobItemObserver.disconnect(); // Disconnect previous observer if any
     }
 
-    if (elementsToObserve.length === 0) {return;}
+    if (elementsToObserve.length === 0) {
+      return;
+    }
 
     const observerOptions = {
       root: recentJobsListDiv, // Observe within the scrollable job list container
       rootMargin: '0px',
-      threshold: 0.1 // Trigger when 10% of the item is visible
+      threshold: 0.1, // Trigger when 10% of the item is visible
     };
 
     jobItemObserver = new IntersectionObserver(async (entries, _observer) => {
@@ -302,14 +317,18 @@ document.addEventListener('DOMContentLoaded', async () => {
           const jobCiphertext = jobItem.dataset.ciphertextForTooltip;
           if (jobCiphertext && !appState.getCachedJobDetails(jobCiphertext)) {
             console.log(`Popup (Observer): Pre-fetching details for visible job ${jobCiphertext}`);
-            try { await apiService.fetchJobDetailsWithCache(jobCiphertext); } catch (_err) { /* silent fail */ }
+            try {
+              await apiService.fetchJobDetailsWithCache(jobCiphertext);
+            } catch (_err) {
+              /* silent fail */
+            }
           }
         }
       }
     }, observerOptions);
 
     // Observe existing and future .job-item elements
-    elementsToObserve.forEach(item => {
+    elementsToObserve.forEach((item) => {
       if (item && item.dataset.ciphertextForTooltip) {
         jobItemObserver.observe(item);
       }
@@ -318,9 +337,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initialize StatusHeader component
   if (typeof StatusHeader === 'undefined') {
-    console.error("Initialization Error: StatusHeader class is not defined. Please ensure popup/components/StatusHeader.js is loaded correctly and without errors.");
+    console.error(
+      'Initialization Error: StatusHeader class is not defined. Please ensure popup/components/StatusHeader.js is loaded correctly and without errors.'
+    );
     if (consolidatedStatusEl) {
-      consolidatedStatusEl.innerHTML = '<p class="app-header__status-tag app-header__status-tag--error">Error: Status component missing.</p>';
+      consolidatedStatusEl.innerHTML =
+        '<p class="app-header__status-tag app-header__status-tag--error">Error: Status component missing.</p>';
     }
     return; // Stop further execution if a critical component is missing
   }
@@ -330,37 +352,48 @@ document.addEventListener('DOMContentLoaded', async () => {
   // This must be initialized before any calls to updateDetailsPanel or handleJobSelect
   // as these functions directly interact with jobDetailsComponent.
   if (typeof JobDetails === 'undefined') {
-    console.error("Initialization Error: JobDetails class is not defined. Please ensure popup/components/JobDetails.js is loaded correctly and without errors.");
+    console.error(
+      'Initialization Error: JobDetails class is not defined. Please ensure popup/components/JobDetails.js is loaded correctly and without errors.'
+    );
     if (jobDetailsPanelEl) {
-      jobDetailsPanelEl.innerHTML = '<p class="details-panel__error">Initialization failed: Job details component missing. Try reloading the extension.</p>';
+      jobDetailsPanelEl.innerHTML =
+        '<p class="details-panel__error">Initialization failed: Job details component missing. Try reloading the extension.</p>';
     }
     return; // Stop further execution if a critical component is missing
   }
   jobDetailsComponent = new JobDetails(jobDetailsPanelEl);
-  
+
   // Initialize SearchForm component
   if (typeof SearchForm === 'undefined') {
-    console.error("Initialization Error: SearchForm class is not defined. Please ensure popup/components/SearchForm.js is loaded correctly and without errors.");
+    console.error(
+      'Initialization Error: SearchForm class is not defined. Please ensure popup/components/SearchForm.js is loaded correctly and without errors.'
+    );
     const querySectionEl = document.querySelector('.query-section');
     if (querySectionEl) {
-      querySectionEl.innerHTML = '<p class="query-section__error">Initialization failed: Search form component missing.</p>';
+      querySectionEl.innerHTML =
+        '<p class="query-section__error">Initialization failed: Search form component missing.</p>';
     }
     return; // Stop further execution if a critical component is missing
   }
-  searchFormComponent = new SearchForm(document.querySelector('.query-section'), handleSearchSubmit);
+  searchFormComponent = new SearchForm(
+    document.querySelector('.query-section'),
+    handleSearchSubmit
+  );
 
   // Initialize ApiService
   apiService = new ApiService(appState);
 
-
-    // Initialize JobDetails component
-    if (typeof JobDetails === 'undefined') {
-      console.error("Initialization Error: JobDetails class is not defined. Please ensure popup/components/JobDetails.js is loaded correctly and without errors.");
-      if (jobDetailsPanelEl) {
-        jobDetailsPanelEl.innerHTML = '<p class="details-panel__error">Initialization failed: Job details component missing. Try reloading the extension.</p>';
-      }
-      return; // Stop further execution if a critical component is missing
+  // Initialize JobDetails component
+  if (typeof JobDetails === 'undefined') {
+    console.error(
+      'Initialization Error: JobDetails class is not defined. Please ensure popup/components/JobDetails.js is loaded correctly and without errors.'
+    );
+    if (jobDetailsPanelEl) {
+      jobDetailsPanelEl.innerHTML =
+        '<p class="details-panel__error">Initialization failed: Job details component missing. Try reloading the extension.</p>';
     }
+    return; // Stop further execution if a critical component is missing
+  }
   initializeUIFromState(); // Initial UI setup from loaded state
 
   // Initialize UI enhancements like scroll hints (now a global function from utils.js)

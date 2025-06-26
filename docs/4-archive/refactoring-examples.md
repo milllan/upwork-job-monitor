@@ -31,11 +31,11 @@ function createJobItemElement(job, isInitiallyCollapsed) {
 recentJobsListDiv.addEventListener('click', (event) => {
   const jobItemElement = event.target.closest('.job-item');
   if (!jobItemElement) return;
-  
+
   const jobId = jobItemElement.dataset.jobId;
   const toggleButton = event.target.closest('.job-item__toggle');
   const deleteButton = event.target.closest('.job-item__delete-btn');
-  
+
   if (toggleButton && jobId) {
     // Toggle logic here
   } else if (deleteButton && jobId) {
@@ -58,22 +58,20 @@ class PopupApp {
   }
 
   displayRecentJobs(jobs = []) {
-    const jobsToDisplay = jobs.filter(job => 
-      job && job.id && !this.deletedJobIds.has(job.id)
-    );
+    const jobsToDisplay = jobs.filter((job) => job && job.id && !this.deletedJobIds.has(job.id));
 
     // Clear existing components
-    this.jobComponents.forEach(component => component.destroy());
+    this.jobComponents.forEach((component) => component.destroy());
     this.jobComponents.clear();
 
     const fragment = document.createDocumentFragment();
 
-    jobsToDisplay.forEach(job => {
+    jobsToDisplay.forEach((job) => {
       const jobComponent = new JobItem(job, {
         isCollapsed: this.collapsedJobIds.has(job.id),
         onToggle: (jobId, isCollapsed) => this.handleJobToggle(jobId, isCollapsed),
         onDelete: (jobId) => this.handleJobDelete(jobId),
-        onSelect: (ciphertext) => this.handleJobSelect(ciphertext)
+        onSelect: (ciphertext) => this.handleJobSelect(ciphertext),
       });
 
       this.jobComponents.set(job.id, jobComponent);
@@ -98,10 +96,10 @@ class PopupApp {
       component.destroy();
       this.jobComponents.delete(jobId);
     }
-    
+
     this.deletedJobIds.add(jobId);
     this.saveDeletedState();
-    
+
     if (jobId === this.currentlySelectedJobId) {
       this.clearDetailsPanel();
     }
@@ -126,7 +124,7 @@ class AppState {
       selectedJobId: null,
       monitorStatus: 'Initializing...',
       lastCheckTimestamp: null,
-      currentTheme: 'light'
+      currentTheme: 'light',
     };
     this.listeners = new Set();
   }
@@ -141,17 +139,23 @@ class AppState {
   setState(updates) {
     const prevState = { ...this.state };
     this.state = { ...this.state, ...updates };
-    
-    this.listeners.forEach(listener => {
+
+    this.listeners.forEach((listener) => {
       listener(this.state, prevState);
     });
   }
 
   // Getters for specific state
-  getJobs() { return this.state.jobs; }
-  getCollapsedJobIds() { return this.state.collapsedJobIds; }
-  getSelectedJobId() { return this.state.selectedJobId; }
-  
+  getJobs() {
+    return this.state.jobs;
+  }
+  getCollapsedJobIds() {
+    return this.state.collapsedJobIds;
+  }
+  getSelectedJobId() {
+    return this.state.selectedJobId;
+  }
+
   // Actions
   toggleJobCollapse(jobId) {
     const collapsedJobIds = new Set(this.state.collapsedJobIds);
@@ -166,13 +170,13 @@ class AppState {
   deleteJob(jobId) {
     const deletedJobIds = new Set(this.state.deletedJobIds);
     deletedJobIds.add(jobId);
-    
-    const jobs = this.state.jobs.filter(job => job.id !== jobId);
-    
-    this.setState({ 
-      jobs, 
+
+    const jobs = this.state.jobs.filter((job) => job.id !== jobId);
+
+    this.setState({
+      jobs,
       deletedJobIds,
-      selectedJobId: this.state.selectedJobId === jobId ? null : this.state.selectedJobId
+      selectedJobId: this.state.selectedJobId === jobId ? null : this.state.selectedJobId,
     });
   }
 }
@@ -202,25 +206,25 @@ class JobService {
   async fetchJobDetails(ciphertext) {
     // Check cache first
     const cached = this.jobDetailsCache.get(ciphertext);
-    if (cached && (Date.now() - cached.timestamp < 15 * 60 * 1000)) {
+    if (cached && Date.now() - cached.timestamp < 15 * 60 * 1000) {
       return cached.data;
     }
 
     // Fetch from background
     try {
       const response = await browser.runtime.sendMessage({
-        action: "getJobDetails",
-        jobCiphertext: ciphertext
+        action: 'getJobDetails',
+        jobCiphertext: ciphertext,
       });
 
       if (response?.jobDetails) {
         this.jobDetailsCache.set(ciphertext, {
           data: response.jobDetails,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
         return response.jobDetails;
       }
-      throw new Error(response?.error || "Failed to fetch job details");
+      throw new Error(response?.error || 'Failed to fetch job details');
     } catch (error) {
       console.error('JobService: Error fetching job details:', error);
       throw error;
@@ -230,8 +234,8 @@ class JobService {
   async triggerJobCheck(query) {
     try {
       const response = await browser.runtime.sendMessage({
-        action: "manualCheck",
-        userQuery: query
+        action: 'manualCheck',
+        userQuery: query,
       });
       return response;
     } catch (error) {
@@ -245,12 +249,14 @@ class JobService {
 ### Benefits of This Approach
 
 1. **Separation of Concerns**
+
 - **JobItem**: Handles individual job rendering and interactions
 - **AppState**: Manages application state
 - **JobService**: Handles data operations
 - **PopupApp**: Orchestrates components and services
 
 2. **Easier Testing**
+
 ```javascript
 // Easy to unit test components
 describe('JobItem', () => {
@@ -258,7 +264,7 @@ describe('JobItem', () => {
     const jobData = { id: '1', title: 'Test Job' };
     const jobItem = new JobItem(jobData);
     const element = jobItem.render();
-    
+
     expect(element.querySelector('.job-item__title').textContent).toBe('Test Job');
   });
 
@@ -266,21 +272,23 @@ describe('JobItem', () => {
     const onToggle = jest.fn();
     const jobItem = new JobItem({ id: '1' }, { onToggle });
     const element = jobItem.render();
-    
+
     element.querySelector('.job-item__toggle').click();
-    
+
     expect(onToggle).toHaveBeenCalledWith('1', true);
   });
 });
 ```
 
 3. **Better Maintainability**
+
 - Each component has a single responsibility
 - Changes to job item rendering only affect the JobItem component
 - State changes are predictable and centralized
 - Easy to add new features without touching existing code
 
 4. **Improved Developer Experience**
+
 - Smaller, focused files are easier to understand
 - Clear interfaces between components
 - Easier to debug issues
@@ -296,6 +304,7 @@ describe('JobItem', () => {
 This approach maintains all existing functionality while making the code much more maintainable and testable.
 
 ---
+
 ---
 
 ## Example 2: Migrating Theme State to AppState
@@ -315,11 +324,12 @@ function setTheme(theme) {
   if (theme === 'dark') {
     themeStylesheet.href = 'popup-dark.css';
     themeToggleButton.textContent = '☀️'; // Sun icon for switching to light mode
-    themeToggleButton.title = "Switch to Light Mode";
-  } else { // Default to light
+    themeToggleButton.title = 'Switch to Light Mode';
+  } else {
+    // Default to light
     themeStylesheet.href = 'popup.css';
     themeToggleButton.textContent = '🌙'; // Moon icon for switching to dark mode
-    themeToggleButton.title = "Switch to Dark Mode";
+    themeToggleButton.title = 'Switch to Dark Mode';
   }
   currentTheme = theme;
   StorageManager.setUiTheme(theme);
@@ -351,14 +361,14 @@ setTheme(loadedTheme); // Apply the theme
 // Add at the top of DOMContentLoaded, after DOM element selection
 document.addEventListener('DOMContentLoaded', async () => {
   // ... existing DOM element selection ...
-  
+
   // Initialize AppState
   const appState = new AppState();
   await appState.loadFromStorage();
-  
+
   // Remove this line:
   // let currentTheme = 'light';
-  
+
   // ... rest of the code ...
 ```
 
@@ -371,7 +381,7 @@ function setTheme(theme) {
 
   // Update AppState (this will trigger persistence automatically)
   appState.setTheme(theme);
-  
+
   // Update UI based on AppState
   updateThemeUI();
 }
@@ -379,15 +389,15 @@ function setTheme(theme) {
 // New function to update UI based on AppState
 function updateThemeUI() {
   const theme = appState.getTheme();
-  
+
   if (theme === 'dark') {
     themeStylesheet.href = 'popup-dark.css';
     themeToggleButton.textContent = '☀️';
-    themeToggleButton.title = "Switch to Light Mode";
+    themeToggleButton.title = 'Switch to Light Mode';
   } else {
     themeStylesheet.href = 'popup.css';
     themeToggleButton.textContent = '🌙';
-    themeToggleButton.title = "Switch to Dark Mode";
+    themeToggleButton.title = 'Switch to Dark Mode';
   }
 }
 ```
@@ -440,17 +450,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Theme management functions
   function updateThemeUI() {
     const theme = appState.getTheme();
-    
+
     if (!themeStylesheet || !themeToggleButton) return;
-    
+
     if (theme === 'dark') {
       themeStylesheet.href = 'popup-dark.css';
       themeToggleButton.textContent = '☀️';
-      themeToggleButton.title = "Switch to Light Mode";
+      themeToggleButton.title = 'Switch to Light Mode';
     } else {
       themeStylesheet.href = 'popup.css';
       themeToggleButton.textContent = '🌙';
-      themeToggleButton.title = "Switch to Dark Mode";
+      themeToggleButton.title = 'Switch to Dark Mode';
     }
   }
 
@@ -509,6 +519,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 - ✅ Optional reactive updates
 
 This migration is **low risk** because:
+
 - Theme state is isolated
 - No complex dependencies
 - Easy to test and verify

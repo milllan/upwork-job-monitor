@@ -1,6 +1,6 @@
 /**
  * AppState - Centralized state management for the Upwork Job Monitor popup
- * 
+ *
  * This class manages all application state and provides a reactive system
  * for UI updates. It replaces the scattered state variables in popup.js
  * with a centralized, predictable state management system.
@@ -15,30 +15,30 @@ class AppState {
       selectedJobId: null,
       collapsedJobIds: new Set(),
       deletedJobIds: new Set(),
-      
-      // Status State  
+
+      // Status State
       monitorStatus: 'Initializing...',
       lastCheckTimestamp: null,
       currentUserQuery: '',
-      
+
       // Job Data
       jobs: [],
       jobDetailsCache: new Map(),
-      
+
       // Component State
       jobComponents: new Map(),
-      
+
       // Cache Configuration
-      cacheExpiryMs: 15 * 60 * 1000 // 15 minutes
+      cacheExpiryMs: 15 * 60 * 1000, // 15 minutes
     };
-    
+
     // Subscription system for reactive updates
     this.listeners = new Set();
     this.selectorListeners = new Map(); // For specific state slice subscriptions
-    
+
     // State persistence helper
     this.persistence = null; // Will be set after StatePersistence is loaded
-    
+
     // Debounced save to prevent excessive storage writes
     this.debouncedSave = this._debounce(this._saveToStorage.bind(this), 300);
   }
@@ -60,21 +60,21 @@ class AppState {
    */
   setState(updates, options = {}) {
     const prevState = { ...this.state };
-    
+
     // Handle Set objects properly
     const processedUpdates = this._processStateUpdates(updates);
-    
+
     // Apply updates
     this.state = { ...this.state, ...processedUpdates };
-    
+
     // Notify listeners
     this._notifyListeners(this.state, prevState);
-    
+
     // Auto-save to storage unless disabled
     if (!options.skipPersistence) {
       this.debouncedSave();
     }
-    
+
     console.log('AppState: State updated', { updates, newState: this.state });
   }
 
@@ -99,7 +99,7 @@ class AppState {
       this.selectorListeners.set(selector, new Set());
     }
     this.selectorListeners.get(selector).add(listener);
-    
+
     return () => {
       const listeners = this.selectorListeners.get(selector);
       if (listeners) {
@@ -113,20 +113,40 @@ class AppState {
 
   // === State Getters ===
 
-  getTheme() { return this.state.theme; }
-  getSelectedJobId() { return this.state.selectedJobId; }
-  getCollapsedJobIds() { return new Set(this.state.collapsedJobIds); }
-  getDeletedJobIds() { return new Set(this.state.deletedJobIds); }
-  getMonitorStatus() { return this.state.monitorStatus; }
-  getLastCheckTimestamp() { return this.state.lastCheckTimestamp; }
-  getCurrentUserQuery() { return this.state.currentUserQuery; }
-  getJobs() { return [...this.state.jobs]; }
-  getJobComponents() { return new Map(this.state.jobComponents); }
+  getTheme() {
+    return this.state.theme;
+  }
+  getSelectedJobId() {
+    return this.state.selectedJobId;
+  }
+  getCollapsedJobIds() {
+    return new Set(this.state.collapsedJobIds);
+  }
+  getDeletedJobIds() {
+    return new Set(this.state.deletedJobIds);
+  }
+  getMonitorStatus() {
+    return this.state.monitorStatus;
+  }
+  getLastCheckTimestamp() {
+    return this.state.lastCheckTimestamp;
+  }
+  getCurrentUserQuery() {
+    return this.state.currentUserQuery;
+  }
+  getJobs() {
+    return [...this.state.jobs];
+  }
+  getJobComponents() {
+    return new Map(this.state.jobComponents);
+  }
 
   // Computed properties
-  getDeletedJobsCount() { return this.state.deletedJobIds.size; }
-  getVisibleJobs() { 
-    return this.state.jobs.filter(job => !this.state.deletedJobIds.has(job.id));
+  getDeletedJobsCount() {
+    return this.state.deletedJobIds.size;
+  }
+  getVisibleJobs() {
+    return this.state.jobs.filter((job) => !this.state.deletedJobIds.has(job.id));
   }
 
   // === State Actions ===
@@ -172,10 +192,10 @@ class AppState {
   deleteJob(jobId) {
     const deletedJobIds = new Set(this.state.deletedJobIds);
     deletedJobIds.add(jobId);
-    
+
     // Clear selection if deleting selected job
     const selectedJobId = this.state.selectedJobId === jobId ? null : this.state.selectedJobId;
-    
+
     this.setState({ deletedJobIds, selectedJobId });
   }
 
@@ -217,8 +237,10 @@ class AppState {
    */
   getCachedJobDetails(ciphertext) {
     const cached = this.state.jobDetailsCache.get(ciphertext);
-    if (!cached) {return null;}
-    
+    if (!cached) {
+      return null;
+    }
+
     if (Date.now() - cached.timestamp >= this.state.cacheExpiryMs) {
       // Remove expired cache
       const jobDetailsCache = new Map(this.state.jobDetailsCache);
@@ -226,7 +248,7 @@ class AppState {
       this.setState({ jobDetailsCache }, { skipPersistence: true });
       return null;
     }
-    
+
     return cached.data;
   }
 
@@ -239,7 +261,7 @@ class AppState {
     const jobDetailsCache = new Map(this.state.jobDetailsCache);
     jobDetailsCache.set(ciphertext, {
       data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
     this.setState({ jobDetailsCache }, { skipPersistence: true });
   }
@@ -273,7 +295,7 @@ class AppState {
    */
   clearJobComponents() {
     const currentComponents = this.getJobComponents(); // gets a copy
-    currentComponents.forEach(component => {
+    currentComponents.forEach((component) => {
       if (component && typeof component.destroy === 'function') {
         component.destroy();
       }
@@ -296,7 +318,7 @@ class AppState {
         monitorStatus,
         lastCheckTimestamp,
         currentUserQuery,
-        jobs
+        jobs,
       ] = await Promise.all([
         StorageManager.getUiTheme(),
         StorageManager.getCollapsedJobIds(),
@@ -304,18 +326,21 @@ class AppState {
         StorageManager.getMonitorStatus(),
         StorageManager.getLastCheckTimestamp(),
         StorageManager.getCurrentUserQuery(),
-        StorageManager.getRecentFoundJobs()
+        StorageManager.getRecentFoundJobs(),
       ]);
 
-      this.setState({
-        theme,
-        collapsedJobIds: new Set(collapsedJobIds),
-        deletedJobIds: new Set(deletedJobIds),
-        monitorStatus,
-        lastCheckTimestamp,
-        currentUserQuery: currentUserQuery || config.DEFAULT_USER_QUERY,
-        jobs
-      }, { skipPersistence: true });
+      this.setState(
+        {
+          theme,
+          collapsedJobIds: new Set(collapsedJobIds),
+          deletedJobIds: new Set(deletedJobIds),
+          monitorStatus,
+          lastCheckTimestamp,
+          currentUserQuery: currentUserQuery || config.DEFAULT_USER_QUERY,
+          jobs,
+        },
+        { skipPersistence: true }
+      );
 
       console.log('AppState: State loaded from storage');
     } catch (error) {
@@ -349,7 +374,7 @@ class AppState {
    */
   _notifyListeners(newState, prevState) {
     // Notify general listeners
-    this.listeners.forEach(listener => {
+    this.listeners.forEach((listener) => {
       try {
         listener(newState, prevState);
       } catch (error) {
@@ -361,9 +386,9 @@ class AppState {
     this.selectorListeners.forEach((listeners, selector) => {
       const newValue = newState[selector];
       const prevValue = prevState[selector];
-      
+
       if (this._hasSelectorChanged(selector, newValue, prevValue)) {
-        listeners.forEach(listener => {
+        listeners.forEach((listener) => {
           try {
             listener(newValue, prevValue);
           } catch (error) {
@@ -408,9 +433,13 @@ class AppState {
    * @returns {boolean} True if the sets contain the same elements, false otherwise.
    */
   _areSetsEqual(set1, set2) {
-    if (set1.size !== set2.size) {return false;}
+    if (set1.size !== set2.size) {
+      return false;
+    }
     for (const item of set1) {
-      if (!set2.has(item)) {return false;}
+      if (!set2.has(item)) {
+        return false;
+      }
     }
     return true;
   }
@@ -423,7 +452,9 @@ class AppState {
    * @returns {boolean} True if the maps contain the same key-value pairs, false otherwise.
    */
   _areMapsEqual(map1, map2) {
-    if (map1.size !== map2.size) {return false;}
+    if (map1.size !== map2.size) {
+      return false;
+    }
     for (const [key, value] of map1) {
       if (!map2.has(key) || map2.get(key) !== value) {
         return false;
@@ -442,7 +473,7 @@ class AppState {
         StorageManager.setUiTheme(this.state.theme),
         StorageManager.setCollapsedJobIds(Array.from(this.state.collapsedJobIds)),
         StorageManager.setDeletedJobIds(Array.from(this.state.deletedJobIds)),
-        StorageManager.setCurrentUserQuery(this.state.currentUserQuery)
+        StorageManager.setCurrentUserQuery(this.state.currentUserQuery),
       ]);
     } catch (error) {
       console.error('AppState: Error saving to storage:', error);

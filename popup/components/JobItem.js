@@ -12,7 +12,7 @@ class JobItem {
       onToggle: null,
       onDelete: null,
       onSelect: null,
-      ...options
+      ...options,
     };
     this.element = null;
     this.viewModel = null;
@@ -91,7 +91,9 @@ class JobItem {
    * @private
    */
   _attachEventListeners() {
-    if (!this.element) {return;}
+    if (!this.element) {
+      return;
+    }
 
     // Toggle button
     const toggleButton = this.element.querySelector('.job-item__toggle');
@@ -128,8 +130,11 @@ class JobItem {
    * Updates the element content with current data
    * @private
    */
-  _updateElement() { // This method is called by render() and update()
-    if (!this.element) {return;}
+  _updateElement() {
+    // This method is called by render() and update()
+    if (!this.element) {
+      return;
+    }
 
     // Prepare the ViewModel
     this.viewModel = this._prepareViewModel();
@@ -142,15 +147,17 @@ class JobItem {
    * Creates a view model from the job data
    * @private
    */
-  _prepareViewModel() { // Renamed from _createViewModel for consistency
+  _prepareViewModel() {
+    // Renamed from _createViewModel for consistency
     const job = this.jobData;
     const isLowPriority = job.isLowPriorityBySkill || job.isLowPriorityByClientCountry;
-    
+
     let priorityTagText = '';
     if (job.isExcludedByTitleFilter) {
       priorityTagText = 'Filtered';
     } else if (job.isLowPriorityByClientCountry && job.client && job.client.country) {
-      const countryName = job.client.country.charAt(0).toUpperCase() + job.client.country.slice(1).toLowerCase();
+      const countryName =
+        job.client.country.charAt(0).toUpperCase() + job.client.country.slice(1).toLowerCase();
       priorityTagText = countryName;
     } else if (job.isLowPriorityBySkill) {
       priorityTagText = 'Skill';
@@ -163,14 +170,16 @@ class JobItem {
       // Raw data
       id: job.id,
       ciphertext: job.ciphertext || job.id,
-      
+
       // Formatted display strings
       budget: formatBudget(job.budget),
       clientInfo: formatClientInfo(job.client),
       skills: formatSkills(job.skills),
       title: job.title || 'No Title',
       jobUrl: `https://www.upwork.com/jobs/${job.ciphertext || job.id}`,
-      postedOn: postedOnDate ? `${postedOnDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}, ${postedOnDate.toLocaleDateString()}` : 'N/A',
+      postedOn: postedOnDate
+        ? `${postedOnDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}, ${postedOnDate.toLocaleDateString()}`
+        : 'N/A',
       timeAgo: postedOnDate ? timeAgo(postedOnDate) : 'N/A',
 
       // HTML snippets
@@ -183,7 +192,8 @@ class JobItem {
       isExcludedByTitleFilter: job.isExcludedByTitleFilter,
       isApplied: !!job.applied,
       isHighRating: job.client && parseFloat(job.client.rating) >= 4.9,
-      isHighSpent: job.client && job.client.totalSpent !== null && Number(job.client.totalSpent) > 10000,
+      isHighSpent:
+        job.client && job.client.totalSpent !== null && Number(job.client.totalSpent) > 10000,
     };
   }
 
@@ -193,19 +203,19 @@ class JobItem {
    */
   _populateFromViewModel() {
     const vm = this.viewModel;
-    
+
     // Populate text content
     this.element.querySelector('[data-field="budget"]').textContent = vm.budget;
     this.element.querySelector('[data-field="client-info"]').innerHTML = vm.clientInfo;
 
     const skillsElement = this.element.querySelector('[data-field="skills"]');
     skillsElement.textContent = vm.skills; // Set text content regardless of whether there are skills
-    
+
     this.element.querySelector('[data-field="priority-tag-text"]').textContent = vm.priorityTagText;
 
     this.element.querySelector('[data-field="posted-on"]').textContent = vm.postedOn;
     this.element.querySelector('[data-field="time-ago"]').textContent = vm.timeAgo;
-    
+
     // Update title link
     const titleLink = this.element.querySelector('.job-item__title');
     titleLink.href = vm.jobUrl;
@@ -219,7 +229,7 @@ class JobItem {
    */
   _updateClasses() {
     const vm = this.viewModel;
-    
+
     this.element.classList.toggle('job-item--collapsed', this.options.isCollapsed);
     this.element.classList.toggle('job-item--low-priority', vm.isLowPriority);
     this.element.classList.toggle('job-item--excluded', vm.isExcludedByTitleFilter);

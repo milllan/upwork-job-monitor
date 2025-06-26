@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.3.0] - 2024-07-17
 
 ### Added
+
 - Initial release of the Upwork Job Monitor extension.
 - Background monitoring of Upwork job feeds using direct GraphQL API calls.
 - Dynamic OAuth2 token extraction and rotation for persistent authentication.

@@ -9,19 +9,19 @@
  * @returns {string} The constructed Upwork search URL.
  */
 function constructUpworkSearchURL(userQuery, contractorTiersGraphQL, sortBy) {
-  const baseURL = "https://www.upwork.com/nx/search/jobs/";
+  const baseURL = 'https://www.upwork.com/nx/search/jobs/';
   const encodedQuery = encodeURIComponent(userQuery);
 
   const tierMap = {
-    "EntryLevel": "1",
-    "IntermediateLevel": "2",
-    "ExpertLevel": "3"
+    EntryLevel: '1',
+    IntermediateLevel: '2',
+    ExpertLevel: '3',
   };
 
   const mappedTiers = contractorTiersGraphQL
-    .map(tier => tierMap[tier])
+    .map((tier) => tierMap[tier])
     .filter(Boolean) // Remove undefined if a tier isn't in map
-    .join(",");
+    .join(',');
 
   let finalURL = `${baseURL}?q=${encodedQuery}`;
   if (mappedTiers) {
@@ -39,9 +39,16 @@ function constructUpworkSearchURL(userQuery, contractorTiersGraphQL, sortBy) {
  * @returns {string} A string representing the time ago.
  */
 function timeAgo(dateInput) {
-  if (!dateInput) {return 'N/A';}
-  const date = (typeof dateInput === 'string' || typeof dateInput === 'number') ? new Date(dateInput) : dateInput;
-  if (isNaN(date.getTime())) {return 'Invalid Date';}
+  if (!dateInput) {
+    return 'N/A';
+  }
+  const date =
+    typeof dateInput === 'string' || typeof dateInput === 'number'
+      ? new Date(dateInput)
+      : dateInput;
+  if (isNaN(date.getTime())) {
+    return 'Invalid Date';
+  }
 
   const now = new Date();
   const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
@@ -49,11 +56,21 @@ function timeAgo(dateInput) {
   const hours = Math.round(minutes / 60);
   const days = Math.round(hours / 24);
 
-  if (seconds < 5) {return 'just now';}
-  if (seconds < 60) {return `${seconds} sec ago`;}
-  if (minutes < 60) {return `${minutes} min ago`;}
-  if (hours < 24) {return `${hours} hr ago`;}
-  if (days === 1) {return `1 day ago`;}
+  if (seconds < 5) {
+    return 'just now';
+  }
+  if (seconds < 60) {
+    return `${seconds} sec ago`;
+  }
+  if (minutes < 60) {
+    return `${minutes} min ago`;
+  }
+  if (hours < 24) {
+    return `${hours} hr ago`;
+  }
+  if (days === 1) {
+    return `1 day ago`;
+  }
   return `${days} days ago`;
 }
 
@@ -99,19 +116,17 @@ function formatSkills(skills) {
   if (!skills || skills.length === 0) {
     return '';
   }
-  const skillNames = skills.map(s => s.name);
+  const skillNames = skills.map((s) => s.name);
   if (skillNames.length > 3) {
     return `Skills: ${skillNames.slice(0, 3).join(', ')}...`;
   }
   return `Skills: ${skillNames.join(', ')}`;
 }
 
-
 // Export functions if this file is used as a module, otherwise they are global in the browser context.
 // For this project's MV2 setup, they are global.
 // If this were an ES module, you'd have:
 // export { constructUpworkSearchURL, timeAgo, formatBudget, formatClientInfo, formatSkills };
-
 
 /**
  * Formats a job budget object into a display string.
@@ -122,7 +137,9 @@ function formatSkills(skills) {
  * @returns {string} The formatted budget string (e.g., "$20 - $40/hr", "$500").
  */
 function formatBudget(budget) {
-  if (!budget) {return 'N/A';}
+  if (!budget) {
+    return 'N/A';
+  }
 
   const { type, minAmount, maxAmount } = budget;
 
@@ -134,7 +151,8 @@ function formatBudget(budget) {
     } else if (!isNaN(min)) {
       return `$${Math.round(min)}/hr`;
     }
-  } else { // fixed price
+  } else {
+    // fixed price
     const amount = parseFloat(minAmount);
     if (!isNaN(amount)) {
       return `$${Math.round(amount)}`;
@@ -152,7 +170,7 @@ function formatBudget(budget) {
  */
 function initializeScrollHints(containerEl, listEl) {
   if (!containerEl || !listEl) {
-    console.warn("Scroll hints not initialized: container or list element not found.");
+    console.warn('Scroll hints not initialized: container or list element not found.');
     return;
   }
 

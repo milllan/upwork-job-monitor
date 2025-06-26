@@ -39,15 +39,23 @@ class JobDetails {
 
     // --- Helper to populate a field, now also handles hiding the parent section ---
     const populateField = (fieldName, content, isHtml = false, sectionName = null) => {
-        const field = clone.querySelector(`[data-field="${fieldName}"]`);
-        const section = sectionName ? clone.querySelector(`[data-section="${sectionName}"]`) : field?.closest('[data-section]');
-        
-        if (field && content) {
-            if (isHtml) {field.innerHTML = content;} else {field.textContent = content;}
-            if (section) {section.classList.remove('hidden');}
-        } else if (section) {
-            section.classList.add('hidden');
+      const field = clone.querySelector(`[data-field="${fieldName}"]`);
+      const section = sectionName
+        ? clone.querySelector(`[data-section="${sectionName}"]`)
+        : field?.closest('[data-section]');
+
+      if (field && content) {
+        if (isHtml) {
+          field.innerHTML = content;
+        } else {
+          field.textContent = content;
         }
+        if (section) {
+          section.classList.remove('hidden');
+        }
+      } else if (section) {
+        section.classList.add('hidden');
+      }
     };
 
     // --- Helper to set visibility of a section based on a boolean ---
@@ -77,32 +85,32 @@ class JobDetails {
     const questionsList = clone.querySelector('[data-field="questions-list"]');
     const questionsSection = clone.querySelector('[data-section="questions"]');
     if (vm.questions.length > 0) {
-        vm.questions.forEach(qText => {
-            const li = document.createElement('li');
-            li.textContent = qText;
-            questionsList.appendChild(li);
-        });
-        questionsSection.classList.remove('hidden');
+      vm.questions.forEach((qText) => {
+        const li = document.createElement('li');
+        li.textContent = qText;
+        questionsList.appendChild(li);
+      });
+      questionsSection.classList.remove('hidden');
     } else {
-        questionsSection.classList.add('hidden');
+      questionsSection.classList.add('hidden');
     }
 
     const contractorList = clone.querySelector('[data-field="contractor-history-list"]');
     const contractorSection = clone.querySelector('[data-section="contractor-history"]');
     if (vm.contractorHistory.length > 0) {
-        vm.contractorHistory.forEach(contractor => {
-            const li = document.createElement('li');
-            const a = document.createElement('a');
-            a.href = `https://www.upwork.com/freelancers/${contractor.ciphertext}`;
-            a.textContent = contractor.name.split(' ')[0]; // Only first name
-            a.target = '_blank';
-            a.rel = 'noopener noreferrer';
-            li.appendChild(a);
-            contractorList.appendChild(li);
-        });
-        contractorSection.classList.remove('hidden');
+      vm.contractorHistory.forEach((contractor) => {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = `https://www.upwork.com/freelancers/${contractor.ciphertext}`;
+        a.textContent = contractor.name.split(' ')[0]; // Only first name
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        li.appendChild(a);
+        contractorList.appendChild(li);
+      });
+      contractorSection.classList.remove('hidden');
     } else {
-        contractorSection.classList.add('hidden');
+      contractorSection.classList.add('hidden');
     }
 
     populateField('description-content', vm.descriptionHTML, true, 'description');
@@ -113,9 +121,15 @@ class JobDetails {
 
   _prepareViewModel(details) {
     const vm = {
-      clientJobsPosted: null, clientHours: null, clientFeedbackCount: null,
-      activityApplicants: null, activityInterviews: null, activityHired: null, activityLastActiveHTML: null,
-      bidAvg: null, bidRange: null,
+      clientJobsPosted: null,
+      clientHours: null,
+      clientFeedbackCount: null,
+      activityApplicants: null,
+      activityInterviews: null,
+      activityHired: null,
+      activityLastActiveHTML: null,
+      bidAvg: null,
+      bidRange: null,
       contractorHistory: [],
       questions: [],
       descriptionHTML: null,
@@ -123,50 +137,71 @@ class JobDetails {
     };
 
     const clientStats = details?.buyer?.info?.stats || {};
-    vm.clientJobsPosted = clientStats.totalAssignments ? `Jobs: ${clientStats.totalAssignments}` : null;
-    vm.clientHours = clientStats.hoursCount > 0 ? `${Math.round(clientStats.hoursCount).toLocaleString()} h total` : null;
-    vm.clientFeedbackCount = clientStats.feedbackCount > 0 ? `Feedback: ${clientStats.feedbackCount}` : null;
+    vm.clientJobsPosted = clientStats.totalAssignments
+      ? `Jobs: ${clientStats.totalAssignments}`
+      : null;
+    vm.clientHours =
+      clientStats.hoursCount > 0
+        ? `${Math.round(clientStats.hoursCount).toLocaleString()} h total`
+        : null;
+    vm.clientFeedbackCount =
+      clientStats.feedbackCount > 0 ? `Feedback: ${clientStats.feedbackCount}` : null;
 
     const clientActivity = details?.opening?.job?.clientActivity || {};
     if (clientActivity.lastBuyerActivity) {
-        const lastActivityDate = new Date(clientActivity.lastBuyerActivity);
-        const fullTimestamp = `${lastActivityDate.toLocaleDateString()} ${lastActivityDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
-        vm.activityLastActiveHTML = `<span title="${fullTimestamp}">${timeAgo(lastActivityDate)}</span>`;
+      const lastActivityDate = new Date(clientActivity.lastBuyerActivity);
+      const fullTimestamp = `${lastActivityDate.toLocaleDateString()} ${lastActivityDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      vm.activityLastActiveHTML = `<span title="${fullTimestamp}">${timeAgo(lastActivityDate)}</span>`;
     }
-    vm.activityApplicants = clientActivity.totalApplicants ? `Applicants: ${clientActivity.totalApplicants}` : null;
-    vm.activityInterviews = clientActivity.totalInvitedToInterview ? `Interviews: ${clientActivity.totalInvitedToInterview}` : null;
+    vm.activityApplicants = clientActivity.totalApplicants
+      ? `Applicants: ${clientActivity.totalApplicants}`
+      : null;
+    vm.activityInterviews = clientActivity.totalInvitedToInterview
+      ? `Interviews: ${clientActivity.totalInvitedToInterview}`
+      : null;
     vm.activityHired = `Hired: ${clientActivity.totalHired || 0}/${clientActivity.numberOfPositionsToHire || 1}`;
 
     // Determine if the job activity section should be shown
-    vm.showJobActivity = !!(vm.activityApplicants || vm.activityInterviews || vm.activityHired || vm.activityLastActiveHTML);
+    vm.showJobActivity = !!(
+      vm.activityApplicants ||
+      vm.activityInterviews ||
+      vm.activityHired ||
+      vm.activityLastActiveHTML
+    );
 
     const bidStats = details?.applicantsBidsStats || {};
     const avgBid = bidStats.avgRateBid?.amount;
     const minBid = bidStats.minRateBid?.amount;
     const maxBid = bidStats.maxRateBid?.amount;
     if (avgBid || minBid || maxBid) {
-        vm.bidAvg = `Avg: $${(avgBid || 0).toFixed(1)}`;
-        vm.bidRange = `Range: $${minBid || 0} - $${maxBid || 0}`;
+      vm.bidAvg = `Avg: $${(avgBid || 0).toFixed(1)}`;
+      vm.bidRange = `Range: $${minBid || 0} - $${maxBid || 0}`;
     }
 
     const workHistory = details?.buyer?.workHistory || [];
     if (workHistory.length > 0) {
       const contractors = new Map();
-      workHistory.forEach(h => {
+      workHistory.forEach((h) => {
         const info = h.contractorInfo;
         if (info && info.contractorName && info.ciphertext && !contractors.has(info.ciphertext)) {
           contractors.set(info.ciphertext, info.contractorName);
         }
       });
-      vm.contractorHistory = Array.from(contractors, ([ciphertext, name]) => ({ name, ciphertext }));
+      vm.contractorHistory = Array.from(contractors, ([ciphertext, name]) => ({
+        name,
+        ciphertext,
+      }));
     }
 
     const questions = details?.opening?.questions || [];
-    vm.questions = questions.map(q => q.question);
+    vm.questions = questions.map((q) => q.question);
 
     const jobDescription = details?.opening?.job?.description;
     if (jobDescription && jobDescription.trim().length > 0) {
-      vm.descriptionHTML = jobDescription.replace(/<\/?[^>]+(>|$)/g, "").trim().replace(/\n/g, '<br>');
+      vm.descriptionHTML = jobDescription
+        .replace(/<\/?[^>]+(>|$)/g, '')
+        .trim()
+        .replace(/\n/g, '<br>');
     }
 
     return vm;

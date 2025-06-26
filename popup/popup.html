@@ -1,105 +1,144 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <title>Upwork Monitor</title>
-  <meta charset="utf-8">
-  <link id="theme-stylesheet" rel="stylesheet" href="popup.css"> <!-- Default to light theme -->
+  <head>
+    <title>Upwork Monitor</title>
+    <meta charset="utf-8" />
+    <link id="theme-stylesheet" rel="stylesheet" href="popup.css" />
+    <!-- Default to light theme -->
     <!-- Pre-emptive theme loader to prevent FOUC -->
-  <script src="../lib/browser-polyfill.min.js"></script>
-  <script src="theme-loader.js"></script>
-</head>
-<body>
-  <header class="app-header">
-    <a class="app-header__title" href="#" target="_blank">Upwork Job Monitor</a>
-    <div class="app-header__meta">
-      <p class="app-header__status">Initializing status...</p>
-      <button id="theme-toggle-button" class="btn btn--icon btn--muted" title="Toggle Theme" aria-label="Toggle Theme">🌙</button>
-      <button class="app-header__button btn btn--icon" title="Check Now (with saved query)">&#x21BB;</button>
-    </div>
-  </header>
-  <!-- <hr>  The HR below status is removed as status is now in h1 -->
-  <div class="query-section">
-    <input type="text" class="query-section__input" placeholder="Enter Upwork search query...">
-    <button class="query-section__button btn btn--icon btn--muted" title="Save & Check" aria-label="Save and Check">&#x1F50D;</button> <!-- Search icon -->
-  </div>
-  <hr>
-
-  <div class="main-content">
-    <div class="job-list-container">
-      <div class="job-list">
-      <!-- Jobs will be injected here -->
-      <p class="job-list__no-jobs">No new jobs found in the last check.</p> <!-- This will be replaced by JS -->
+    <script src="../lib/browser-polyfill.min.js"></script>
+    <script src="theme-loader.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="app-header__title" href="#" target="_blank">Upwork Job Monitor</a>
+      <div class="app-header__meta">
+        <p class="app-header__status">Initializing status...</p>
+        <button
+          id="theme-toggle-button"
+          class="btn btn--icon btn--muted"
+          title="Toggle Theme"
+          aria-label="Toggle Theme"
+        >
+          🌙
+        </button>
+        <button class="app-header__button btn btn--icon" title="Check Now (with saved query)">
+          &#x21BB;
+        </button>
       </div>
+    </header>
+    <!-- <hr>  The HR below status is removed as status is now in h1 -->
+    <div class="query-section">
+      <input type="text" class="query-section__input" placeholder="Enter Upwork search query..." />
+      <button
+        class="query-section__button btn btn--icon btn--muted"
+        title="Save & Check"
+        aria-label="Save and Check"
+      >
+        &#x1F50D;
+      </button>
+      <!-- Search icon -->
     </div>
-    <!-- Container for the job details panel, now a flex item, with ARIA live region attributes -->
-    <div class="details-panel" role="region" aria-label="Job Details Panel" aria-live="polite" aria-atomic="true"></div>
-  </div>
-  <script src="../utils.js"></script> <!-- Add this line -->
-  <script src="../background/config.js"></script> <!-- Add this line -->
-  <script src="../storage/storage-manager.js"></script> <!-- Add this line -->
-  <script src="components/JobItem.js"></script>
-  <script src="components/JobDetails.js"></script>
-  <script src="components/StatusHeader.js"></script>
-  <script src="components/SearchForm.js"></script>
-  <script src="services/ApiService.js"></script>
-  <script src="state/AppState.js"></script>
-  <script src="popup.js"></script>
+    <hr />
 
-  <!-- Job Item Template -->
-  <template id="job-item-template">
-    <div class="job-item" data-job-id="">
-      <div class="job-item__header">
-        <span class="job-item__toggle"></span>
-        <h3 class="job-item__title-container">
-          <span class="job-item__applied-icon" title="You applied to this job">
-            <img src="icons/applied-icon.svg" alt="Applied to job" class="air3-icon sm" data-test="UpCIcon" />
-          </span>
-          <span class="job-item__priority-tag"><span data-field="priority-tag-text"></span></span>
-          <a href="#" target="_blank" class="job-item__title"></a>
-        </h3>
-        <span class="job-item__delete-btn" title="Remove from list">×</span>
+    <div class="main-content">
+      <div class="job-list-container">
+        <div class="job-list">
+          <!-- Jobs will be injected here -->
+          <p class="job-list__no-jobs">No new jobs found in the last check.</p>
+          <!-- This will be replaced by JS -->
+        </div>
       </div>
-      <div class="job-item__details">
-        <p class="job-item__meta"><strong>Budget:</strong> <span data-field="budget"></span></p>
-        <p class="job-item__meta" data-field="client-info"></p>
-        <p class="job-item__skills" data-field="skills"></p>
-        <p class="job-item__meta"><small>Posted: <span data-field="posted-on"></span> <b>(<span data-field="time-ago"></span>)</b></small></p>
-      </div>
+      <!-- Container for the job details panel, now a flex item, with ARIA live region attributes -->
+      <div
+        class="details-panel"
+        role="region"
+        aria-label="Job Details Panel"
+        aria-live="polite"
+        aria-atomic="true"
+      ></div>
     </div>
-  </template>
+    <script src="../utils.js"></script>
+    <!-- Add this line -->
+    <script src="../background/config.js"></script>
+    <!-- Add this line -->
+    <script src="../storage/storage-manager.js"></script>
+    <!-- Add this line -->
+    <script src="components/JobItem.js"></script>
+    <script src="components/JobDetails.js"></script>
+    <script src="components/StatusHeader.js"></script>
+    <script src="components/SearchForm.js"></script>
+    <script src="services/ApiService.js"></script>
+    <script src="state/AppState.js"></script>
+    <script src="popup.js"></script>
 
-  <!-- Job Details Panel Template -->
-  <template id="job-details-template">
+    <!-- Job Item Template -->
+    <template id="job-item-template">
+      <div class="job-item" data-job-id="">
+        <div class="job-item__header">
+          <span class="job-item__toggle"></span>
+          <h3 class="job-item__title-container">
+            <span class="job-item__applied-icon" title="You applied to this job">
+              <img
+                src="icons/applied-icon.svg"
+                alt="Applied to job"
+                class="air3-icon sm"
+                data-test="UpCIcon"
+              />
+            </span>
+            <span class="job-item__priority-tag"><span data-field="priority-tag-text"></span></span>
+            <a href="#" target="_blank" class="job-item__title"></a>
+          </h3>
+          <span class="job-item__delete-btn" title="Remove from list">×</span>
+        </div>
+        <div class="job-item__details">
+          <p class="job-item__meta"><strong>Budget:</strong> <span data-field="budget"></span></p>
+          <p class="job-item__meta" data-field="client-info"></p>
+          <p class="job-item__skills" data-field="skills"></p>
+          <p class="job-item__meta">
+            <small
+              >Posted: <span data-field="posted-on"></span>
+              <b>(<span data-field="time-ago"></span>)</b></small
+            >
+          </p>
+        </div>
+      </div>
+    </template>
+
+    <!-- Job Details Panel Template -->
+    <template id="job-details-template">
       <div class="details-panel__stats-group" data-section="client-info">
-          <strong>Client:</strong>
-          <span class="details-panel__stat" data-field="client-jobs-posted"></span>
-          <span class="details-panel__stat" data-field="client-hours"></span>
-          <span class="details-panel__stat" data-field="client-feedback-count"></span>
+        <strong>Client:</strong>
+        <span class="details-panel__stat" data-field="client-jobs-posted"></span>
+        <span class="details-panel__stat" data-field="client-hours"></span>
+        <span class="details-panel__stat" data-field="client-feedback-count"></span>
       </div>
       <div class="details-panel__job-activity" data-section="job-activity">
-          <span class="details-panel__stat" data-field="activity-applicants"></span>
-          <span class="details-panel__stat" data-field="activity-interviews"></span>
-          <span class="details-panel__stat" data-field="activity-hired"></span>
-          <span class="details-panel__stat">Active: <span data-field="activity-last-active"></span></span>
+        <span class="details-panel__stat" data-field="activity-applicants"></span>
+        <span class="details-panel__stat" data-field="activity-interviews"></span>
+        <span class="details-panel__stat" data-field="activity-hired"></span>
+        <span class="details-panel__stat"
+          >Active: <span data-field="activity-last-active"></span
+        ></span>
       </div>
       <div class="details-panel__bids" data-section="bid-stats">
-          <div class="details-panel__stats-group">
-              <strong>Bid Stats:</strong>
-              <span class="details-panel__stat" data-field="bid-avg"></span>
-              <span class="details-panel__stat" data-field="bid-range"></span>
-          </div>
+        <div class="details-panel__stats-group">
+          <strong>Bid Stats:</strong>
+          <span class="details-panel__stat" data-field="bid-avg"></span>
+          <span class="details-panel__stat" data-field="bid-range"></span>
+        </div>
       </div>
       <div class="details-panel__contractor-history" data-section="contractor-history">
-          <p><strong>Recent Hires:</strong></p>
-          <ul data-field="contractor-history-list"></ul>
+        <p><strong>Recent Hires:</strong></p>
+        <ul data-field="contractor-history-list"></ul>
       </div>
       <div class="details-panel__questions" data-section="questions">
-          <p><strong>Screening Questions:</strong></p>
-          <ol data-field="questions-list"></ol>
+        <p><strong>Screening Questions:</strong></p>
+        <ol data-field="questions-list"></ol>
       </div>
       <div class="details-panel__description" data-section="description">
-          <div class="details-panel__description-content" data-field="description-content"></div>
+        <div class="details-panel__description-content" data-field="description-content"></div>
       </div>
-  </template>
-</body>
+    </template>
+  </body>
 </html>

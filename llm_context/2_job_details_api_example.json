@@ -77,16 +77,16 @@
               }
             },
             {
-                "jobInfo": {
-                  "title": "C++ Developer to Create Windows Shell Extension Application"
-                },
-                "rate": null,
-                "feedback": {
-                  "score": 2.55,
-                  "comment": null
-                },
-                "feedbackToClient": null
-              }
+              "jobInfo": {
+                "title": "C++ Developer to Create Windows Shell Extension Application"
+              },
+              "rate": null,
+              "feedback": {
+                "score": 2.55,
+                "comment": null
+              },
+              "feedbackToClient": null
+            }
           ]
         },
         "currentUserInfo": {

@@ -3,7 +3,7 @@
  * Handles all interactions with the Upwork API.
  * This includes token retrieval, GraphQL payload construction, and fetch requests.
  */
-console.log("Upwork API module loaded.");
+console.log('Upwork API module loaded.');
 
 /**
  * Retrieves and prioritizes potential OAuth2 API tokens from cookies.
@@ -11,15 +11,15 @@ console.log("Upwork API module loaded.");
  */
 async function getAllPotentialApiTokens() {
   try {
-    const cookies = await browser.cookies.getAll({ domain: "upwork.com" });
+    const cookies = await browser.cookies.getAll({ domain: 'upwork.com' });
     if (!cookies || cookies.length === 0) {
-      console.warn("API: No cookies found for upwork.com domain.");
+      console.warn('API: No cookies found for upwork.com domain.');
       return [];
     }
 
     const allOAuthTokens = [];
     for (const cookie of cookies) {
-      if (cookie.value && cookie.value.startsWith("oauth2v2_")) {
+      if (cookie.value && cookie.value.startsWith('oauth2v2_')) {
         allOAuthTokens.push({ name: cookie.name, value: cookie.value });
       }
     }
@@ -32,33 +32,36 @@ async function getAllPotentialApiTokens() {
     const candidateTokens = [];
 
     // 1. Prioritize 'oauth2_global_js_token' as it's often the active one for UI GQL calls
-    const globalJsToken = allOAuthTokens.find(t => t.name === "oauth2_global_js_token");
+    const globalJsToken = allOAuthTokens.find((t) => t.name === 'oauth2_global_js_token');
     if (globalJsToken) {
       candidateTokens.push(globalJsToken.value);
     }
 
     // 2. Add 'sb' pattern tokens next, if different from globalJsToken
-    const sbPatternTokens = allOAuthTokens.filter(t =>
-      t.name.length === 10 && t.name.endsWith("sb") &&
-      t.name !== "forterToken" &&
-      (!globalJsToken || t.value !== globalJsToken.value) // Avoid duplicates
+    const sbPatternTokens = allOAuthTokens.filter(
+      (t) =>
+        t.name.length === 10 &&
+        t.name.endsWith('sb') &&
+        t.name !== 'forterToken' &&
+        (!globalJsToken || t.value !== globalJsToken.value) // Avoid duplicates
     );
-    sbPatternTokens.forEach(t => candidateTokens.push(t.value));
+    sbPatternTokens.forEach((t) => candidateTokens.push(t.value));
 
     // 3. Add other potential oauth2v2_ tokens, excluding known non-API and already added ones
-    const otherPotentials = allOAuthTokens.filter(t =>
-      t.value.startsWith("oauth2v2_") && // Ensure it's an oauth2v2 token
-      !candidateTokens.includes(t.value) && // Avoid duplicates
-      t.name !== "visitor_gql_token" &&
-      t.name !== "visitor_innova_gql_token" &&
-      !t.name.includes("master_access_token") &&
-      !t.name.includes("_vt")
+    const otherPotentials = allOAuthTokens.filter(
+      (t) =>
+        t.value.startsWith('oauth2v2_') && // Ensure it's an oauth2v2 token
+        !candidateTokens.includes(t.value) && // Avoid duplicates
+        t.name !== 'visitor_gql_token' &&
+        t.name !== 'visitor_innova_gql_token' &&
+        !t.name.includes('master_access_token') &&
+        !t.name.includes('_vt')
     );
-    otherPotentials.forEach(t => candidateTokens.push(t.value));
+    otherPotentials.forEach((t) => candidateTokens.push(t.value));
     // console.log("API: Candidate API tokens (prioritized):", candidateTokens.map(t => t.substring(0,20) + "..."));
     return [...new Set(candidateTokens)]; // Ensure uniqueness
   } catch (error) {
-    console.error("API: Error getting all cookies:", error.message);
+    console.error('API: Error getting all cookies:', error.message);
     return [];
   }
 }
@@ -109,30 +112,36 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
   };
   const graphqlPayload = { query: fullRawQueryString, variables: variables };
   const requestHeadersForFetch = {
-    "Authorization": `Bearer ${bearerToken}`,
-    "Content-Type": "application/json",
-    "Accept": "*/*",
+    Authorization: `Bearer ${bearerToken}`,
+    'Content-Type': 'application/json',
+    Accept: '*/*',
   };
 
   try {
     const response = await fetch(endpoint, {
-      method: "POST",
+      method: 'POST',
       headers: requestHeadersForFetch,
       body: JSON.stringify(graphqlPayload),
     });
     if (!response.ok) {
       const responseBodyText = await response.text();
-      console.warn(`API: API request failed with token ${bearerToken.substring(0,10)}... Status: ${response.status}`, responseBodyText.substring(0, 300));
+      console.warn(
+        `API: API request failed with token ${bearerToken.substring(0, 10)}... Status: ${response.status}`,
+        responseBodyText.substring(0, 300)
+      );
       return { error: true, status: response.status, body: responseBodyText.substring(0, 300) };
     }
     const data = await response.json();
     if (data.errors) {
-      console.warn(`API: GraphQL API errors with token ${bearerToken.substring(0,10)}...:`, data.errors);
+      console.warn(
+        `API: GraphQL API errors with token ${bearerToken.substring(0, 10)}...:`,
+        data.errors
+      );
       return { error: true, graphqlErrors: data.errors };
     }
     if (data.data?.search?.universalSearchNuxt?.userJobSearchV1?.results) {
       const jobsData = data.data.search.universalSearchNuxt.userJobSearchV1.results;
-      return jobsData.map(job => ({
+      return jobsData.map((job) => ({
         id: job.jobTile.job.ciphertext || job.jobTile.job.id, // Prefer ciphertext from jobTile
         ciphertext: job.jobTile.job.ciphertext,
         title: job.title,
@@ -142,8 +151,12 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
         budget: {
           type: job.jobTile.job.jobType,
           currencyCode: job.jobTile.job.fixedPriceAmount?.isoCurrencyCode || 'USD',
-          minAmount: job.jobTile.job.jobType.toLowerCase().includes('hourly') ? job.jobTile.job.hourlyBudgetMin : job.jobTile.job.fixedPriceAmount?.amount,
-          maxAmount: job.jobTile.job.jobType.toLowerCase().includes('hourly') ? job.jobTile.job.hourlyBudgetMax : job.jobTile.job.fixedPriceAmount?.amount,
+          minAmount: job.jobTile.job.jobType.toLowerCase().includes('hourly')
+            ? job.jobTile.job.hourlyBudgetMin
+            : job.jobTile.job.fixedPriceAmount?.amount,
+          maxAmount: job.jobTile.job.jobType.toLowerCase().includes('hourly')
+            ? job.jobTile.job.hourlyBudgetMax
+            : job.jobTile.job.fixedPriceAmount?.amount,
         },
         client: {
           paymentVerificationStatus: job.upworkHistoryData?.client?.paymentVerificationStatus,
@@ -151,12 +164,16 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
           totalSpent: job.upworkHistoryData?.client?.totalSpent?.amount || 0,
           rating: job.upworkHistoryData?.client?.totalFeedback,
         },
-        skills: job.ontologySkills ? job.ontologySkills.map(skill => ({ name: skill.prettyName || skill.prefLabel })) : [],
-        _fullJobData: job // Keep this for debugging if needed
+        skills: job.ontologySkills
+          ? job.ontologySkills.map((skill) => ({ name: skill.prettyName || skill.prefLabel }))
+          : [],
+        _fullJobData: job, // Keep this for debugging if needed
       }));
-    } else { return []; }
-  } catch (error) { 
-    console.error(`API: Network error with token ${bearerToken.substring(0,10)}...:`, error);
+    } else {
+      return [];
+    }
+  } catch (error) {
+    console.error(`API: Network error with token ${bearerToken.substring(0, 10)}...:`, error);
     return { error: true, networkError: error.message };
   }
 }
@@ -177,11 +194,14 @@ async function _executeApiCallWithStickyTokenRotation(apiCallFunction, ...params
   if (lastKnownGoodToken) {
     // console.log(`API: Trying last known good token ${lastKnownGoodToken.substring(0, 15)}... for ${operationName}`);
     const result = await apiCallFunction(lastKnownGoodToken, ...params);
-    if (result && !result.error && !result.permissionIssue) { // Check for permissionIssue as well
+    if (result && !result.error && !result.permissionIssue) {
+      // Check for permissionIssue as well
       console.log(`API: Successfully used last known good token for ${operationName}.`);
       return { result, token: lastKnownGoodToken };
     } else {
-      console.warn(`API: Last known good token failed for ${operationName}. Clearing it and trying full rotation.`);
+      console.warn(
+        `API: Last known good token failed for ${operationName}. Clearing it and trying full rotation.`
+      );
       await StorageManager.setLastKnownGoodToken(null); // Clear the failing sticky token
     }
   }
@@ -198,18 +218,28 @@ async function _executeApiCallWithStickyTokenRotation(apiCallFunction, ...params
     const result = await apiCallFunction(token, ...params);
 
     if (result && !result.error && !result.permissionIssue) {
-      console.log(`API: Successfully fetched with token ${token.substring(0, 15)}... for ${operationName}. Setting as new good token.`);
+      console.log(
+        `API: Successfully fetched with token ${token.substring(0, 15)}... for ${operationName}. Setting as new good token.`
+      );
       await StorageManager.setLastKnownGoodToken(token);
       return { result, token: token };
     } else {
       if (result && result.graphqlErrors) {
-        console.warn(`API: GraphQL error with token ${token.substring(0, 15)} for ${operationName} - ${JSON.stringify(result.graphqlErrors)}`);
+        console.warn(
+          `API: GraphQL error with token ${token.substring(0, 15)} for ${operationName} - ${JSON.stringify(result.graphqlErrors)}`
+        );
       } else if (result && result.status) {
-        console.warn(`API: HTTP error ${result.status} with token ${token.substring(0, 15)} for ${operationName}`);
+        console.warn(
+          `API: HTTP error ${result.status} with token ${token.substring(0, 15)} for ${operationName}`
+        );
       } else if (result && result.networkError) {
-        console.warn(`API: Network error with token ${token.substring(0, 15)} for ${operationName}`);
+        console.warn(
+          `API: Network error with token ${token.substring(0, 15)} for ${operationName}`
+        );
       } else if (result && result.permissionIssue) {
-        console.warn(`API: Permission issue with token ${token.substring(0, 15)} for ${operationName}: ${result.message}`);
+        console.warn(
+          `API: Permission issue with token ${token.substring(0, 15)} for ${operationName}: ${result.message}`
+        );
       }
       // console.log(`API: Token ${token.substring(0, 15)}... failed for ${operationName}. Trying next.`);
     }
@@ -225,8 +255,13 @@ async function _executeApiCallWithStickyTokenRotation(apiCallFunction, ...params
  * @returns {Promise<{jobs: Object[], token: string}|{error: true, message: string, details?: any}>}
  */
 async function fetchJobsWithTokenRotation(userQuery) {
-  const apiResponse = await _executeApiCallWithStickyTokenRotation(fetchUpworkJobsDirectly, userQuery);
-  if (apiResponse.error) {return apiResponse;} // Propagate error
+  const apiResponse = await _executeApiCallWithStickyTokenRotation(
+    fetchUpworkJobsDirectly,
+    userQuery
+  );
+  if (apiResponse.error) {
+    return apiResponse;
+  } // Propagate error
   return { jobs: apiResponse.result, token: apiResponse.token };
 }
 
@@ -300,42 +335,48 @@ async function fetchJobDetails(bearerToken, jobCiphertext) {
       }
     }
   }`;
-  
+
   const variables = {
     id: jobCiphertext,
     // isLoggedIn: true, // Removed as it's unused in the current query structure
     // isFreelancerOrAgency: true // Removed as it's unused
   };
-  
+
   const graphqlPayload = { query: graphqlQuery, variables: variables };
   const requestHeadersForFetch = {
-    "Authorization": `Bearer ${bearerToken}`,
-    "Content-Type": "application/json",
-    "Accept": "*/*",
+    Authorization: `Bearer ${bearerToken}`,
+    'Content-Type': 'application/json',
+    Accept: '*/*',
   };
 
   try {
     const response = await fetch(endpoint, {
-      method: "POST",
+      method: 'POST',
       headers: requestHeadersForFetch,
       body: JSON.stringify(graphqlPayload),
     });
-    
+
     if (!response.ok) {
       const responseBodyText = await response.text();
-      console.warn(`API: Job details request failed with token ${bearerToken.substring(0,10)}... Status: ${response.status}`, responseBodyText.substring(0, 300));
+      console.warn(
+        `API: Job details request failed with token ${bearerToken.substring(0, 10)}... Status: ${response.status}`,
+        responseBodyText.substring(0, 300)
+      );
       return { error: true, status: response.status, body: responseBodyText.substring(0, 300) };
     }
-    
+
     const data = await response.json();
     if (data.errors) {
-      console.warn(`API: GraphQL API errors with token ${bearerToken.substring(0,10)}...:`, data.errors);
+      console.warn(
+        `API: GraphQL API errors with token ${bearerToken.substring(0, 10)}...:`,
+        data.errors
+      );
       return { error: true, graphqlErrors: data.errors };
     }
-    
+
     return data.data.jobAuthDetails;
-  } catch (error) { 
-    console.error(`API: Network error with token ${bearerToken.substring(0,10)}...:`, error);
+  } catch (error) {
+    console.error(`API: Network error with token ${bearerToken.substring(0, 10)}...:`, error);
     return { error: true, networkError: error.message };
   }
 }
@@ -349,15 +390,17 @@ async function fetchJobDetails(bearerToken, jobCiphertext) {
  */
 async function fetchJobDetailsWithTokenRotation(jobCiphertext) {
   const apiResponse = await _executeApiCallWithStickyTokenRotation(fetchJobDetails, jobCiphertext);
-  if (apiResponse.error) {return apiResponse;} // Propagate error
+  if (apiResponse.error) {
+    return apiResponse;
+  } // Propagate error
   return { jobDetails: apiResponse.result, token: apiResponse.token };
 }
 
 // Expose functions globally for MV2 background script
 const UpworkAPI = {
-    getAllPotentialApiTokens,
-    fetchUpworkJobsDirectly,
-    fetchJobsWithTokenRotation,
-    fetchJobDetails,
-    fetchJobDetailsWithTokenRotation
+  getAllPotentialApiTokens,
+  fetchUpworkJobsDirectly,
+  fetchJobsWithTokenRotation,
+  fetchJobDetails,
+  fetchJobDetailsWithTokenRotation,
 };
