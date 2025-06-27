@@ -142,22 +142,54 @@ async function setCollapsedJobIds(collapsedIdsArray) {
   await setStorage({ [STORAGE_KEYS.COLLAPSED_JOB_IDS]: collapsedIdsArray });
 }
 
-async function getLastKnownGoodToken() {
-  const result = await getStorage(STORAGE_KEYS.LAST_KNOWN_GOOD_TOKEN);
-  return result[STORAGE_KEYS.LAST_KNOWN_GOOD_TOKEN] || null;
+/**
+ * Gets the last known good token for a specific API endpoint.
+ * @param {string} apiIdentifier - The API endpoint identifier (e.g., 'jobSearch', 'jobDetails').
+ * @returns {Promise<string|null>} The last known good token for the endpoint, or null if not set.
+ */
+async function getApiEndpointToken(apiIdentifier) {
+  const result = await getStorage(STORAGE_KEYS.API_ENDPOINT_TOKENS);
+  const tokens = result[STORAGE_KEYS.API_ENDPOINT_TOKENS] || {};
+  return tokens[apiIdentifier] || null;
 }
 
-async function setLastKnownGoodToken(token) {
-  // Store null to clear it if the token is explicitly set to null
-  await setStorage({ [STORAGE_KEYS.LAST_KNOWN_GOOD_TOKEN]: token });
+/**
+ * Sets the last known good token for a specific API endpoint.
+ * @param {string} apiIdentifier - The API endpoint identifier.
+ * @param {string|null} token - The token to set (or null to clear).
+ */
+async function setApiEndpointToken(apiIdentifier, token) {
+  const result = await getStorage(STORAGE_KEYS.API_ENDPOINT_TOKENS);
+  const tokens = result[STORAGE_KEYS.API_ENDPOINT_TOKENS] || {};
+  if (token === null) {
+    delete tokens[apiIdentifier];
+  } else {
+    tokens[apiIdentifier] = token;
+  }
+  await setStorage({ [STORAGE_KEYS.API_ENDPOINT_TOKENS]: tokens });
 }
 
+/**
+ * Clears all per-endpoint tokens.
+ */
+async function clearAllApiEndpointTokens() {
+  await setStorage({ [STORAGE_KEYS.API_ENDPOINT_TOKENS]: {} });
+}
+
+/**
+ * Gets the current UI theme from storage.
+ * @returns {Promise<string>} The current UI theme ('light' or 'dark').
+ */
 async function getUiTheme() {
   const result = await getStorage(STORAGE_KEYS.UI_THEME);
   // Default to 'light' if nothing is set
   return result[STORAGE_KEYS.UI_THEME] || 'light';
 }
 
+/**
+ * Sets the UI theme in storage.
+ * @param {string} theme - The theme to set ('light' or 'dark').
+ */
 async function setUiTheme(theme) {
   if (theme === 'light' || theme === 'dark') {
     await setStorage({ [STORAGE_KEYS.UI_THEME]: theme });
@@ -180,7 +212,8 @@ async function initializeStorage(defaultUserQuery) {
     [STORAGE_KEYS.RECENT_FOUND_JOBS]: [],
     [STORAGE_KEYS.COLLAPSED_JOB_IDS]: [],
     [STORAGE_KEYS.CURRENT_USER_QUERY]: defaultUserQuery, // Set initial default query
-    [STORAGE_KEYS.LAST_KNOWN_GOOD_TOKEN]: null,
+    [STORAGE_KEYS.LAST_KNOWN_GOOD_TOKEN]: null, // Deprecated
+    [STORAGE_KEYS.API_ENDPOINT_TOKENS]: {}, // New per-endpoint token storage
     [STORAGE_KEYS.UI_THEME]: 'light', // Default theme
   });
 }
@@ -204,8 +237,9 @@ const StorageManager = {
   setRecentFoundJobs,
   getCollapsedJobIds,
   setCollapsedJobIds,
-  getLastKnownGoodToken,
-  setLastKnownGoodToken,
+  getApiEndpointToken,
+  setApiEndpointToken,
+  clearAllApiEndpointTokens,
   getUiTheme,
   setUiTheme,
   initializeStorage,

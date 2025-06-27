@@ -142,24 +142,37 @@ function formatBudget(budget) {
   }
 
   const { type, minAmount, maxAmount } = budget;
+  // Helper for thousand separators
+  const formatNumber = (num) => {
+    const n = parseFloat(num);
+    return isNaN(n) ? null : n.toLocaleString();
+  };
 
   if (type && type.toLowerCase().includes('hourly')) {
-    const min = parseFloat(minAmount);
-    const max = parseFloat(maxAmount);
-    if (!isNaN(min) && !isNaN(max) && min < max) {
-      return `$${Math.round(min)} - $${Math.round(max)}/hr`;
-    } else if (!isNaN(min)) {
-      return `$${Math.round(min)}/hr`;
+    // Always both min and max present for hourly jobs, but check for missing/invalid
+    const min = formatNumber(minAmount);
+    const max = formatNumber(maxAmount);
+    if (min && max) {
+      return `$${min} - $${max}/hr`;
+    } else if (min) {
+      return `$${min}/hr`;
+    } else if (max) {
+      return `$${max}/hr`;
+    } else {
+      return 'N/A';
     }
   } else {
-    // fixed price
-    const amount = parseFloat(minAmount);
-    if (!isNaN(amount)) {
-      return `$${Math.round(amount)}`;
+    // Fixed price: show range if min and max differ, else just min
+    const min = formatNumber(minAmount);
+    const max = formatNumber(maxAmount);
+    if (min && max && min !== max) {
+      return `$${min} - $${max}`;
+    } else if (min) {
+      return `$${min}`;
+    } else {
+      return 'N/A';
     }
   }
-
-  return 'N/A';
 }
 
 /**
