@@ -170,13 +170,6 @@ async function setApiEndpointToken(apiIdentifier, token) {
 }
 
 /**
- * Clears all per-endpoint tokens.
- */
-async function clearAllApiEndpointTokens() {
-  await setStorage({ [STORAGE_KEYS.API_ENDPOINT_TOKENS]: {} });
-}
-
-/**
  * Gets the current UI theme from storage.
  * @returns {Promise<string>} The current UI theme ('light' or 'dark').
  */
@@ -239,7 +232,6 @@ const StorageManager = {
   setCollapsedJobIds,
   getApiEndpointToken,
   setApiEndpointToken,
-  clearAllApiEndpointTokens,
   getUiTheme,
   setUiTheme,
   initializeStorage,
