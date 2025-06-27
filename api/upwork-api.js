@@ -90,8 +90,21 @@ async function _executeGraphQLQuery(bearerToken, endpointAlias, query, variables
       return { error: true, status: response.status, body: responseBodyText.substring(0, 300) };
     }
 
-    const data = await response.json();
-    return data; // Return the full response for the caller to check for errors and destructure
+    // --- Start of Recommended Change ---
+    const responseBodyText = await response.text();
+    try {
+      const data = JSON.parse(responseBodyText);
+      return data; // Return the parsed data
+    } catch (parsingError) {
+      console.error(
+        `API (_executeGraphQLQuery): Failed to parse JSON response for alias ${endpointAlias}.`,
+        parsingError
+      );
+      // Log the start of the response that failed to help debug what was received
+      console.warn(`Response text that failed parsing: ${responseBodyText.substring(0, 500)}`);
+      return { error: true, type: 'parsing', message: parsingError.message };
+    }
+    // --- End of Recommended Change ---
   } catch (error) {
     console.error(
       `API (_executeGraphQLQuery): Network error for alias ${endpointAlias} with token ${bearerToken.substring(0, 10)}...:`,
