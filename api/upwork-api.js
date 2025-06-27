@@ -102,7 +102,7 @@ async function _executeGraphQLQuery(bearerToken, endpointAlias, query, variables
       );
       // Log the start of the response that failed to help debug what was received
       console.warn(`Response text that failed parsing: ${responseBodyText.substring(0, 500)}`);
-      return { error: true, type: 'parsing', message: parsingError.message };
+      return { error: true, type: 'parsing', message: parsingError.message, body: responseBodyText.substring(0, 500) };
     }
     // --- End of Recommended Change ---
   } catch (error) {
