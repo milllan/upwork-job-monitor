@@ -341,17 +341,21 @@ browser.alarms.onAlarm.addListener(async (alarm) => {
 async function sendNotification(job) {
   // Made async
   const jobUrl = `https://www.upwork.com/jobs/${job.ciphertext || job.id}`;
+  // Use formatBudget from utils.js for budget formatting
+  const budgetString = formatBudget(job.budget);
   const notificationOptions = {
     type: 'basic',
     iconUrl: 'icons/icon48.png',
     title: 'New Upwork Job!',
-    message: `${job.title}\nBudget: ${job.budget && job.budget.amount !== null ? job.budget.amount + ' ' + (job.budget.currencyCode || '') : 'N/A'}`,
+    message: budgetString && budgetString !== 'N/A'
+      ? `${job.title}\nBudget: ${budgetString}`
+      : job.title,
     priority: 2,
   };
   try {
     await browser.notifications.create(jobUrl, notificationOptions);
     // Play notification sound
-    const audio = new Audio(browser.runtime.getURL('audio/notification.mp3')); // Ensure this path is correct
+    const audio = new Audio(browser.runtime.getURL('audio/notification.mp3'));
     audio.play().catch((e) => console.warn('MV2: Error playing notification sound:', e));
   } catch (e) {
     console.error('MV2: Error creating notification:', e);

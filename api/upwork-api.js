@@ -32,20 +32,20 @@ async function getAllPotentialApiTokens() {
     const candidateTokens = [];
 
     // 1. Prioritize 'oauth2_global_js_token' as it's often the active one for UI GQL calls
-    const globalJsToken = allOAuthTokens.find((t) => t.name === 'oauth2_global_js_token');
-    if (globalJsToken) {
-      candidateTokens.push(globalJsToken.value);
-    }
+    //const globalJsToken = allOAuthTokens.find((t) => t.name === 'oauth2_global_js_token');
+    //if (globalJsToken) {
+    //  candidateTokens.unshift(globalJsToken.value);
+    //}
 
     // 2. Add 'sb' pattern tokens next, if different from globalJsToken
     const sbPatternTokens = allOAuthTokens.filter(
       (t) =>
         t.name.length === 10 &&
         t.name.endsWith('sb') &&
-        t.name !== 'forterToken' &&
-        (!globalJsToken || t.value !== globalJsToken.value) // Avoid duplicates
+        t.name !== 'forterToken' // && // Avoid duplicates
+        //(!globalJsToken || t.value !== globalJsToken.value) // Avoid duplicates
     );
-    sbPatternTokens.forEach((t) => candidateTokens.push(t.value));
+    sbPatternTokens.forEach((t) => candidateTokens.unshift(t.value));
 
     // 3. Add other potential oauth2v2_ tokens, excluding known non-API and already added ones
     const otherPotentials = allOAuthTokens.filter(
@@ -393,6 +393,98 @@ async function fetchJobDetailsWithTokenRotation(jobCiphertext) {
   return { jobDetails: apiResponse.result, token: apiResponse.token };
 }
 
+/**
+ * Fetches talent profile details directly using a provided bearer token and profile ciphertext.
+ * @param {string} bearerToken The OAuth2 bearer token.
+ * @param {string} profileCiphertext The freelancer's ciphertext ID.
+ * @returns {Promise<Object|Object>} A promise that resolves with the profile details object on success,
+ *                                   or an error object {error: true, ...} on failure.
+ */
+async function fetchTalentProfile(bearerToken, profileCiphertext) {
+  const endpoint = `${config.UPWORK_GRAPHQL_ENDPOINT_BASE}?alias=getDetails`;
+  const graphqlQuery = `
+    query GetTalentProfile($profileUrl: String) {
+      talentVPDAuthProfile(
+        filter: {
+          profileUrl: $profileUrl,
+          excludePortfolio: true,
+          excludeAgencies: false
+        }
+      ) {
+        identity { uid ciphertext }
+        profile {
+          name
+          title
+          description
+          location { country city }
+          skills { node { prettyName rank } }
+        }
+        stats {
+          totalHours
+          totalJobsWorked
+          rating
+          hourlyRate { node { amount currencyCode } }
+          totalEarnings
+        }
+        employmentHistory { companyName jobTitle startDate endDate description }
+        education { institutionName areaOfStudy degree }
+      }
+    }
+  `;
+  const variables = { profileUrl: profileCiphertext };
+  const graphqlPayload = { query: graphqlQuery, variables };
+  const requestHeadersForFetch = {
+    Authorization: `Bearer ${bearerToken}`,
+    'Content-Type': 'application/json',
+    Accept: '*/*',
+  };
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: requestHeadersForFetch,
+      body: JSON.stringify(graphqlPayload),
+    });
+    if (!response.ok) {
+      const responseBodyText = await response.text();
+      console.warn(
+        `API: Talent profile request failed with token ${bearerToken.substring(0, 10)}... Status: ${response.status}`,
+        responseBodyText.substring(0, 300)
+      );
+      return { error: true, status: response.status, body: responseBodyText.substring(0, 300) };
+    }
+    const data = await response.json();
+    if (data.errors) {
+      console.warn(
+        `API: GraphQL API errors with token ${bearerToken.substring(0, 10)}...:`,
+        data.errors
+      );
+      return { error: true, graphqlErrors: data.errors };
+    }
+    return data.data.talentVPDAuthProfile;
+  } catch (error) {
+    console.error(`API: Network error with token ${bearerToken.substring(0, 10)}...:`, error);
+    return { error: true, networkError: error.message };
+  }
+}
+
+/**
+ * Fetches talent profile details by trying multiple API tokens until one succeeds.
+ * @param {string} profileCiphertext The freelancer's ciphertext ID.
+ * @returns {Promise<{profileDetails: Object, token: string}|{error: true, message: string, details?: any}>}
+ */
+async function fetchTalentProfileWithTokenRotation(profileCiphertext) {
+  const apiResponse = await _executeApiCallWithStickyTokenRotation(
+    'talentProfile',
+    fetchTalentProfile,
+    profileCiphertext
+  );
+  if (apiResponse.error) {
+    return apiResponse;
+  }
+  return { profileDetails: apiResponse.result, token: apiResponse.token };
+}
+
 // Expose functions globally for MV2 background script
 const UpworkAPI = {
   getAllPotentialApiTokens,
@@ -400,4 +492,5 @@ const UpworkAPI = {
   fetchJobsWithTokenRotation,
   fetchJobDetails,
   fetchJobDetailsWithTokenRotation,
+  fetchTalentProfileWithTokenRotation,
 };

@@ -205,7 +205,15 @@ class JobItem {
     const vm = this.viewModel;
 
     // Populate text content
-    this.element.querySelector('[data-field="budget"]').textContent = vm.budget;
+    const budgetField = this.element.querySelector('[data-field="budget"]');
+    const budgetMeta = budgetField ? budgetField.closest('.job-item__meta') : null;
+    if (vm.budget && vm.budget !== 'N/A') {
+      budgetField.textContent = vm.budget;
+      if (budgetMeta) budgetMeta.style.display = '';
+    } else {
+      budgetField.textContent = '';
+      if (budgetMeta) budgetMeta.style.display = 'none';
+    }
     this.element.querySelector('[data-field="client-info"]').innerHTML = vm.clientInfo;
 
     const skillsElement = this.element.querySelector('[data-field="skills"]');
