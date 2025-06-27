@@ -232,7 +232,6 @@ const StorageManager = {
   setCollapsedJobIds,
   getApiEndpointToken,
   setApiEndpointToken,
-  clearAllApiEndpointTokens,
   getUiTheme,
   setUiTheme,
   initializeStorage,
