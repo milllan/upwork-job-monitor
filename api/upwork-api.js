@@ -397,7 +397,7 @@ async function fetchJobDetailsWithTokenRotation(jobCiphertext) {
  * Fetches talent profile details directly using a provided bearer token and profile ciphertext.
  * @param {string} bearerToken The OAuth2 bearer token.
  * @param {string} profileCiphertext The freelancer's ciphertext ID.
- * @returns {Promise<Object|Object>} A promise that resolves with the profile details object on success,
+ * @returns {Promise<Object>} A promise that resolves with the profile details object on success,
  *                                   or an error object {error: true, ...} on failure.
  */
 async function fetchTalentProfile(bearerToken, profileCiphertext) {
