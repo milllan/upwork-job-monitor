@@ -228,7 +228,7 @@ async function _executeApiCallWithStickyTokenRotation(apiIdentifier, apiCallFunc
     } else if (result && result.error) {
       // --- Start of Updated Error Logging ---
       const tokenSnippet = `token ${token.substring(0, 15)}`;
-      const { type, details } = result;
+      const { type, details = {} } = result;
       switch (type) {
         case 'graphql':
           console.warn(
