@@ -175,29 +175,28 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
 
 /**
  * Internal helper to manage API calls with sticky token and rotation logic.
+ * @param {string} apiIdentifier The API endpoint identifier (e.g., 'jobSearch', 'jobDetails').
  * @param {Function} apiCallFunction The actual API call function (e.g., fetchUpworkJobsDirectly, fetchJobDetails).
  * @param {any[]} params Parameters to pass to the apiCallFunction after the token.
  * @returns {Promise<{result: any, token: string}|{error: true, message: string, details?: any}>}
  *          Resolves with an object containing the API call's result and the successful token,
  *          or an error object if all tokens fail.
  */
-async function _executeApiCallWithStickyTokenRotation(apiCallFunction, ...params) {
+async function _executeApiCallWithStickyTokenRotation(apiIdentifier, apiCallFunction, ...params) {
   const operationName = apiCallFunction.name; // For logging
 
-  // 1. Try with the last known good token
-  const lastKnownGoodToken = await StorageManager.getLastKnownGoodToken();
+  // 1. Try with the last known good token for this endpoint
+  const lastKnownGoodToken = await StorageManager.getApiEndpointToken(apiIdentifier);
   if (lastKnownGoodToken) {
-    // console.log(`API: Trying last known good token ${lastKnownGoodToken.substring(0, 15)}... for ${operationName}`);
     const result = await apiCallFunction(lastKnownGoodToken, ...params);
     if (result && !result.error && !result.permissionIssue) {
-      // Check for permissionIssue as well
-      console.log(`API: Successfully used last known good token for ${operationName}.`);
+      console.log(`API: Successfully used last known good token for ${operationName} (${apiIdentifier}).`);
       return { result, token: lastKnownGoodToken };
     } else {
       console.warn(
-        `API: Last known good token failed for ${operationName}. Clearing it and trying full rotation.`
+        `API: Last known good token failed for ${operationName} (${apiIdentifier}). Clearing it and trying full rotation.`
       );
-      await StorageManager.setLastKnownGoodToken(null); // Clear the failing sticky token
+      await StorageManager.setApiEndpointToken(apiIdentifier, null); // Clear the failing sticky token for this endpoint
     }
   }
 
@@ -209,14 +208,12 @@ async function _executeApiCallWithStickyTokenRotation(apiCallFunction, ...params
   }
 
   for (const token of candidateTokens) {
-    // console.log(`API: Trying candidate token ${token.substring(0, 15)}... for ${operationName}`);
     const result = await apiCallFunction(token, ...params);
-
     if (result && !result.error && !result.permissionIssue) {
       console.log(
-        `API: Successfully fetched with token ${token.substring(0, 15)}... for ${operationName}. Setting as new good token.`
+        `API: Successfully fetched with token ${token.substring(0, 15)}... for ${operationName} (${apiIdentifier}). Setting as new good token.`
       );
-      await StorageManager.setLastKnownGoodToken(token);
+      await StorageManager.setApiEndpointToken(apiIdentifier, token);
       return { result, token: token };
     } else {
       if (result && result.graphqlErrors) {
@@ -240,7 +237,7 @@ async function _executeApiCallWithStickyTokenRotation(apiCallFunction, ...params
     }
   }
 
-  console.error(`API: All candidate tokens failed for ${operationName}.`);
+  console.error(`API: All candidate tokens failed for ${operationName} (${apiIdentifier}).`);
   return { error: true, message: `All candidate tokens failed for ${operationName}.` };
 }
 
@@ -251,12 +248,13 @@ async function _executeApiCallWithStickyTokenRotation(apiCallFunction, ...params
  */
 async function fetchJobsWithTokenRotation(userQuery) {
   const apiResponse = await _executeApiCallWithStickyTokenRotation(
+    'jobSearch',
     fetchUpworkJobsDirectly,
     userQuery
   );
   if (apiResponse.error) {
     return apiResponse;
-  } // Propagate error
+  }
   return { jobs: apiResponse.result, token: apiResponse.token };
 }
 
@@ -384,10 +382,14 @@ async function fetchJobDetails(bearerToken, jobCiphertext) {
  *          or an error object if all tokens fail.
  */
 async function fetchJobDetailsWithTokenRotation(jobCiphertext) {
-  const apiResponse = await _executeApiCallWithStickyTokenRotation(fetchJobDetails, jobCiphertext);
+  const apiResponse = await _executeApiCallWithStickyTokenRotation(
+    'jobDetails',
+    fetchJobDetails,
+    jobCiphertext
+  );
   if (apiResponse.error) {
     return apiResponse;
-  } // Propagate error
+  }
   return { jobDetails: apiResponse.result, token: apiResponse.token };
 }
 
