@@ -35,7 +35,7 @@ async function getAllPotentialApiTokens() {
     const sbPatternTokens = allOAuthTokens.filter(
       (t) => t.name.length === 10 && t.name.endsWith('sb') && t.name !== 'forterToken'
     );
-    sbPatternTokens.forEach((t) => candidateTokens.unshift(t.value));
+    sbPatternTokens.forEach((t) => candidateTokens.unshift(t.value)); // Unshift to prioritize reverse order
 
     // Add other potential oauth2v2_ tokens, excluding known non-API and already added ones
     const otherPotentials = allOAuthTokens.filter(
