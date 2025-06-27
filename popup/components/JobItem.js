@@ -209,10 +209,10 @@ class JobItem {
     const budgetMeta = budgetField ? budgetField.closest('.job-item__meta') : null;
     if (vm.budget && vm.budget !== 'N/A') {
       budgetField.textContent = vm.budget;
-      if (budgetMeta) budgetMeta.style.display = '';
+      if (budgetMeta) budgetMeta.classList.remove('job-item__meta--hidden');
     } else {
       budgetField.textContent = '';
-      if (budgetMeta) budgetMeta.style.display = 'none';
+      if (budgetMeta) budgetMeta.classList.add('job-item__meta--hidden');
     }
     this.element.querySelector('[data-field="client-info"]').innerHTML = vm.clientInfo;
 
