@@ -274,8 +274,7 @@ async function _performJobCheckLogic(triggeredByUserQuery) {
 
   const apiResult = await UpworkAPI.fetchJobs(userQueryToUse);
 
-  // On success, apiResult IS the array of jobs. On failure, it has an .error property.
-  // The API returns an object { jobs: [...], error: ... }. We extract the jobs array.
+// On success, apiResult is an object like { jobs: [...] }. On failure, it has an .error property.
   if (apiResult.error) {
     console.error('MV2: Failed to fetch jobs after trying all tokens.', apiResult);
     // The options object is not strictly needed here but keeps the pattern consistent.
