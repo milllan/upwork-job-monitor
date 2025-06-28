@@ -5,6 +5,12 @@
  */
 console.log('Upwork API module loaded.');
 
+const API_IDENTIFIERS = {
+  JOB_SEARCH: 'jobSearch',
+  JOB_DETAILS: 'jobDetails',
+  TALENT_PROFILE: 'talentProfile',
+};
+
 /**
  * Retrieves and prioritizes potential OAuth2 API tokens from cookies.
  * @returns {Promise<string[]>} A promise that resolves with an array of token strings.
@@ -118,7 +124,7 @@ async function _executeGraphQLQuery(bearerToken, endpointAlias, query, variables
  * @returns {Promise<Object[]|Object>} A promise that resolves with an array of job objects on success,
  *                                      or a standardized error object on failure.
  */
-async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
+async function _fetchUpworkJobsDirectly(bearerToken, userQuery) {
   const endpointAlias = 'userJobSearch';
   const fullRawQueryString = `
   query UserJobSearch($requestVariables: UserJobSearchV1Request!) {
@@ -293,7 +299,7 @@ async function fetchJobsWithTokenRotation(userQuery) {
  * @returns {Promise<Object|Object>} A promise that resolves with the job details object on success,
  *                                   or a standardized error object on failure.
  */
-async function fetchJobDetails(bearerToken, jobCiphertext) {
+async function _fetchJobDetails(bearerToken, jobCiphertext) {
   const endpointAlias = 'gql-query-get-auth-job-details';
   const graphqlQuery = `
   query JobAuthDetailsQuery($id: ID!) {
@@ -375,7 +381,7 @@ async function fetchJobDetailsWithTokenRotation(jobCiphertext) {
  * @returns {Promise<Object>} A promise that resolves with the profile details object on success,
  *                            or a standardized error object on failure.
  */
-async function fetchTalentProfile(bearerToken, profileCiphertext) {
+async function _fetchTalentProfile(bearerToken, profileCiphertext) {
   const endpointAlias = 'getDetails';
   const graphqlQuery = `
     query GetTalentProfile($profileUrl: String) {

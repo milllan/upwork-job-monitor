@@ -264,7 +264,7 @@ async function _handleApiTokenFailure(errorResult, context, options = {}) {
  * @param {string} triggeredByUserQuery - A specific query from a user action, or null/undefined.
  */
 async function _performJobCheckLogic(triggeredByUserQuery) {
-  console.log('MV2: Starting _performJobCheckLogic (Direct Background with token loop)...');
+  console.log('MV2: Attempting runJobCheck (Direct Background with token loop)...');
   await StorageManager.setMonitorStatus('Checking...');
 
   const userQueryToUse =
@@ -272,7 +272,7 @@ async function _performJobCheckLogic(triggeredByUserQuery) {
     (await StorageManager.getCurrentUserQuery()) ||
     config.DEFAULT_USER_QUERY;
 
-  const apiResult = await UpworkAPI.fetchJobsWithTokenRotation(userQueryToUse);
+  const apiResult = await UpworkAPI.fetchJobs(userQueryToUse);
 
   if (apiResult.error) {
     console.error('MV2: Failed to fetch jobs after trying all tokens.', apiResult);
@@ -464,7 +464,7 @@ browser.runtime.onMessage.addListener(async (request, _sender) => {
 
 // MODIFIED: This now contains the smart error handling logic
 async function _fetchAndProcessJobDetails(jobCiphertext) {
-  const apiResult = await UpworkAPI.fetchJobDetailsWithTokenRotation(jobCiphertext);
+  const apiResult = await UpworkAPI.fetchJobDetails(jobCiphertext);
 
   if (apiResult.error) {
     console.error('MV2: Failed to fetch job details.', apiResult);
@@ -481,7 +481,7 @@ async function _fetchAndProcessJobDetails(jobCiphertext) {
 
 // NEW: Processing function for talent profiles
 async function _fetchAndProcessTalentProfile(profileCiphertext) {
-  const apiResult = await UpworkAPI.fetchTalentProfileWithTokenRotation(profileCiphertext);
+  const apiResult = await UpworkAPI.fetchTalentProfile(profileCiphertext);
 
   if (apiResult.error) {
     console.error('MV2: Failed to fetch talent profile.', apiResult);
