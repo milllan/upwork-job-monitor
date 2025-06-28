@@ -100,7 +100,7 @@ async function _executeGraphQLQuery(bearerToken, endpointAlias, query, variables
       return data; // Success
     } catch (parsingError) {
       console.warn(`Response text that failed parsing: ${responseBodyText.substring(0, 500)}`);
-      return { error: true, type: 'parsing', details: { message: parsingError.message } };
+      return { error: true, type: 'parsing', details: { message: parsingError.message, body: responseBodyText.substring(0, 500) } };
     }
   } catch (error) {
     return { error: true, type: 'network', details: { message: error.message } };
