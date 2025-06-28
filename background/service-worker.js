@@ -495,4 +495,6 @@ async function _fetchAndProcessTalentProfile(profileCiphertext) {
 }
 
 setupAlarms();
-runJobCheck(); // Perform an initial job check as soon as the extension loads.
+// Defer the initial run to ensure all modules are loaded and initialized,
+// preventing a race condition where UpworkAPI might not be defined yet.
+setTimeout(() => runJobCheck(), 0);

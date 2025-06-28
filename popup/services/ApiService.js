@@ -33,8 +33,11 @@ class ApiService {
       this.appState.setCachedJobDetails(jobCiphertext, response.jobDetails);
       return response.jobDetails;
     } else {
-      console.error('ApiService: Failed to get job details from background', response?.error);
-      throw new Error(response?.error || 'Failed to fetch job details');
+      console.error(
+        'ApiService: Failed to get job details from background:',
+        response?.message || response
+      );
+      throw new Error(response?.message || 'An unknown error occurred in the background script.');
     }
   }
 

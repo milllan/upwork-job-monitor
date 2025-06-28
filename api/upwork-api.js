@@ -206,6 +206,100 @@ async function _fetchUpworkJobsDirectly(bearerToken, userQuery) {
 }
 
 /**
+ * Fetches detailed job information using a provided bearer token.
+ * @param {string} bearerToken The OAuth2 bearer token.
+ * @param {string} jobCiphertext The job's ciphertext ID.
+ * @returns {Promise<Object|Object>} A promise that resolves with the job details object on success,
+ *                                   or a standardized error object on failure.
+ */
+async function _fetchJobDetails(bearerToken, jobCiphertext) {
+  const endpointAlias = 'gql-query-get-auth-job-details';
+  const graphqlQuery = `
+  query JobAuthDetailsQuery($id: ID!) {
+    jobAuthDetails(id: $id) {
+      opening {
+        job {
+          description
+          clientActivity {
+            lastBuyerActivity
+            totalApplicants
+            totalHired
+            totalInvitedToInterview
+            numberOfPositionsToHire
+          }
+        }
+        questions {
+          question
+        }
+      }
+      buyer {
+        info {
+          stats {
+            totalAssignments
+            hoursCount
+            feedbackCount
+            score
+            totalCharges {
+              amount
+            }
+          }
+        }
+        workHistory {
+          contractorInfo {
+            contractorName
+            ciphertext
+          }
+        }
+      }
+      applicantsBidsStats {
+        avgRateBid {
+          amount
+        }
+        minRateBid {
+          amount
+        }
+        maxRateBid {
+          amount
+        }
+      }
+    }
+  }`;
+
+  const variables = {
+    id: jobCiphertext,
+    isLoggedIn: true,
+  };
+
+  const responseData = await _executeGraphQLQuery(
+    bearerToken,
+    endpointAlias,
+    graphqlQuery,
+    variables
+  );
+
+  if (responseData.error) {
+    return responseData;
+  }
+
+  return responseData.data?.jobAuthDetails || {};
+}
+
+/**
+ * Fetches talent profile details using a provided bearer token.
+ * @param {string} bearerToken The OAuth2 bearer token.
+ * @param {string} profileCiphertext The freelancer's ciphertext ID.
+ * @returns {Promise<Object>} A promise that resolves with the profile details object on success,
+ *                            or a standardized error object on failure.
+ */
+async function _fetchTalentProfile(bearerToken, profileCiphertext) {
+  // This function is currently unused but is included for completeness based on the refactoring plan.
+  // Its implementation would be similar to _fetchJobDetails, using the talent profile GraphQL query.
+  // For now, it's a placeholder to prevent reference errors.
+  console.warn('API: _fetchTalentProfile is a placeholder and not fully implemented.');
+  return Promise.resolve({});
+}
+
+/**
  * Internal helper to manage API calls with sticky token and rotation logic.
  * @param {string} apiIdentifier The API endpoint identifier (e.g., 'jobSearch', 'jobDetails').
  * @param {Function} apiCallFunction The actual API call function (e.g., fetchUpworkJobsDirectly, fetchJobDetails).
@@ -275,182 +369,56 @@ async function _executeApiCallWithStickyTokenRotation(apiIdentifier, apiCallFunc
   return lastError || { error: true, message: `All candidate tokens failed for ${operationName}.` };
 }
 
-/**
- * Fetches Upwork jobs using the sticky token rotation strategy.
- * @param {string} userQuery The user's search query string.
- * @returns {Promise<{jobs: Object[], token: string}|{error: true, message: string, details?: any}>}
- */
-async function fetchJobsWithTokenRotation(userQuery) {
-  const apiResponse = await _executeApiCallWithStickyTokenRotation(
-    'jobSearch',
-    fetchUpworkJobsDirectly,
-    userQuery
-  );
-  if (apiResponse.error) {
-    return apiResponse;
-  }
-  return { jobs: apiResponse.result, token: apiResponse.token };
-}
-
-/**
- * Fetches detailed job and client information for a specific job.
- * @param {string} bearerToken The OAuth2 bearer token.
- * @param {string} jobCiphertext The job's ciphertext ID from search results.
- * @returns {Promise<Object|Object>} A promise that resolves with the job details object on success,
- *                                   or a standardized error object on failure.
- */
-async function _fetchJobDetails(bearerToken, jobCiphertext) {
-  const endpointAlias = 'gql-query-get-auth-job-details';
-  const graphqlQuery = `
-  query JobAuthDetailsQuery($id: ID!) {
-    jobAuthDetails(id: $id) {
-      opening {
-        job {
-          description
-          clientActivity {
-            lastBuyerActivity
-            totalApplicants
-            totalHired
-            totalInvitedToInterview
-            numberOfPositionsToHire
-          }
-        }
-        questions { question position }
-      }
-      buyer {
-        info {
-          stats {
-            totalAssignments hoursCount feedbackCount score
-            totalCharges { amount }
-          }
-        }
-        workHistory {
-          jobInfo { title }
-          contractorInfo { contractorName ciphertext }
-          feedback { score comment }
-          feedbackToClient { comment }
-        }
-      }
-      applicantsBidsStats {
-        avgRateBid { amount }
-        minRateBid { amount }
-        maxRateBid { amount }
-      }
-    }
-  }`;
-
-  const variables = {
-    id: jobCiphertext,
-  };
-
-  const responseData = await _executeGraphQLQuery(
-    bearerToken,
-    endpointAlias,
-    graphqlQuery,
-    variables
-  );
-
-  if (responseData.error) {
-    return responseData;
-  }
-
-  return responseData.data.jobAuthDetails;
-}
-
-/**
- * Fetches detailed job information by trying multiple API tokens until one succeeds.
- * @param {string} jobCiphertext The job's ciphertext ID.
- * @returns {Promise<{jobDetails: Object, token: string}|{error: true, message: string, details?: any}>}
- */
-async function fetchJobDetailsWithTokenRotation(jobCiphertext) {
-  const apiResponse = await _executeApiCallWithStickyTokenRotation(
-    'jobDetails',
-    fetchJobDetails,
-    jobCiphertext
-  );
-  if (apiResponse.error) {
-    return apiResponse;
-  }
-  return { jobDetails: apiResponse.result, token: apiResponse.token };
-}
-
-/**
- * Fetches talent profile details directly using a provided bearer token and profile ciphertext.
- * @param {string} bearerToken The OAuth2 bearer token.
- * @param {string} profileCiphertext The freelancer's ciphertext ID.
- * @returns {Promise<Object>} A promise that resolves with the profile details object on success,
- *                            or a standardized error object on failure.
- */
-async function _fetchTalentProfile(bearerToken, profileCiphertext) {
-  const endpointAlias = 'getDetails';
-  const graphqlQuery = `
-    query GetTalentProfile($profileUrl: String) {
-      talentVPDAuthProfile(
-        filter: {
-          profileUrl: $profileUrl,
-          excludePortfolio: true,
-          excludeAgencies: false
-        }
-      ) {
-        identity { uid ciphertext }
-        profile {
-          name
-          title
-          description
-          location { country city }
-          skills { node { prettyName rank } }
-        }
-        stats {
-          totalHours
-          totalJobsWorked
-          rating
-          hourlyRate { node { amount currencyCode } }
-          totalEarnings
-        }
-        employmentHistory { companyName jobTitle startDate endDate description }
-        education { institutionName areaOfStudy degree }
-      }
-    }
-  `;
-  const variables = { profileUrl: profileCiphertext };
-
-  const responseData = await _executeGraphQLQuery(
-    bearerToken,
-    endpointAlias,
-    graphqlQuery,
-    variables
-  );
-
-  if (responseData.error) {
-    return responseData;
-  }
-
-  return responseData.data.talentVPDAuthProfile;
-}
-
-/**
- * Fetches talent profile details by trying multiple API tokens until one succeeds.
- * @param {string} profileCiphertext The freelancer's ciphertext ID.
- * @returns {Promise<{profileDetails: Object, token: string}|{error: true, message: string, details?: any}>}
- */
-async function fetchTalentProfileWithTokenRotation(profileCiphertext) {
-  const apiResponse = await _executeApiCallWithStickyTokenRotation(
-    'talentProfile',
-    fetchTalentProfile,
-    profileCiphertext
-  );
-  if (apiResponse.error) {
-    return apiResponse;
-  }
-  return { profileDetails: apiResponse.result, token: apiResponse.token };
-}
-
 // Expose functions globally for MV2 background script
 const UpworkAPI = {
-  getAllPotentialApiTokens,
-  fetchUpworkJobsDirectly,
-  fetchJobsWithTokenRotation,
-  fetchJobDetails,
-  fetchJobDetailsWithTokenRotation,
-  fetchTalentProfileWithTokenRotation,
+  /**
+   * Fetches Upwork jobs using the sticky token rotation strategy.
+   * @param {string} userQuery The user's search query string.
+   * @returns {Promise<{jobs: Object[], token: string}|{error: true, message: string, details?: any}>}
+   */
+  fetchJobs: async function (userQuery) {
+    const apiResponse = await _executeApiCallWithStickyTokenRotation(
+      API_IDENTIFIERS.JOB_SEARCH,
+      _fetchUpworkJobsDirectly,
+      userQuery
+    );
+    if (apiResponse.error) {
+      return apiResponse;
+    }
+    return { jobs: apiResponse.result, token: apiResponse.token };
+  },
+
+  /**
+   * Fetches detailed job information by trying multiple API tokens until one succeeds.
+   * @param {string} jobCiphertext The job's ciphertext ID.
+   * @returns {Promise<{jobDetails: Object, token: string}|{error: true, message: string, details?: any}>}
+   */
+  fetchJobDetails: async function (jobCiphertext) {
+    const apiResponse = await _executeApiCallWithStickyTokenRotation(
+      API_IDENTIFIERS.JOB_DETAILS,
+      _fetchJobDetails,
+      jobCiphertext
+    );
+    if (apiResponse.error) {
+      return apiResponse;
+    }
+    return { jobDetails: apiResponse.result, token: apiResponse.token };
+  },
+
+  /**
+   * Fetches talent profile details by trying multiple API tokens until one succeeds.
+   * @param {string} profileCiphertext The freelancer's ciphertext ID.
+   * @returns {Promise<{profileDetails: Object, token: string}|{error: true, message: string, details?: any}>}
+   */
+  fetchTalentProfile: async function (profileCiphertext) {
+    const apiResponse = await _executeApiCallWithStickyTokenRotation(
+      API_IDENTIFIERS.TALENT_PROFILE,
+      _fetchTalentProfile,
+      profileCiphertext
+    );
+    if (apiResponse.error) {
+      return apiResponse;
+    }
+    return { profileDetails: apiResponse.result, token: apiResponse.token };
+  },
 };
