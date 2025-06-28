@@ -258,7 +258,74 @@ async function _handleApiTokenFailure(errorResult, context, options = {}) {
   await _sendPopupUpdateMessage();
 }
 
-// --- MODIFIED Main Job Checking Logic ---
+/**
+ * Contains the core logic for a single job check run.
+ * This function is called by the `runJobCheck` orchestrator.
+ * @param {string} triggeredByUserQuery - A specific query from a user action, or null/undefined.
+ */
+async function _performJobCheckLogic(triggeredByUserQuery) {
+  console.log('MV2: Attempting runJobCheck (Direct Background with token loop)...');
+  await StorageManager.setMonitorStatus('Checking...');
+
+  const userQueryToUse =
+    triggeredByUserQuery ||
+    (await StorageManager.getCurrentUserQuery()) ||
+    config.DEFAULT_USER_QUERY;
+
+  const apiResult = await UpworkAPI.fetchJobsWithTokenRotation(userQueryToUse);
+
+  if (apiResult.error) {
+    console.error('MV2: Failed to fetch jobs after trying all tokens.', apiResult);
+    // The options object is not strictly needed here but keeps the pattern consistent.
+    await _handleApiTokenFailure(apiResult, 'jobSearch', {});
+    return; // Exit the logic flow on failure
+  }
+
+  let fetchedJobs = apiResult.jobs;
+
+  // Apply client-side title exclusion and skill-based low-priority marking
+  if (fetchedJobs && fetchedJobs.length > 0) {
+    const originalJobCount = fetchedJobs.length;
+    const processedJobsResult = _applyClientSideFilters(fetchedJobs);
+    fetchedJobs = processedJobsResult.processedJobs;
+    console.log(
+      `MV2: Processed ${originalJobCount} jobs. Marked ${processedJobsResult.titleExcludedCount} as excluded by title. Marked ${processedJobsResult.skillLowPriorityCount} as low-priority by skill. Marked ${processedJobsResult.clientCountryLowPriorityCount} as low-priority by client country.`
+    );
+  }
+
+  // Deduplication, Notification, and Collapsed ID Management
+  const historicalSeenJobIds = await StorageManager.getSeenJobIds();
+  const deletedJobIds = await StorageManager.getDeletedJobIds();
+  const currentCollapsedJobIds = await StorageManager.getCollapsedJobIds();
+
+  const processResult = await _processAndNotifyNewJobs(
+    fetchedJobs,
+    historicalSeenJobIds,
+    deletedJobIds,
+    currentCollapsedJobIds
+  );
+
+  console.log(
+    `MV2 DirectBG: Token Loop. Found ${processResult.allNewOrUpdatedJobsCount} new/updated jobs, ${processResult.notifiableNewJobsCount} are notifiable.`
+  );
+
+  // Update storage
+  await _updateStorageAfterCheck(
+    processResult.notifiableNewJobsCount,
+    fetchedJobs,
+    processResult.updatedCollapsedJobIds,
+    deletedJobIds
+  );
+
+  // Send message to popup
+  await _sendPopupUpdateMessage();
+}
+
+/**
+ * Orchestrates the job checking process, ensuring it doesn't run concurrently.
+ * This function acts as a gatekeeper and error handler for the core logic.
+ * @param {string} triggeredByUserQuery - A query from a user action, if any.
+ */
 async function runJobCheck(triggeredByUserQuery) {
   if (isJobCheckRunning) {
     console.log('MV2: runJobCheck - Job check already in progress. Skipping this run.');
@@ -268,61 +335,13 @@ async function runJobCheck(triggeredByUserQuery) {
   isJobCheckRunning = true;
 
   try {
-    console.log('MV2: Attempting runJobCheck (Direct Background with token loop)...');
-    await StorageManager.setMonitorStatus('Checking...');
-
-    const userQueryToUse =
-      triggeredByUserQuery ||
-      (await StorageManager.getCurrentUserQuery()) ||
-      config.DEFAULT_USER_QUERY;
-
-    const apiResult = await UpworkAPI.fetchJobsWithTokenRotation(userQueryToUse);
-
-    if (apiResult.error) {
-      console.error('MV2: Failed to fetch jobs after trying all tokens.', apiResult);
-      // The options object is not strictly needed here but keeps the pattern consistent.
-      await _handleApiTokenFailure(apiResult, 'jobSearch', {});
-      return;
-    }
-
-    let fetchedJobs = apiResult.jobs;
-
-    // Apply client-side title exclusion and skill-based low-priority marking
-    if (fetchedJobs && fetchedJobs.length > 0) {
-      const originalJobCount = fetchedJobs.length;
-      const processedJobsResult = _applyClientSideFilters(fetchedJobs);
-      fetchedJobs = processedJobsResult.processedJobs;
-      console.log(
-        `MV2: Processed ${originalJobCount} jobs. Marked ${processedJobsResult.titleExcludedCount} as excluded by title. Marked ${processedJobsResult.skillLowPriorityCount} as low-priority by skill. Marked ${processedJobsResult.clientCountryLowPriorityCount} as low-priority by client country.`
-      );
-    }
-
-    // Deduplication, Notification, and Collapsed ID Management
-    const historicalSeenJobIds = await StorageManager.getSeenJobIds();
-    const deletedJobIds = await StorageManager.getDeletedJobIds();
-    const currentCollapsedJobIds = await StorageManager.getCollapsedJobIds();
-
-    const processResult = await _processAndNotifyNewJobs(
-      fetchedJobs,
-      historicalSeenJobIds,
-      deletedJobIds,
-      currentCollapsedJobIds
-    );
-
-    console.log(
-      `MV2 DirectBG: Token Loop. Found ${processResult.allNewOrUpdatedJobsCount} new/updated jobs, ${processResult.notifiableNewJobsCount} are notifiable.`
-    );
-
-    // Update storage
-    await _updateStorageAfterCheck(
-      processResult.notifiableNewJobsCount,
-      fetchedJobs,
-      processResult.updatedCollapsedJobIds,
-      deletedJobIds
-    );
-
-    // Send message to popup
-    await _sendPopupUpdateMessage();
+    // Delegate the core logic to the new helper function
+    await _performJobCheckLogic(triggeredByUserQuery);
+  } catch (error) {
+    // Catch any unexpected errors from the logic function
+    console.error('MV2: An unexpected error occurred during the job check process:', error);
+    await StorageManager.setMonitorStatus('Error. Check console.');
+    await _sendPopupUpdateMessage(); // Notify popup of the error status
   } finally {
     isJobCheckRunning = false;
     console.log('MV2: runJobCheck finished. isJobCheckRunning set to false.');
