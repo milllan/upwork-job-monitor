@@ -490,7 +490,7 @@ async function _fetchAndProcessTalentProfile(profileCiphertext) {
   const apiResult = await UpworkAPI.fetchTalentProfile(profileCiphertext);
 
   if (apiResult && !apiResult.error) {
-    return { profileDetails: apiResult.profileDetails };
+    return apiResult;
   } else {
     console.error('MV2: Failed to fetch talent profile.', apiResult);
     if (apiResult.type === 'http' && apiResult.details.status === 403) {
