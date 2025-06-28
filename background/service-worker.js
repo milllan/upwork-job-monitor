@@ -3,7 +3,7 @@ console.log('Background Script MV2 loaded - Dynamic Token Attempt.');
 // --- WebRequest Listener to Modify Headers ---
 
 // Helper function to upsert (update or insert) a header in a requestHeaders array
-function upsertHeader(headers, name, value) {
+/*function upsertHeader(headers, name, value) {
   const lowerName = name.toLowerCase();
   const index = headers.findIndex((h) => h.name.toLowerCase() === lowerName);
   if (index > -1) {
@@ -48,7 +48,7 @@ browser.webRequest.onBeforeSendHeaders.addListener(
   },
   { urls: [config.TARGET_GRAPHQL_URL_PATTERN] },
   ['blocking', 'requestHeaders']
-);
+);*/
 
 let isJobCheckRunning = false; // Flag to prevent concurrent runs
 
@@ -274,7 +274,7 @@ async function _performJobCheckLogic(triggeredByUserQuery) {
 
   const apiResult = await UpworkAPI.fetchJobs(userQueryToUse);
 
-// On success, apiResult is an object like { jobs: [...] }. On failure, it has an .error property.
+  // On success, apiResult is an object like { jobs: [...] }. On failure, it has an .error property.
   if (apiResult.error) {
     console.error('MV2: Failed to fetch jobs after trying all tokens.', apiResult);
     // The options object is not strictly needed here but keeps the pattern consistent.
@@ -380,6 +380,7 @@ browser.alarms.onAlarm.addListener(async (alarm) => {
     await runJobCheck();
   }
 });
+
 async function sendNotification(job) {
   // Made async
   const jobUrl = `https://www.upwork.com/jobs/${job.ciphertext || job.id}`;
@@ -395,9 +396,9 @@ async function sendNotification(job) {
   };
   try {
     await browser.notifications.create(jobUrl, notificationOptions);
-    // Play notification sound
-    const audio = new Audio(browser.runtime.getURL('audio/notification.mp3'));
-    audio.play().catch((e) => console.warn('MV2: Error playing notification sound:', e));
+    // Play notification sound using the persistent audio element
+    // The call is now cleaner and abstracted
+    AudioService.playSound();
   } catch (e) {
     console.error('MV2: Error creating notification:', e);
   }

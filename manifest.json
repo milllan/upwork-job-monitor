@@ -18,6 +18,7 @@
       "utils.js",
       "storage/storage-manager.js",
       "api/upwork-api.js",
+      "background/audio-service.js",
       "background/service-worker.js"
     ],
     "persistent": true
