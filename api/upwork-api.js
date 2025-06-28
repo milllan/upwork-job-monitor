@@ -227,13 +227,14 @@ async function _executeApiCallWithStickyTokenRotation(apiIdentifier, apiCallFunc
     return { error: true, message: `No candidate API tokens found for ${operationName}.` };
   }
 
+  let lastError = null; // Store the last seen error
   for (const token of candidateTokens) {
     const result = await apiCallFunction(token, ...params);
     if (result && !result.error) {
       await StorageManager.setApiEndpointToken(apiIdentifier, token);
       return { result, token: token };
     } else if (result && result.error) {
-      // --- Start of Updated Error Logging ---
+      lastError = result; // Keep track of the last error
       const tokenSnippet = `token ${token.substring(0, 15)}`;
       const { type, details = {} } = result;
       switch (type) {
@@ -260,11 +261,12 @@ async function _executeApiCallWithStickyTokenRotation(apiIdentifier, apiCallFunc
         default:
           console.warn(`API: An unknown error occurred with ${tokenSnippet} for ${operationName}`);
       }
-      // --- End of Updated Error Logging ---
     }
   }
 
-  return { error: true, message: `All candidate tokens failed for ${operationName}.` };
+  console.error(`API: All candidate tokens failed for ${operationName} (${apiIdentifier}).`);
+  // **THIS IS THE KEY CHANGE FOR ISSUE #13**
+  return lastError || { error: true, message: `All candidate tokens failed for ${operationName}.` };
 }
 
 /**

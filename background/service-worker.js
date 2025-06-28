@@ -1,4 +1,4 @@
-// background.js (Manifest V2 - Dynamic Token Attempt)
+// background/service-worker.js (Manifest V2 - Dynamic Token Attempt)
 console.log('Background Script MV2 loaded - Dynamic Token Attempt.');
 // --- WebRequest Listener to Modify Headers ---
 
@@ -144,7 +144,6 @@ async function _processAndNotifyNewJobs(
       !job.isLowPriorityByClientCountry &&
       job.applied !== true
   );
-
   const newJobIdsToMarkSeen = [];
   fetchedJobs.forEach((job) => {
     if (job && job.id && !historicalSeenJobIds.has(job.id)) {
@@ -162,11 +161,9 @@ async function _processAndNotifyNewJobs(
     }
   });
   await StorageManager.addSeenJobIds(newJobIdsToMarkSeen);
-
   if (notifiableNewJobs.length > 0) {
     notifiableNewJobs.forEach((job) => sendNotification(job));
   }
-
   return {
     allNewOrUpdatedJobsCount: allNewOrUpdatedJobs.length,
     notifiableNewJobsCount: notifiableNewJobs.length,
@@ -213,12 +210,59 @@ async function _updateStorageAfterCheck(
   await StorageManager.setCollapsedJobIds(Array.from(updatedCollapsedJobIds)); // Save updated collapsed IDs
 }
 
-// --- Main Job Checking Logic (runJobCheck) ---
+// --- MODIFIED Helper Function for Smart Error Handling ---
+/**
+ * Handles API failures, providing specific user feedback and actions.
+ * Opens a relevant Upwork tab ONLY on authentication-related errors (HTTP 403).
+ * @param {object} errorResult - The error object from the API call.
+ * @param {string} context - The context of the API call ('jobSearch', 'jobDetails', 'talentProfile').
+ * @param {object} [options={}] - Context-specific options.
+ * @param {string} [options.ciphertext] - The ciphertext ID for details/profile calls.
+ */
+async function _handleApiTokenFailure(errorResult, context, options = {}) {
+  const isAuthFailure = errorResult.type === 'http' && errorResult.details?.status === 403;
+
+  if (isAuthFailure) {
+    await StorageManager.setMonitorStatus('Authentication failed. Please log in to Upwork.');
+    let recoveryUrl = config.UPWORK_DOMAIN;
+
+    // Build context-specific recovery URL
+    switch (context) {
+      case 'jobSearch':
+        recoveryUrl = `${config.UPWORK_DOMAIN}/nx/find-work/`;
+        break;
+      case 'jobDetails':
+        if (options.ciphertext) {
+          recoveryUrl = `${config.UPWORK_DOMAIN}/jobs/${options.ciphertext}`;
+        }
+        break;
+      case 'talentProfile':
+        if (options.ciphertext) {
+          recoveryUrl = `${config.UPWORK_DOMAIN}/freelancers/${options.ciphertext}`;
+        }
+        break;
+    }
+
+    try {
+      await browser.tabs.create({ url: recoveryUrl });
+    } catch (e) {
+      console.warn(`MV2: Error trying to open recovery tab for ${context}:`, e);
+    }
+  } else {
+    // For other errors (network, parsing, server errors), just update the status.
+    const errorMessage = `API Error: ${errorResult.type || 'Unknown'}. Check console.`;
+    await StorageManager.setMonitorStatus(errorMessage);
+  }
+
+  // Notify the popup that the state has changed
+  await _sendPopupUpdateMessage();
+}
+
+// --- MODIFIED Main Job Checking Logic ---
 async function runJobCheck(triggeredByUserQuery) {
   if (isJobCheckRunning) {
     console.log('MV2: runJobCheck - Job check already in progress. Skipping this run.');
-    // Optionally, update status to indicate it's busy, though the existing "Checking..." from the ongoing run might suffice.
-    // await StorageManager.setMonitorStatus("Busy, check in progress...");
+    await StorageManager.setMonitorStatus('Busy, check in progress...');
     return;
   }
   isJobCheckRunning = true;
@@ -227,47 +271,27 @@ async function runJobCheck(triggeredByUserQuery) {
     console.log('MV2: Attempting runJobCheck (Direct Background with token loop)...');
     await StorageManager.setMonitorStatus('Checking...');
 
-    // Use the passed query or get from storage
     const userQueryToUse =
       triggeredByUserQuery ||
-      (await StorageManager.getCurrentUserQuery()) || // Use StorageManager
-      config.DEFAULT_USER_QUERY; // Use config object
-
-    console.log('MV2: Using query for check:', userQueryToUse);
+      (await StorageManager.getCurrentUserQuery()) ||
+      config.DEFAULT_USER_QUERY;
 
     const apiResult = await UpworkAPI.fetchJobsWithTokenRotation(userQueryToUse);
 
-    let fetchedJobs = null;
-    // let successfulToken = null; // This variable is assigned but its value is never read.
-
-    if (apiResult && !apiResult.error) {
-      fetchedJobs = apiResult.jobs;
-      // successfulToken = apiResult.token;
-    } else {
-      console.error('MV2: Failed to fetch jobs after trying all tokens.', apiResult?.message);
-      await StorageManager.setMonitorStatus(
-        "Authentication failed. Please ensure you are logged into Upwork in another tab and then click 'Check Now."
-      );
-      // Open Upwork search page to help re-establish tokens
-      try {
-        const searchUrl = constructUpworkSearchURL(
-          userQueryToUse,
-          config.DEFAULT_CONTRACTOR_TIERS_GQL,
-          config.DEFAULT_SORT_CRITERIA
-        );
-        await browser.tabs.create({ url: searchUrl });
-        await _sendPopupUpdateMessage(); // Notify popup of error state
-      } catch (e) {
-        console.warn('MV2: Error trying to open tab or send updatePopupDisplay message:', e);
-      }
-      return; // Exit runJobCheck; 'finally' block will execute before returning
+    if (apiResult.error) {
+      console.error('MV2: Failed to fetch jobs after trying all tokens.', apiResult);
+      // The options object is not strictly needed here but keeps the pattern consistent.
+      await _handleApiTokenFailure(apiResult, 'jobSearch', {});
+      return;
     }
+
+    let fetchedJobs = apiResult.jobs;
 
     // Apply client-side title exclusion and skill-based low-priority marking
     if (fetchedJobs && fetchedJobs.length > 0) {
-      const originalJobCount = fetchedJobs.length; // Store original count before processing
+      const originalJobCount = fetchedJobs.length;
       const processedJobsResult = _applyClientSideFilters(fetchedJobs);
-      fetchedJobs = processedJobsResult.processedJobs; // Update fetchedJobs with processed ones
+      fetchedJobs = processedJobsResult.processedJobs;
       console.log(
         `MV2: Processed ${originalJobCount} jobs. Marked ${processedJobsResult.titleExcludedCount} as excluded by title. Marked ${processedJobsResult.skillLowPriorityCount} as low-priority by skill. Marked ${processedJobsResult.clientCountryLowPriorityCount} as low-priority by client country.`
       );
@@ -276,7 +300,7 @@ async function runJobCheck(triggeredByUserQuery) {
     // Deduplication, Notification, and Collapsed ID Management
     const historicalSeenJobIds = await StorageManager.getSeenJobIds();
     const deletedJobIds = await StorageManager.getDeletedJobIds();
-    const currentCollapsedJobIds = await StorageManager.getCollapsedJobIds(); // Get current collapsed IDs
+    const currentCollapsedJobIds = await StorageManager.getCollapsedJobIds();
 
     const processResult = await _processAndNotifyNewJobs(
       fetchedJobs,
@@ -305,11 +329,8 @@ async function runJobCheck(triggeredByUserQuery) {
   }
 }
 
-// --- Test Function, onInstalled, Alarms, Notifications, onMessage (remain the same) ---
-// async function testFetchJobs() {
-//   console.log("MV2: Running testFetchJobs (Direct Background Attempt)...");
-//   await runJobCheck();
-// }
+// --- Initial Setup and Alarm Creation ---
+// Initialize storage and set up alarms on install/update
 
 browser.runtime.onInstalled.addListener(async (details) => {
   // Made async
@@ -347,9 +368,8 @@ async function sendNotification(job) {
     type: 'basic',
     iconUrl: 'icons/icon48.png',
     title: 'New Upwork Job!',
-    message: budgetString && budgetString !== 'N/A'
-      ? `${job.title}\nBudget: ${budgetString}`
-      : job.title,
+    message:
+      budgetString && budgetString !== 'N/A' ? `${job.title}\nBudget: ${budgetString}` : job.title,
     priority: 2,
   };
   try {
@@ -372,33 +392,43 @@ browser.notifications.onClicked.addListener(async (notificationId) => {
   }
 });
 
-// --- Message Handlers ---
+// --- MODIFIED Message Handlers ---
 
 async function _handleManualCheck(request) {
   const queryFromPopup = request.userQuery || config.DEFAULT_USER_QUERY;
   await StorageManager.setCurrentUserQuery(queryFromPopup);
-  await runJobCheck(queryFromPopup);
+  await runJobCheck(queryFromPopup); // This now has the smart error handler
   return { status: 'Manual check initiated and processing.' };
 }
 
+// MODIFIED: This function now just calls the processing function
 async function _handleGetJobDetails(request) {
   if (!request.jobCiphertext) {
     throw new Error('jobCiphertext is required for getJobDetails action.');
   }
-  console.log('MV2: Received getJobDetails request for:', request.jobCiphertext);
-  const jobDetails = await _fetchAndProcessJobDetails(request.jobCiphertext);
-  return { jobDetails: jobDetails };
+  return await _fetchAndProcessJobDetails(request.jobCiphertext);
+}
+
+// NEW: Handler for talent profile requests
+async function _handleGetTalentProfile(request) {
+  if (!request.profileCiphertext) {
+    throw new Error('profileCiphertext is required for getTalentProfile action.');
+  }
+  return await _fetchAndProcessTalentProfile(request.profileCiphertext);
 }
 
 const messageHandlers = {
   manualCheck: _handleManualCheck,
   getJobDetails: _handleGetJobDetails,
+  getTalentProfile: _handleGetTalentProfile, // ADDED
 };
 
 browser.runtime.onMessage.addListener(async (request, _sender) => {
   const handler = messageHandlers[request.action];
   if (handler) {
     try {
+      // Await the handler and return its result directly.
+      // This correctly propagates the successful data or the error object.
       return await handler(request);
     } catch (error) {
       console.error(
@@ -406,33 +436,44 @@ browser.runtime.onMessage.addListener(async (request, _sender) => {
         error.message,
         error.stack
       );
-      return { error: `Error during ${request.action} execution: ${error.message}` };
+      return { error: true, message: `Error during ${request.action}: ${error.message}` };
     }
   } else if (request.action) {
     console.warn(`MV2: No message handler found for action: ${request.action}`);
-    return { error: `Unknown action: ${request.action}` };
   }
-  // Return true for other async messages if sendResponse is used, or let it be undefined.
-  // For the above, returning the promise from async function handles it.
 });
 
-setupAlarms();
-runJobCheck(); // Perform an initial job check as soon as the extension loads.
-
-// Renamed and adapted function to be called by the message listener
+// MODIFIED: This now contains the smart error handling logic
 async function _fetchAndProcessJobDetails(jobCiphertext) {
   const apiResult = await UpworkAPI.fetchJobDetailsWithTokenRotation(jobCiphertext);
 
-  if (apiResult && !apiResult.error) {
-    //const jobDetails = apiResult.jobDetails; // removed unused variable
-    console.log('MV2: Successfully fetched job details');
-
-    // Check if popup is open before sending
-    // This check is no longer strictly necessary here if we are directly responding to a message from the popup,
-    // as the popup must be open to have sent the message.
-    return apiResult.jobDetails;
-  } else {
-    console.error('MV2: Failed to fetch job details.', apiResult?.message);
-    throw new Error(apiResult?.message || 'Failed to fetch job details from API');
+  if (apiResult.error) {
+    console.error('MV2: Failed to fetch job details.', apiResult);
+    // On auth failure for a user-initiated action, we can open a tab and still return an error.
+    if (apiResult.type === 'http' && apiResult.details.status === 403) {
+      await _handleApiTokenFailure(apiResult, 'jobDetails', { ciphertext: jobCiphertext });
+    }
+    // Throw an error to be caught by the popup's logic and displayed in the UI.
+    throw new Error(apiResult.message || `API Error: ${apiResult.type}`);
   }
+
+  return { jobDetails: apiResult.jobDetails };
 }
+
+// NEW: Processing function for talent profiles
+async function _fetchAndProcessTalentProfile(profileCiphertext) {
+  const apiResult = await UpworkAPI.fetchTalentProfileWithTokenRotation(profileCiphertext);
+
+  if (apiResult.error) {
+    console.error('MV2: Failed to fetch talent profile.', apiResult);
+    if (apiResult.type === 'http' && apiResult.details.status === 403) {
+      await _handleApiTokenFailure(apiResult, 'talentProfile', { ciphertext: profileCiphertext });
+    }
+    throw new Error(apiResult.message || `API Error: ${apiResult.type}`);
+  }
+
+  return { profileDetails: apiResult.profileDetails };
+}
+
+setupAlarms();
+runJobCheck(); // Perform an initial job check as soon as the extension loads.
