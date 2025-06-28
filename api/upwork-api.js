@@ -100,7 +100,11 @@ async function _executeGraphQLQuery(bearerToken, endpointAlias, query, variables
       return data; // Success
     } catch (parsingError) {
       console.warn(`Response text that failed parsing: ${responseBodyText.substring(0, 500)}`);
-      return { error: true, type: 'parsing', details: { message: parsingError.message, body: responseBodyText.substring(0, 500) } };
+      return {
+        error: true,
+        type: 'parsing',
+        details: { message: parsingError.message, body: responseBodyText.substring(0, 500) },
+      };
     }
   } catch (error) {
     return { error: true, type: 'network', details: { message: error.message } };
@@ -211,6 +215,9 @@ async function _executeApiCallWithStickyTokenRotation(apiIdentifier, apiCallFunc
     if (result && !result.error) {
       return { result, token: lastKnownGoodToken };
     } else {
+      console.warn(
+        `API: Last known good token failed for ${operationName} (${apiIdentifier}). Clearing it and trying full rotation.`
+      );
       await StorageManager.setApiEndpointToken(apiIdentifier, null);
     }
   }
@@ -324,7 +331,9 @@ async function fetchJobDetails(bearerToken, jobCiphertext) {
     }
   }`;
 
-  const variables = { id: jobCiphertext };
+  const variables = {
+    id: jobCiphertext,
+  };
 
   const responseData = await _executeGraphQLQuery(
     bearerToken,
@@ -368,14 +377,33 @@ async function fetchTalentProfile(bearerToken, profileCiphertext) {
   const endpointAlias = 'getDetails';
   const graphqlQuery = `
     query GetTalentProfile($profileUrl: String) {
-      talentVPDAuthProfile(filter: { profileUrl: $profileUrl, excludePortfolio: true, excludeAgencies: false }) {
+      talentVPDAuthProfile(
+        filter: {
+          profileUrl: $profileUrl,
+          excludePortfolio: true,
+          excludeAgencies: false
+        }
+      ) {
         identity { uid ciphertext }
-        profile { name title description location { country city } skills { node { prettyName rank } } }
-        stats { totalHours totalJobsWorked rating hourlyRate { node { amount currencyCode } } totalEarnings }
+        profile {
+          name
+          title
+          description
+          location { country city }
+          skills { node { prettyName rank } }
+        }
+        stats {
+          totalHours
+          totalJobsWorked
+          rating
+          hourlyRate { node { amount currencyCode } }
+          totalEarnings
+        }
         employmentHistory { companyName jobTitle startDate endDate description }
         education { institutionName areaOfStudy degree }
       }
-    }`;
+    }
+  `;
   const variables = { profileUrl: profileCiphertext };
 
   const responseData = await _executeGraphQLQuery(
