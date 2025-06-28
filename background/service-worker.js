@@ -264,7 +264,7 @@ async function _handleApiTokenFailure(errorResult, context, options = {}) {
  * @param {string} triggeredByUserQuery - A specific query from a user action, or null/undefined.
  */
 async function _performJobCheckLogic(triggeredByUserQuery) {
-  console.log('MV2: Attempting runJobCheck (Direct Background with token loop)...');
+  console.log('MV2: Starting _performJobCheckLogic (Direct Background with token loop)...');
   await StorageManager.setMonitorStatus('Checking...');
 
   const userQueryToUse =
