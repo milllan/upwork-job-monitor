@@ -1,4 +1,4 @@
-// background.js (Manifest V2 - Dynamic Token Attempt)
+// background/service-worker.js (Manifest V2 - Dynamic Token Attempt)
 console.log('Background Script MV2 loaded - Dynamic Token Attempt.');
 // --- WebRequest Listener to Modify Headers ---
 
@@ -213,12 +213,55 @@ async function _updateStorageAfterCheck(
   await StorageManager.setCollapsedJobIds(Array.from(updatedCollapsedJobIds)); // Save updated collapsed IDs
 }
 
+// --- New Helper Function for Smart Error Handling ---
+/**
+ * Handles API failures, providing specific user feedback and actions.
+ * Opens a relevant Upwork tab ONLY on authentication-related errors (HTTP 403).
+ * @param {object} errorResult - The error object from the API call.
+ * @param {string} context - The context of the API call ('jobSearch', 'jobDetails', 'talentProfile').
+ * @param {string} [userQuery] - The user query, required for 'jobSearch' context.
+ */
+async function _handleApiTokenFailure(errorResult, context, userQuery) {
+  const isAuthFailure = errorResult.type === 'http' && errorResult.details.status === 403;
+
+  if (isAuthFailure) {
+    await StorageManager.setMonitorStatus('Authentication failed. Please log in to Upwork.');
+    let recoveryUrl = config.UPWORK_DOMAIN;
+    switch (context) {
+      case 'jobSearch':
+        recoveryUrl = constructUpworkSearchURL(
+          userQuery || config.DEFAULT_USER_QUERY,
+          config.DEFAULT_CONTRACTOR_TIERS_GQL,
+          config.DEFAULT_SORT_CRITERIA
+        );
+        break;
+      case 'jobDetails':
+        recoveryUrl = `${config.UPWORK_DOMAIN}/nx/search/jobs/`;
+        break;
+      case 'talentProfile':
+        recoveryUrl = `${config.UPWORK_DOMAIN}/nx/search/talent/`;
+        break;
+    }
+    try {
+      await browser.tabs.create({ url: recoveryUrl });
+    } catch (e) {
+      console.warn(`MV2: Error trying to open recovery tab for ${context}:`, e);
+    }
+  } else {
+    // For other errors (network, parsing, server errors), just update the status.
+    const errorMessage = `API Error: ${errorResult.type || 'Unknown'}. Check console.`;
+    await StorageManager.setMonitorStatus(errorMessage);
+  }
+
+  // Notify the popup that the state has changed
+  await _sendPopupUpdateMessage();
+}
+
 // --- Main Job Checking Logic (runJobCheck) ---
 async function runJobCheck(triggeredByUserQuery) {
   if (isJobCheckRunning) {
     console.log('MV2: runJobCheck - Job check already in progress. Skipping this run.');
-    // Optionally, update status to indicate it's busy, though the existing "Checking..." from the ongoing run might suffice.
-    // await StorageManager.setMonitorStatus("Busy, check in progress...");
+    await StorageManager.setMonitorStatus('Busy, check in progress...');
     return;
   }
   isJobCheckRunning = true;
@@ -227,47 +270,29 @@ async function runJobCheck(triggeredByUserQuery) {
     console.log('MV2: Attempting runJobCheck (Direct Background with token loop)...');
     await StorageManager.setMonitorStatus('Checking...');
 
-    // Use the passed query or get from storage
     const userQueryToUse =
       triggeredByUserQuery ||
-      (await StorageManager.getCurrentUserQuery()) || // Use StorageManager
-      config.DEFAULT_USER_QUERY; // Use config object
+      (await StorageManager.getCurrentUserQuery()) ||
+      config.DEFAULT_USER_QUERY;
 
     console.log('MV2: Using query for check:', userQueryToUse);
 
     const apiResult = await UpworkAPI.fetchJobsWithTokenRotation(userQueryToUse);
 
-    let fetchedJobs = null;
-    // let successfulToken = null; // This variable is assigned but its value is never read.
-
-    if (apiResult && !apiResult.error) {
-      fetchedJobs = apiResult.jobs;
-      // successfulToken = apiResult.token;
-    } else {
-      console.error('MV2: Failed to fetch jobs after trying all tokens.', apiResult?.message);
-      await StorageManager.setMonitorStatus(
-        "Authentication failed. Please ensure you are logged into Upwork in another tab and then click 'Check Now."
-      );
-      // Open Upwork search page to help re-establish tokens
-      try {
-        const searchUrl = constructUpworkSearchURL(
-          userQueryToUse,
-          config.DEFAULT_CONTRACTOR_TIERS_GQL,
-          config.DEFAULT_SORT_CRITERIA
-        );
-        await browser.tabs.create({ url: searchUrl });
-        await _sendPopupUpdateMessage(); // Notify popup of error state
-      } catch (e) {
-        console.warn('MV2: Error trying to open tab or send updatePopupDisplay message:', e);
-      }
-      return; // Exit runJobCheck; 'finally' block will execute before returning
+    if (apiResult.error) {
+      console.error('MV2: Failed to fetch jobs after trying all tokens.', apiResult);
+      // **THIS IS THE KEY CHANGE FOR ISSUE #13**
+      await _handleApiTokenFailure(apiResult, 'jobSearch', userQueryToUse);
+      return; // Exit runJobCheck
     }
+
+    let fetchedJobs = apiResult.jobs;
 
     // Apply client-side title exclusion and skill-based low-priority marking
     if (fetchedJobs && fetchedJobs.length > 0) {
-      const originalJobCount = fetchedJobs.length; // Store original count before processing
+      const originalJobCount = fetchedJobs.length;
       const processedJobsResult = _applyClientSideFilters(fetchedJobs);
-      fetchedJobs = processedJobsResult.processedJobs; // Update fetchedJobs with processed ones
+      fetchedJobs = processedJobsResult.processedJobs;
       console.log(
         `MV2: Processed ${originalJobCount} jobs. Marked ${processedJobsResult.titleExcludedCount} as excluded by title. Marked ${processedJobsResult.skillLowPriorityCount} as low-priority by skill. Marked ${processedJobsResult.clientCountryLowPriorityCount} as low-priority by client country.`
       );
@@ -276,7 +301,7 @@ async function runJobCheck(triggeredByUserQuery) {
     // Deduplication, Notification, and Collapsed ID Management
     const historicalSeenJobIds = await StorageManager.getSeenJobIds();
     const deletedJobIds = await StorageManager.getDeletedJobIds();
-    const currentCollapsedJobIds = await StorageManager.getCollapsedJobIds(); // Get current collapsed IDs
+    const currentCollapsedJobIds = await StorageManager.getCollapsedJobIds();
 
     const processResult = await _processAndNotifyNewJobs(
       fetchedJobs,
@@ -305,11 +330,8 @@ async function runJobCheck(triggeredByUserQuery) {
   }
 }
 
-// --- Test Function, onInstalled, Alarms, Notifications, onMessage (remain the same) ---
-// async function testFetchJobs() {
-//   console.log("MV2: Running testFetchJobs (Direct Background Attempt)...");
-//   await runJobCheck();
-// }
+// --- Initial Setup and Alarm Creation ---
+// Initialize storage and set up alarms on install/update
 
 browser.runtime.onInstalled.addListener(async (details) => {
   // Made async
@@ -347,9 +369,8 @@ async function sendNotification(job) {
     type: 'basic',
     iconUrl: 'icons/icon48.png',
     title: 'New Upwork Job!',
-    message: budgetString && budgetString !== 'N/A'
-      ? `${job.title}\nBudget: ${budgetString}`
-      : job.title,
+    message:
+      budgetString && budgetString !== 'N/A' ? `${job.title}\nBudget: ${budgetString}` : job.title,
     priority: 2,
   };
   try {
