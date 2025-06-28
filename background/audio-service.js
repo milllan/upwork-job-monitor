@@ -9,24 +9,30 @@ const AudioService = (() => {
    * A placeholder for MV3 logic is included for future migration.
    */
   function initialize() {
-    // MV3 check (will be false in your current extension)
-    if (chrome.offscreen) {
-      // Logic for MV3 would go here. For now, we do nothing.
-      console.info('AudioService: MV3 environment detected (Offscreen API available).');
+    // This function sets up the audio player. It's designed to be robust
+    // and handle the case where the script runs before the body is ready.
+    if (typeof document === 'undefined') {
+      console.error('AudioService: Cannot initialize, document is not available.');
+      return;
     }
-    // MV2 fallback
-    else if (typeof document !== 'undefined') {
-      audioPlayer = document.createElement('audio');
-      audioPlayer.src = browser.runtime.getURL('audio/notification.mp3');
-      document.body.appendChild(audioPlayer);
-      console.info(
-        'AudioService: MV2 environment detected. Initialized persistent <audio> element.'
-      );
+
+    // If the body is already available, create the player.
+    // Otherwise, wait for the DOM to be fully loaded.
+    if (document.body) {
+      _createPlayer();
     } else {
-      console.error(
-        'AudioService: Could not initialize. Neither Offscreen API nor document is available.'
-      );
+      document.addEventListener('DOMContentLoaded', _createPlayer);
     }
+  }
+
+  function _createPlayer() {
+    if (document.getElementById('notification-sound-player')) return; // Already exists
+    audioPlayer = document.createElement('audio');
+    audioPlayer.id = 'notification-sound-player';
+    audioPlayer.src = browser.runtime.getURL('audio/notification.mp3');
+    audioPlayer.preload = 'auto'; // Hint to the browser to start loading the file.
+    document.body.appendChild(audioPlayer);
+    console.info('AudioService: MV2 environment detected. Initialized persistent <audio> element.');
   }
 
   /**
@@ -43,6 +49,8 @@ const AudioService = (() => {
     // MV2 implementation (for today)
     if (audioPlayer) {
       try {
+        // Rewind the audio to the beginning to allow it to be played again.
+        audioPlayer.currentTime = 0;
         await audioPlayer.play();
       } catch (error) {
         console.warn('AudioService: Error playing notification sound:', error);
