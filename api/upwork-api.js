@@ -54,6 +54,9 @@ async function getAllPotentialApiTokens() {
         !t.name.includes('_vt')
     );
     otherPotentials.forEach((t) => candidateTokens.push(t.value));
+
+    console.log('API_DEBUG: Found candidate tokens:', candidateTokens);
+
     return [...new Set(candidateTokens)]; // Ensure uniqueness
   } catch (error) {
     console.error('API: Error getting all cookies:', error.message);
