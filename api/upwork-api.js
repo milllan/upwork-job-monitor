@@ -5,6 +5,12 @@
  */
 console.log('Upwork API module loaded.');
 
+const API_IDENTIFIERS = {
+  JOB_SEARCH: 'jobSearch',
+  JOB_DETAILS: 'jobDetails',
+  TALENT_PROFILE: 'talentProfile',
+};
+
 /**
  * Retrieves and prioritizes potential OAuth2 API tokens from cookies.
  * @returns {Promise<string[]>} A promise that resolves with an array of token strings.
@@ -112,13 +118,10 @@ async function _executeGraphQLQuery(bearerToken, endpointAlias, query, variables
 }
 
 /**
- * Fetches Upwork jobs directly using a provided bearer token and user query.
- * @param {string} bearerToken The OAuth2 bearer token.
- * @param {string} userQuery The user's search query string.
- * @returns {Promise<Object[]|Object>} A promise that resolves with an array of job objects on success,
- *                                      or a standardized error object on failure.
+ * Internal-only function to fetch Upwork jobs.
+ * @private
  */
-async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
+async function _fetchUpworkJobs(bearerToken, userQuery) {
   const endpointAlias = 'userJobSearch';
   const fullRawQueryString = `
   query UserJobSearch($requestVariables: UserJobSearchV1Request!) {
@@ -140,17 +143,15 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
       }
     }
   }`;
-
   const variables = {
     requestVariables: {
       userQuery: userQuery || config.DEFAULT_USER_QUERY,
       contractorTier: config.DEFAULT_CONTRACTOR_TIERS_GQL,
       sort: config.DEFAULT_SORT_CRITERIA,
-      highlight: false,
+      highlight: true,
       paging: { offset: 0, count: config.API_FETCH_COUNT },
     },
   };
-
   const responseData = await _executeGraphQLQuery(
     bearerToken,
     endpointAlias,
@@ -163,78 +164,173 @@ async function fetchUpworkJobsDirectly(bearerToken, userQuery) {
     return responseData;
   }
 
-  // Process successful data
-  if (responseData.data?.search?.universalSearchNuxt?.userJobSearchV1?.results) {
-    const jobsData = responseData.data.search.universalSearchNuxt.userJobSearchV1.results;
-    return jobsData.map((job) => ({
-      id: job.jobTile.job.ciphertext || job.jobTile.job.id,
-      ciphertext: job.jobTile.job.ciphertext,
-      title: job.title,
-      description: job.description,
-      postedOn: job.jobTile.job.publishTime || job.jobTile.job.createTime,
-      applied: job.applied,
-      budget: {
-        type: job.jobTile.job.jobType,
-        currencyCode: job.jobTile.job.fixedPriceAmount?.isoCurrencyCode || 'USD',
-        minAmount: job.jobTile.job.jobType.toLowerCase().includes('hourly')
-          ? job.jobTile.job.hourlyBudgetMin
-          : job.jobTile.job.fixedPriceAmount?.amount,
-        maxAmount: job.jobTile.job.jobType.toLowerCase().includes('hourly')
-          ? job.jobTile.job.hourlyBudgetMax
-          : job.jobTile.job.fixedPriceAmount?.amount,
-      },
-      client: {
-        paymentVerificationStatus: job.upworkHistoryData?.client?.paymentVerificationStatus,
-        country: job.upworkHistoryData?.client?.country,
-        totalSpent: job.upworkHistoryData?.client?.totalSpent?.amount || 0,
-        rating: job.upworkHistoryData?.client?.totalFeedback,
-      },
-      skills: job.ontologySkills
-        ? job.ontologySkills.map((skill) => ({ name: skill.prettyName || skill.prefLabel }))
-        : [],
-      _fullJobData: job, // Keep this for debugging if needed
-    }));
-  } else {
-    return [];
+  const results = responseData.data?.search?.universalSearchNuxt?.userJobSearchV1?.results;
+  if (!results) return [];
+
+  return results.map((job) => ({
+    id: job.jobTile.job.ciphertext || job.jobTile.job.id,
+    ciphertext: job.jobTile.job.ciphertext,
+    title: job.title,
+    description: job.description,
+    postedOn: job.jobTile.job.publishTime || job.jobTile.job.createTime,
+    applied: job.applied,
+    budget: {
+      type: job.jobTile.job.jobType,
+      currencyCode: job.jobTile.job.fixedPriceAmount?.isoCurrencyCode || 'USD',
+      minAmount: job.jobTile.job.jobType.toLowerCase().includes('hourly')
+        ? job.jobTile.job.hourlyBudgetMin
+        : job.jobTile.job.fixedPriceAmount?.amount,
+      maxAmount: job.jobTile.job.jobType.toLowerCase().includes('hourly')
+        ? job.jobTile.job.hourlyBudgetMax
+        : job.jobTile.job.fixedPriceAmount?.amount,
+    },
+    client: {
+      paymentVerificationStatus: job.upworkHistoryData?.client?.paymentVerificationStatus,
+      country: job.upworkHistoryData?.client?.country,
+      totalSpent: job.upworkHistoryData?.client?.totalSpent?.amount || 0,
+      rating: job.upworkHistoryData?.client?.totalFeedback,
+    },
+    skills:
+      job.ontologySkills?.map((skill) => ({ name: skill.prettyName || skill.prefLabel })) || [],
+    _fullJobData: job, // Keep this for debugging if needed
+  }));
+}
+
+/**
+ * Internal-only function to fetch job details.
+ * @private
+ */
+async function _fetchJobDetails(bearerToken, jobCiphertext) {
+  const endpointAlias = 'gql-query-get-auth-job-details';
+  const graphqlQuery = `
+  query JobAuthDetailsQuery($id: ID!) {
+    jobAuthDetails(id: $id) {
+      opening {
+        job {
+          description
+          clientActivity {
+            lastBuyerActivity
+            totalApplicants
+            totalHired
+            totalInvitedToInterview
+            numberOfPositionsToHire
+          }
+        }
+        questions {
+          question
+        }
+      }
+      buyer {
+        info {
+          stats {
+            totalAssignments
+            hoursCount
+            feedbackCount
+            score
+            totalCharges {
+              amount
+            }
+          }
+        }
+        workHistory {
+          contractorInfo {
+            contractorName
+            ciphertext
+          }
+        }
+      }
+      applicantsBidsStats {
+        avgRateBid {
+          amount
+        }
+        minRateBid {
+          amount
+        }
+        maxRateBid {
+          amount
+        }
+      }
+    }
+  }`;
+
+  const variables = {
+    id: jobCiphertext,
+    isLoggedIn: true,
+  };
+  const responseData = await _executeGraphQLQuery(
+    bearerToken,
+    endpointAlias,
+    graphqlQuery,
+    variables
+  );
+
+  if (responseData.error) {
+    return responseData;
   }
+  return responseData.data?.jobAuthDetails || {};
+}
+
+/**
+ * Internal-only function to fetch talent profile details.
+ * @private
+ */
+async function _fetchTalentProfile(bearerToken, profileCiphertext) {
+  const endpointAlias = 'getDetails';
+  const graphqlQuery = `
+    query GetTalentProfile($profileUrl: String) {
+      talentVPDAuthProfile(filter: { profileUrl: $profileUrl }) {
+        identity { uid ciphertext }
+        profile { name title description location { country city } skills { node { prettyName rank } } }
+        stats { totalHours totalJobsWorked rating hourlyRate { node { amount currencyCode } } totalEarnings }
+      }
+    }`;
+  const variables = { profileUrl: profileCiphertext };
+  const responseData = await _executeGraphQLQuery(
+    bearerToken,
+    endpointAlias,
+    graphqlQuery,
+    variables
+  );
+
+  if (responseData.error) return responseData;
+  return responseData.data?.talentVPDAuthProfile || {};
 }
 
 /**
  * Internal helper to manage API calls with sticky token and rotation logic.
- * @param {string} apiIdentifier The API endpoint identifier (e.g., 'jobSearch', 'jobDetails').
- * @param {Function} apiCallFunction The actual API call function (e.g., fetchUpworkJobsDirectly, fetchJobDetails).
- * @param {any[]} params Parameters to pass to the apiCallFunction after the token.
- * @returns {Promise<{result: any, token: string}|{error: true, message: string, details?: any}>}
+ * This version MERGES the robust error handling from the old function
+ * with the new refactored structure.
+ * @private
  */
-async function _executeApiCallWithStickyTokenRotation(apiIdentifier, apiCallFunction, ...params) {
+async function _executeApiCallWithTokenRotation(apiIdentifier, apiCallFunction, ...params) {
   const operationName = apiCallFunction.name;
-
   const lastKnownGoodToken = await StorageManager.getApiEndpointToken(apiIdentifier);
+
   if (lastKnownGoodToken) {
     const result = await apiCallFunction(lastKnownGoodToken, ...params);
     if (result && !result.error) {
-      return { result, token: lastKnownGoodToken };
-    } else {
-      console.warn(
-        `API: Last known good token failed for ${operationName} (${apiIdentifier}). Clearing it and trying full rotation.`
-      );
-      await StorageManager.setApiEndpointToken(apiIdentifier, null);
+      return { result, token: lastKnownGoodToken }; // Return consistent object
     }
+    // If the sticky token failed, clear it and proceed to full rotation.
+    await StorageManager.setApiEndpointToken(apiIdentifier, null);
   }
 
   const candidateTokens = await getAllPotentialApiTokens();
   if (!candidateTokens || candidateTokens.length === 0) {
-    return { error: true, message: `No candidate API tokens found for ${operationName}.` };
+    return { error: true, type: 'auth', details: { message: 'No candidate API tokens found.' } };
   }
 
-  let lastError = null; // Store the last seen error
+  let lastError = null; // <<<< IMPORTANT: Keep track of the last error
   for (const token of candidateTokens) {
     const result = await apiCallFunction(token, ...params);
     if (result && !result.error) {
       await StorageManager.setApiEndpointToken(apiIdentifier, token);
-      return { result, token: token };
-    } else if (result && result.error) {
-      lastError = result; // Keep track of the last error
+      return { result, token }; // Return consistent object
+    }
+
+    // --- THIS IS THE ROBUST LOGIC THAT WAS MISSING ---
+    else if (result && result.error) {
+      lastError = result; // Keep track of the specific error from the failed attempt
       const tokenSnippet = `token ${token.substring(0, 15)}`;
       const { type, details = {} } = result;
       switch (type) {
@@ -262,189 +358,66 @@ async function _executeApiCallWithStickyTokenRotation(apiIdentifier, apiCallFunc
           console.warn(`API: An unknown error occurred with ${tokenSnippet} for ${operationName}`);
       }
     }
+    // --- END OF ROBUST LOGIC ---
   }
 
   console.error(`API: All candidate tokens failed for ${operationName} (${apiIdentifier}).`);
-  // **THIS IS THE KEY CHANGE FOR ISSUE #13**
-  return lastError || { error: true, message: `All candidate tokens failed for ${operationName}.` };
-}
-
-/**
- * Fetches Upwork jobs using the sticky token rotation strategy.
- * @param {string} userQuery The user's search query string.
- * @returns {Promise<{jobs: Object[], token: string}|{error: true, message: string, details?: any}>}
- */
-async function fetchJobsWithTokenRotation(userQuery) {
-  const apiResponse = await _executeApiCallWithStickyTokenRotation(
-    'jobSearch',
-    fetchUpworkJobsDirectly,
-    userQuery
+  // Return the *last specific error* we encountered, which is much more useful than a generic message.
+  return (
+    lastError || { error: true, type: 'auth', details: { message: 'All candidate tokens failed.' } }
   );
-  if (apiResponse.error) {
-    return apiResponse;
-  }
-  return { jobs: apiResponse.result, token: apiResponse.token };
 }
 
-/**
- * Fetches detailed job and client information for a specific job.
- * @param {string} bearerToken The OAuth2 bearer token.
- * @param {string} jobCiphertext The job's ciphertext ID from search results.
- * @returns {Promise<Object|Object>} A promise that resolves with the job details object on success,
- *                                   or a standardized error object on failure.
- */
-async function fetchJobDetails(bearerToken, jobCiphertext) {
-  const endpointAlias = 'gql-query-get-auth-job-details';
-  const graphqlQuery = `
-  query JobAuthDetailsQuery($id: ID!) {
-    jobAuthDetails(id: $id) {
-      opening {
-        job {
-          description
-          clientActivity {
-            lastBuyerActivity
-            totalApplicants
-            totalHired
-            totalInvitedToInterview
-            numberOfPositionsToHire
-          }
-        }
-        questions { question position }
-      }
-      buyer {
-        info {
-          stats {
-            totalAssignments hoursCount feedbackCount score
-            totalCharges { amount }
-          }
-        }
-        workHistory {
-          jobInfo { title }
-          contractorInfo { contractorName ciphertext }
-          feedback { score comment }
-          feedbackToClient { comment }
-        }
-      }
-      applicantsBidsStats {
-        avgRateBid { amount }
-        minRateBid { amount }
-        maxRateBid { amount }
-      }
-    }
-  }`;
-
-  const variables = {
-    id: jobCiphertext,
-  };
-
-  const responseData = await _executeGraphQLQuery(
-    bearerToken,
-    endpointAlias,
-    graphqlQuery,
-    variables
-  );
-
-  if (responseData.error) {
-    return responseData;
-  }
-
-  return responseData.data.jobAuthDetails;
-}
-
-/**
- * Fetches detailed job information by trying multiple API tokens until one succeeds.
- * @param {string} jobCiphertext The job's ciphertext ID.
- * @returns {Promise<{jobDetails: Object, token: string}|{error: true, message: string, details?: any}>}
- */
-async function fetchJobDetailsWithTokenRotation(jobCiphertext) {
-  const apiResponse = await _executeApiCallWithStickyTokenRotation(
-    'jobDetails',
-    fetchJobDetails,
-    jobCiphertext
-  );
-  if (apiResponse.error) {
-    return apiResponse;
-  }
-  return { jobDetails: apiResponse.result, token: apiResponse.token };
-}
-
-/**
- * Fetches talent profile details directly using a provided bearer token and profile ciphertext.
- * @param {string} bearerToken The OAuth2 bearer token.
- * @param {string} profileCiphertext The freelancer's ciphertext ID.
- * @returns {Promise<Object>} A promise that resolves with the profile details object on success,
- *                            or a standardized error object on failure.
- */
-async function fetchTalentProfile(bearerToken, profileCiphertext) {
-  const endpointAlias = 'getDetails';
-  const graphqlQuery = `
-    query GetTalentProfile($profileUrl: String) {
-      talentVPDAuthProfile(
-        filter: {
-          profileUrl: $profileUrl,
-          excludePortfolio: true,
-          excludeAgencies: false
-        }
-      ) {
-        identity { uid ciphertext }
-        profile {
-          name
-          title
-          description
-          location { country city }
-          skills { node { prettyName rank } }
-        }
-        stats {
-          totalHours
-          totalJobsWorked
-          rating
-          hourlyRate { node { amount currencyCode } }
-          totalEarnings
-        }
-        employmentHistory { companyName jobTitle startDate endDate description }
-        education { institutionName areaOfStudy degree }
-      }
-    }
-  `;
-  const variables = { profileUrl: profileCiphertext };
-
-  const responseData = await _executeGraphQLQuery(
-    bearerToken,
-    endpointAlias,
-    graphqlQuery,
-    variables
-  );
-
-  if (responseData.error) {
-    return responseData;
-  }
-
-  return responseData.data.talentVPDAuthProfile;
-}
-
-/**
- * Fetches talent profile details by trying multiple API tokens until one succeeds.
- * @param {string} profileCiphertext The freelancer's ciphertext ID.
- * @returns {Promise<{profileDetails: Object, token: string}|{error: true, message: string, details?: any}>}
- */
-async function fetchTalentProfileWithTokenRotation(profileCiphertext) {
-  const apiResponse = await _executeApiCallWithStickyTokenRotation(
-    'talentProfile',
-    fetchTalentProfile,
-    profileCiphertext
-  );
-  if (apiResponse.error) {
-    return apiResponse;
-  }
-  return { profileDetails: apiResponse.result, token: apiResponse.token };
-}
-
-// Expose functions globally for MV2 background script
+// =================================================================================
+// PUBLIC API INTERFACE
+// =================================================================================
 const UpworkAPI = {
-  getAllPotentialApiTokens,
-  fetchUpworkJobsDirectly,
-  fetchJobsWithTokenRotation,
-  fetchJobDetails,
-  fetchJobDetailsWithTokenRotation,
-  fetchTalentProfileWithTokenRotation,
+  /**
+   * Fetches a list of jobs, handling token rotation automatically.
+   * @returns {Promise<{jobs: Object[]}|{error: boolean, ...}>}
+   */
+  fetchJobs: async (userQuery) => {
+    const response = await _executeApiCallWithTokenRotation(
+      API_IDENTIFIERS.JOB_SEARCH,
+      _fetchUpworkJobs,
+      userQuery
+    );
+    if (response.error) {
+      return response;
+    }
+    return { jobs: response.result };
+  },
+
+  /**
+   * Fetches the details for a specific job, handling token rotation automatically.
+   * @returns {Promise<{jobDetails: Object}|{error: boolean, ...}>}
+   */
+  fetchJobDetails: async (jobCiphertext) => {
+    const response = await _executeApiCallWithTokenRotation(
+      API_IDENTIFIERS.JOB_DETAILS,
+      _fetchJobDetails,
+      jobCiphertext
+    );
+    if (response.error) {
+      return response;
+    }
+    return { jobDetails: response.result };
+  },
+
+  /**
+   * Fetches the profile for a specific freelancer, handling token rotation automatically.
+   * @param {string} profileCiphertext The freelancer's ciphertext ID.
+   * @returns {Promise<{profileDetails: Object}|{error: boolean, ...}>}
+   */
+  fetchTalentProfile: async (profileCiphertext) => {
+    const response = await _executeApiCallWithTokenRotation(
+      API_IDENTIFIERS.TALENT_PROFILE,
+      _fetchTalentProfile,
+      profileCiphertext
+    );
+    if (response.error) {
+      return response;
+    }
+    return { profileDetails: response.result };
+  },
 };
