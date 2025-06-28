@@ -220,7 +220,11 @@ async function _updateStorageAfterCheck(
  * @param {string} [options.ciphertext] - The ciphertext ID for details/profile calls.
  */
 async function _handleApiTokenFailure(errorResult, context, options = {}) {
-  const isAuthFailure = errorResult.type === 'http' && errorResult.details?.status === 403;
+  // An auth failure is now defined as: no tokens found, a 403 Forbidden, or a 429 Too Many Requests.
+  const isAuthFailure =
+    errorResult.type === 'auth' ||
+    (errorResult.type === 'http' &&
+      (errorResult.details?.status === 403 || errorResult.details?.status === 429));
 
   if (isAuthFailure) {
     await StorageManager.setMonitorStatus('Authentication failed. Please log in to Upwork.');
