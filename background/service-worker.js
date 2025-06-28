@@ -222,7 +222,7 @@ async function _updateStorageAfterCheck(
  * @param {string} [userQuery] - The user query, required for 'jobSearch' context.
  */
 async function _handleApiTokenFailure(errorResult, context, userQuery) {
-  const isAuthFailure = errorResult.type === 'http' && errorResult.details.status === 403;
+const isAuthFailure = errorResult.type === 'http' && errorResult.details?.status === 403;
 
   if (isAuthFailure) {
     await StorageManager.setMonitorStatus('Authentication failed. Please log in to Upwork.');
