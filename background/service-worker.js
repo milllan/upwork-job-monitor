@@ -220,7 +220,12 @@ async function _updateStorageAfterCheck(
  * @param {string} [options.ciphertext] - The ciphertext ID for details/profile calls.
  */
 async function _handleApiTokenFailure(errorResult, context, options = {}) {
-  const isAuthFailure = errorResult.type === 'http' && errorResult.details?.status === 403;
+  // An auth failure is now defined as: no tokens found, a permissions-based GraphQL error, or specific HTTP errors.
+  const isAuthFailure =
+    errorResult.type === 'auth' ||
+    errorResult.type === 'graphql' || // A GraphQL error often indicates a permissions issue with the token.
+    (errorResult.type === 'http' && // Or an HTTP error that indicates auth issues
+      [401, 403, 429].includes(errorResult.details?.status)); // 401 Unauthorized, 403 Forbidden, 429 Too Many Requests
 
   if (isAuthFailure) {
     await StorageManager.setMonitorStatus('Authentication failed. Please log in to Upwork.');
