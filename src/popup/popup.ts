@@ -38,6 +38,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   initializeUIFromState();
   console.log('Popup: initializeUIFromState called.');
 
+  /**
+   * Updates the popup title link to point to an Upwork search URL based on the current query and default search parameters.
+   *
+   * @param currentQuery - The search query to use in the Upwork URL
+   */
   function updatePopupTitleLink(currentQuery: string): void {
     if (popupTitleLinkEl) {
       const url = constructUpworkSearchURL(
@@ -49,6 +54,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  /**
+   * Updates the popup UI to reflect the current theme by switching the stylesheet and updating the theme toggle button's icon and tooltip.
+   */
   function updateThemeUI(): void {
     const theme = appState.getTheme();
     if (!themeStylesheet || !themeToggleButton) {
@@ -66,10 +74,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  /**
+   * Updates the selected job ID in the application state.
+   *
+   * @param jobId - The ID of the job to select, or null to clear the selection
+   */
   function setSelectedJobItem(jobId: string | null): void {
     appState.setSelectedJobId(jobId);
   }
 
+  /**
+   * Updates the visual selection state of job items in the job list based on the newly selected and previously selected job IDs.
+   *
+   * @param newJobId - The job ID to mark as selected, or null to clear selection
+   * @param oldJobId - The job ID to unmark as selected, or null if none was previously selected
+   */
   function updateJobSelectionUI(newJobId: string | null, oldJobId: string | null): void {
     if (oldJobId) {
       const prevSelectedElement = recentJobsListDiv.querySelector(
@@ -90,6 +109,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  /**
+   * Updates the job details panel by fetching and displaying details for the specified job.
+   *
+   * Shows a loading state, retrieves job details asynchronously with caching, and renders them in the details panel. If fetching fails, displays an error message.
+   *
+   * @param jobCiphertext - The unique identifier for the job whose details should be displayed
+   */
   async function updateDetailsPanel(jobCiphertext: string): Promise<void> {
     if (!jobDetailsComponent) {
       return;
@@ -106,20 +132,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  /**
+   * Toggles the collapsed state of a job in the application state.
+   *
+   * @param jobId - The unique identifier of the job to toggle
+   */
   function handleJobToggle(jobId: string, _isNowCollapsed: boolean): void {
     appState.toggleJobCollapse(jobId);
   }
 
+  /**
+   * Removes a job from the application state by its ID.
+   *
+   * @param jobId - The unique identifier of the job to delete
+   */
   function handleJobDelete(jobId: string): void {
     appState.deleteJob(jobId);
   }
 
+  /**
+   * Updates the job details panel if a different job is selected.
+   *
+   * If the provided job ciphertext does not match the currently selected job, updates the details panel to display the new job's information.
+   *
+   * @param jobCiphertext - The ciphertext identifier of the job to select
+   */
   function handleJobSelect(jobCiphertext: string): void {
     if (jobCiphertext !== appState.getSelectedJobId()) {
       updateDetailsPanel(jobCiphertext);
     }
   }
 
+  /**
+   * Renders the list of recent jobs in the popup UI, updating the display based on the current app state.
+   *
+   * If no jobs are available, shows an empty state message and clears job components. Otherwise, creates and displays job item components for each visible job, selects the first non-filtered job if present, and sets up an intersection observer for prefetching job details.
+   */
   function displayRecentJobs(): void {
     console.log('Popup: displayRecentJobs called.');
     const jobsToDisplay = appState.getVisibleJobs();
@@ -170,6 +218,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     );
   }
 
+  /**
+   * Initializes the popup UI components based on the current application state.
+   *
+   * Updates the search form, popup title link, job list, status header, and theme to reflect the latest state.
+   */
   function initializeUIFromState(): void {
     console.log('Popup: Initializing UI from state.');
     const state = appState.getState();
@@ -186,6 +239,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateThemeUI();
   }
 
+  /**
+   * Handles search form submission by saving the query, updating the UI, and triggering a manual job check.
+   *
+   * Updates the current user query in the app state, refreshes the popup title link, sets the monitor status to "Checking...", and initiates a manual check via the API service. If an error occurs during the check, reloads the app state from storage.
+   *
+   * @param query - The search query entered by the user
+   */
   async function handleSearchSubmit(query: string): Promise<void> {
     appState.setCurrentUserQuery(query);
     updatePopupTitleLink(query);
@@ -224,6 +284,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  /**
+   * Sets up an IntersectionObserver to prefetch job details for visible job items in the job list.
+   *
+   * Disconnects any existing observer, then observes the provided elements. When a job item becomes visible, its details are prefetched and cached if not already available.
+   *
+   * @param elementsToObserve - The list of job item elements to observe for visibility changes
+   */
   function setupIntersectionObserver(elementsToObserve: HTMLElement[] = []): void {
     if (jobItemObserver) {
       jobItemObserver.disconnect();

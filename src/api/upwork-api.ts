@@ -16,8 +16,9 @@ const API_IDENTIFIERS = {
 };
 
 /**
- * Retrieves and prioritizes potential OAuth2 API tokens from cookies.
- * @returns {Promise<string[]>} A promise that resolves with an array of token strings.
+ * Retrieves all potential OAuth2 API tokens from Upwork cookies, prioritizing tokens likely to be active for GraphQL calls.
+ *
+ * @returns A promise that resolves to an array of unique OAuth2 token strings, ordered by likelihood of validity.
  */
 async function getAllPotentialApiTokens(): Promise<string[]> {
   try {
@@ -69,14 +70,15 @@ async function getAllPotentialApiTokens(): Promise<string[]> {
 }
 
 /**
- * Private helper to execute a generic GraphQL query against the Upwork API.
- * This centralizes fetch logic, header creation, and error handling.
- * @param {string} bearerToken The OAuth2 bearer token.
- * @param {string} endpointAlias The alias for the GraphQL endpoint (e.g., 'userJobSearch').
- * @param {string} query The GraphQL query string.
- * @param {Object} variables The variables for the GraphQL query.
- * @returns {Promise<Object>} A promise that resolves with the full GraphQL response on success,
- *                            or a standardized error object {error: true, type: '...', ...} on failure.
+ * Executes a GraphQL query against the Upwork API using the provided OAuth2 bearer token and endpoint alias.
+ *
+ * Handles HTTP, network, and parsing errors, returning a standardized error object on failure or the parsed GraphQL response on success.
+ *
+ * @param bearerToken - The OAuth2 bearer token for authentication
+ * @param endpointAlias - The alias identifying the Upwork GraphQL endpoint
+ * @param query - The GraphQL query string to execute
+ * @param variables - Variables to be used in the GraphQL query
+ * @returns The parsed GraphQL response data, or a standardized error object if the request fails
  */
 async function _executeGraphQLQuery<T>(
   bearerToken: string,
@@ -130,8 +132,11 @@ async function _executeGraphQLQuery<T>(
 }
 
 /**
- * Internal-only function to fetch Upwork jobs.
- * @private
+ * Retrieves a list of Upwork jobs matching the provided user query using the specified bearer token.
+ *
+ * @param bearerToken - The OAuth2 bearer token used for authentication
+ * @param userQuery - The search query string to filter jobs
+ * @returns An array of `Job` objects if successful, or a `GraphQLResponse` error object on failure
  */
 async function _fetchUpworkJobs(bearerToken: string, userQuery: string): Promise<Job[] | GraphQLResponse<any>> {
   const endpointAlias = 'userJobSearch';
@@ -209,8 +214,11 @@ async function _fetchUpworkJobs(bearerToken: string, userQuery: string): Promise
 }
 
 /**
- * Internal-only function to fetch job details.
- * @private
+ * Retrieves detailed information about a specific Upwork job using its ciphertext identifier.
+ *
+ * @param bearerToken - The OAuth2 bearer token for authentication
+ * @param jobCiphertext - The ciphertext identifier of the job to fetch details for
+ * @returns The job details object if found, null if not found, or a GraphQL error response on failure
  */
 async function _fetchJobDetails(bearerToken: string, jobCiphertext: string): Promise<JobDetails | null | GraphQLResponse<any>> {
   const endpointAlias = 'gql-query-get-auth-job-details';
@@ -283,8 +291,11 @@ async function _fetchJobDetails(bearerToken: string, jobCiphertext: string): Pro
 }
 
 /**
- * Internal-only function to fetch talent profile details.
- * @private
+ * Retrieves a freelancer's talent profile from Upwork using the provided profile ciphertext.
+ *
+ * @param bearerToken - The OAuth2 bearer token for authentication
+ * @param profileCiphertext - The ciphertext identifier for the freelancer's profile
+ * @returns The talent profile object if found, null if not found, or a GraphQL error response on failure
  */
 async function _fetchTalentProfile(bearerToken: string, profileCiphertext: string): Promise<TalentProfile | null | GraphQLResponse<any>> {
   const endpointAlias = 'getDetails';
@@ -309,10 +320,14 @@ async function _fetchTalentProfile(bearerToken: string, profileCiphertext: strin
 }
 
 /**
- * Internal helper to manage API calls with sticky token and rotation logic.
- * This version MERGES the robust error handling from the old function
- * with the new refactored structure.
- * @private
+ * Executes an API call with token rotation, using a sticky token if available and falling back to all candidate tokens on failure.
+ *
+ * Attempts the API call with the last known good token for the specified API identifier. If that fails, iterates through all available candidate tokens until a successful call is made or all tokens fail. On success, stores the working token for future use. Returns either the successful result with the token used, or the last encountered error response.
+ *
+ * @param apiIdentifier - Unique identifier for the API endpoint to manage sticky token storage
+ * @param apiCallFunction - The API call function to execute, which accepts a bearer token as its first argument
+ * @param params - Additional parameters to pass to the API call function
+ * @returns An object containing the successful result and token, or a structured error response if all tokens fail
  */
 async function _executeApiCallWithTokenRotation<T>(
   apiIdentifier: string,

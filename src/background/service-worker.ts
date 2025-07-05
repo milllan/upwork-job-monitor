@@ -10,10 +10,12 @@ import { formatBudget } from '../utils.js';
 let isJobCheckRunning = false; // Flag to prevent concurrent runs
 
 /**
- * Applies client-side filtering rules (title exclusion, skill/country low-priority)
- * to a list of jobs.
- * @param {Array<Object>} jobs - The array of job objects to process.
- * @returns {Object} An object containing the processed jobs and counts of filtered jobs.
+ * Applies exclusion and low-priority filters to a list of jobs based on title, skills, and client country.
+ *
+ * Jobs are flagged as excluded if their title matches any configured exclusion string, and as low priority if their skills or client country match configured low-priority terms.
+ *
+ * @param jobs - The array of jobs to filter and annotate
+ * @returns An object containing the processed jobs with filter flags and counts for each filter category
  */
 function _applyClientSideFilters(jobs: Job[]): {
   processedJobs: Job[];
@@ -83,12 +85,15 @@ function _applyClientSideFilters(jobs: Job[]): {
 }
 
 /**
- * Processes fetched jobs for deduplication, updates seen/collapsed IDs, and sends notifications.
- * @param {Array<Object>} fetchedJobs - The jobs fetched from the API, already processed by client-side filters.
- * @param {Set<string>} historicalSeenJobIds - Set of job IDs seen historically.
- * @param {Set<string>} deletedJobIds - Set of job IDs deleted by the user.
- * @param {Set<string>} currentCollapsedJobIds - Current set of collapsed job IDs.
- * @returns {Promise<Object>} An object containing counts of new/notifiable jobs and the updated collapsed job IDs.
+ * Identifies new and notifiable jobs from the fetched list, updates seen and collapsed job IDs, and sends notifications for eligible jobs.
+ *
+ * Filters out jobs that have already been seen or deleted, determines which jobs are new and notifiable (not excluded or low priority), marks new jobs as seen, updates the set of collapsed job IDs for low-priority or excluded jobs, and sends notifications for notifiable jobs.
+ *
+ * @param fetchedJobs - Jobs fetched from the API, already processed by client-side filters
+ * @param historicalSeenJobIds - Set of job IDs that have been seen previously
+ * @param deletedJobIds - Set of job IDs deleted by the user
+ * @param currentCollapsedJobIds - Current set of collapsed job IDs
+ * @returns An object containing the count of all new or updated jobs, the count of notifiable new jobs, and the updated set of collapsed job IDs
  */
 async function _processAndNotifyNewJobs(
   fetchedJobs: Job[],
@@ -155,11 +160,12 @@ async function _sendPopupUpdateMessage() {
 
 // --- Storage Update Helper ---
 /**
- * Updates various storage items after a job check.
- * @param {number} notifiableNewJobsCount - Number of new, notifiable jobs found.
- * @param {Array<Object>} fetchedJobs - All jobs fetched from the API (after client-side filtering).
- * @param {Set<string>} updatedCollapsedJobIds - The set of collapsed job IDs, including newly collapsed ones.
- * @param {Set<string>} deletedJobIds - The set of job IDs deleted by the user.
+ * Updates storage with the latest job check results, including monitor status, new job count, last check timestamp, recent jobs (excluding deleted ones), and collapsed job IDs.
+ *
+ * @param notifiableNewJobsCount - The number of new, notifiable jobs found in the latest check.
+ * @param fetchedJobs - The list of jobs fetched from the API after client-side filtering.
+ * @param updatedCollapsedJobIds - The set of collapsed job IDs to be stored.
+ * @param deletedJobIds - The set of job IDs that have been deleted by the user.
  */
 async function _updateStorageAfterCheck(
   notifiableNewJobsCount: number,
@@ -180,12 +186,13 @@ async function _updateStorageAfterCheck(
 
 // --- MODIFIED Helper Function for Smart Error Handling ---
 /**
- * Handles API failures, providing specific user feedback and actions.
- * Opens a relevant Upwork tab ONLY on authentication-related errors (HTTP 403).
- * @param {object} errorResult - The error object from the API call.
- * @param {string} context - The context of the API call ('jobSearch', 'jobDetails', 'talentProfile').
- * @param {object} [options={}] - Context-specific options.
- * @param {string} [options.ciphertext] - The ciphertext ID for details/profile calls.
+ * Handles API authentication failures and other API errors, updating monitor status and triggering user recovery actions when needed.
+ *
+ * If an authentication-related error is detected (such as missing tokens, permission errors, or specific HTTP status codes), updates the monitor status and attempts to open a relevant Upwork page in a new browser tab to prompt user re-authentication. For other API errors, updates the monitor status with a generic error message. Notifies the extension popup of the status change.
+ *
+ * @param errorResult - The error object returned from the API call
+ * @param context - The context of the API call ('jobSearch', 'jobDetails', or 'talentProfile')
+ * @param options - Optional context-specific options, such as a ciphertext ID for details or profile recovery URLs
  */
 async function _handleApiTokenFailure(
   errorResult: any,
@@ -236,9 +243,9 @@ async function _handleApiTokenFailure(
 }
 
 /**
- * Contains the core logic for a single job check run.
- * This function is called by the `runJobCheck` orchestrator.
- * @param {string} triggeredByUserQuery - A specific query from a user action, or null/undefined.
+ * Executes a single Upwork job check cycle, including fetching jobs, applying client-side filters, processing notifications, and updating storage.
+ *
+ * @param triggeredByUserQuery - An optional user-specified search query to override the default or stored query.
  */
 async function _performJobCheckLogic(triggeredByUserQuery?: string) {
   console.log('MV2: Attempting runJobCheck (Direct Background with token loop)...');
@@ -299,9 +306,9 @@ async function _performJobCheckLogic(triggeredByUserQuery?: string) {
 }
 
 /**
- * Orchestrates the job checking process, ensuring it doesn't run concurrently.
- * This function acts as a gatekeeper and error handler for the core logic.
- * @param {string} triggeredByUserQuery - A query from a user action, if any.
+ * Initiates a job check if one is not already running, handling concurrency and unexpected errors.
+ *
+ * @param triggeredByUserQuery - An optional user-provided query to override the default job search.
  */
 async function runJobCheck(triggeredByUserQuery?: string) {
   if (isJobCheckRunning) {
@@ -335,6 +342,11 @@ browser.runtime.onInstalled.addListener(async (details: any) => {
   await setupAlarms(); // Always set up alarms on install/update
 });
 
+/**
+ * Ensures that a periodic alarm for job fetching is set up, creating it if it does not already exist.
+ *
+ * Uses configuration values for the alarm name and interval.
+ */
 async function setupAlarms() {
   // Made async
   try {
@@ -356,6 +368,11 @@ browser.alarms.onAlarm.addListener(async (alarm: any) => {
   }
 });
 
+/**
+ * Displays a browser notification for a new Upwork job and plays a notification sound.
+ *
+ * The notification includes the job title and budget if available.
+ */
 async function sendNotification(job: Job) {
   // Made async
   const jobUrl = `https://www.upwork.com/jobs/${job.ciphertext || job.id}`;
@@ -389,7 +406,13 @@ browser.notifications.onClicked.addListener(async (notificationId: string) => {
   }
 });
 
-// --- MODIFIED Message Handlers ---
+/**
+ * Handles a manual job check request from the extension popup.
+ *
+ * Sets the current user query based on the request or default configuration, initiates a job check, and returns a status message.
+ *
+ * @returns An object indicating that the manual check has been initiated.
+ */
 
 async function _handleManualCheck(request: any) {
   const queryFromPopup = request.userQuery || config.DEFAULT_USER_QUERY;
@@ -398,7 +421,11 @@ async function _handleManualCheck(request: any) {
   return { status: 'Manual check initiated and processing.' };
 }
 
-// MODIFIED: This function now just calls the processing function
+/**
+ * Handles a request to retrieve job details by validating input and delegating to the job details fetcher.
+ *
+ * @returns The job details object or a GraphQL error response.
+ */
 async function _handleGetJobDetails(request: any) {
   if (!request.jobCiphertext) {
     throw new Error('jobCiphertext is required for getJobDetails action.');
@@ -406,7 +433,11 @@ async function _handleGetJobDetails(request: any) {
   return await _fetchAndProcessJobDetails(request.jobCiphertext);
 }
 
-// NEW: Handler for talent profile requests
+/**
+ * Handles requests to retrieve a talent profile by validating input and fetching profile details.
+ *
+ * @returns The talent profile details or an error response if retrieval fails.
+ */
 async function _handleGetTalentProfile(request: any) {
   if (!request.profileCiphertext) {
     throw new Error('profileCiphertext is required for getTalentProfile action.');
@@ -440,7 +471,14 @@ browser.runtime.onMessage.addListener(async (request: any, _sender: any) => {
   }
 });
 
-// MODIFIED: This now contains the smart error handling logic
+/**
+ * Fetches detailed information for a job using its ciphertext, handling API errors and authentication failures.
+ *
+ * If the API returns an authentication error (HTTP 403), triggers token recovery logic. Returns either the job details or a GraphQL error response.
+ *
+ * @param jobCiphertext - The encrypted identifier for the job to fetch details for
+ * @returns An object containing the job details, or a GraphQL error response if the fetch fails
+ */
 async function _fetchAndProcessJobDetails(jobCiphertext: string): Promise<{ jobDetails: JobDetails | null } | GraphQLResponse<any>> {
   const apiResult = await UpworkAPI.fetchJobDetails(jobCiphertext);
 
@@ -463,7 +501,15 @@ async function _fetchAndProcessJobDetails(jobCiphertext: string): Promise<{ jobD
   return apiResult;
 }
 
-// NEW: Processing function for talent profiles
+/**
+ * Fetches and processes a talent profile from the Upwork API using the provided ciphertext.
+ *
+ * If the API response indicates an authentication failure, triggers token recovery handling.
+ * Returns the talent profile details or a GraphQL error response.
+ *
+ * @param profileCiphertext - The encrypted identifier for the talent profile to fetch.
+ * @returns An object containing the talent profile details, or a GraphQL error response if the fetch fails.
+ */
 async function _fetchAndProcessTalentProfile(
   profileCiphertext: string
 ): Promise<{ profileDetails: TalentProfile | null } | GraphQLResponse<any>> {

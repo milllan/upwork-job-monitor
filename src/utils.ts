@@ -4,11 +4,12 @@
 type Tier = 'EntryLevel' | 'IntermediateLevel' | 'ExpertLevel';
 
 /**
- * Constructs a direct Upwork job search URL.
- * @param {string} userQuery The raw search query string.
- * @param {Tier[]} contractorTiersGraphQL Array of GQL contractor tier strings (e.g., ["IntermediateLevel", "ExpertLevel"]).
- * @param {string} sortBy Sort criteria (e.g., "recency", "relevance").
- * @returns {string} The constructed Upwork search URL.
+ * Builds a URL for searching Upwork jobs with the specified query, contractor tiers, and sort order.
+ *
+ * @param userQuery - The search keywords to use in the Upwork job search
+ * @param contractorTiersGraphQL - Array of contractor tier identifiers to filter results (e.g., "EntryLevel", "ExpertLevel")
+ * @param sortBy - The sorting criterion for the search results (e.g., "recency", "relevance")
+ * @returns The complete Upwork job search URL with applied filters and sorting
  */
 function constructUpworkSearchURL(userQuery: string, contractorTiersGraphQL: Tier[], sortBy: string): string {
   const baseURL = 'https://www.upwork.com/nx/search/jobs/';
@@ -36,9 +37,10 @@ function constructUpworkSearchURL(userQuery: string, contractorTiersGraphQL: Tie
 }
 
 /**
- * Converts a date to a string like "x minutes ago".
- * @param {string|Date|number} dateInput The date to convert.
- * @returns {string} A string representing the time ago.
+ * Returns a human-readable string representing how much time has passed since the given date.
+ *
+ * @param dateInput - The date or timestamp to convert
+ * @returns A relative time string such as "just now", "x sec ago", "x min ago", "x hr ago", or "x days ago". Returns "N/A" if input is missing, or "Invalid Date" if the input is not a valid date.
  */
 function timeAgo(dateInput: string | Date | number): string {
   if (!dateInput) {
@@ -77,10 +79,12 @@ function timeAgo(dateInput: string | Date | number): string {
 }
 
 /**
- * Formats client information into an HTML string for display in a job item.
- * This function generates HTML directly, intended for use with element.innerHTML.
- * @param {object} client The client object from a job.
- * @returns {string} The formatted HTML string for client info.
+ * Generates an HTML string summarizing client information for display in a job listing.
+ *
+ * Includes the client's country, rating (with styling for high ratings), total spent (with styling for high spenders), and a warning icon if payment is not verified. Returns a fallback string if client data is missing.
+ *
+ * @param client - The client object containing country, rating, total spent, and payment verification status
+ * @returns An HTML string representing the formatted client information
  */
 function formatClientInfo(client: any): string {
   let clientInfo = 'Client info N/A';
@@ -110,9 +114,10 @@ function formatClientInfo(client: any): string {
 }
 
 /**
- * Formats a list of skills into a display string.
- * @param {Array<object>} skills An array of skill objects, each with a 'name' property.
- * @returns {string} The formatted skills string (e.g., "Skills: Skill1, Skill2, Skill3...").
+ * Formats up to three skill names from a list into a display string, appending an ellipsis if more skills exist.
+ *
+ * @param skills - Array of skill objects with a `name` property
+ * @returns A string listing up to three skills, or an empty string if none are provided
  */
 function formatSkills(skills: { name: string }[]): string {
   if (!skills || skills.length === 0) {
@@ -131,12 +136,12 @@ function formatSkills(skills: { name: string }[]): string {
 // export { constructUpworkSearchURL, timeAgo, formatBudget, formatClientInfo, formatSkills };
 
 /**
- * Formats a job budget object into a display string.
- * @param {object} budget The budget object from a job.
- * @param {string} [budget.type] The type of job (e.g., 'HOURLY').
- * @param {number|string} [budget.minAmount] The minimum budget amount.
- * @param {number|string} [budget.maxAmount] The maximum budget amount.
- * @returns {string} The formatted budget string (e.g., "$20 - $40/hr", "$500").
+ * Formats a job budget into a human-readable string for display.
+ *
+ * Converts hourly budgets to a range or single value with "/hr" suffix, and fixed-price budgets to a range or single value. Returns "N/A" if budget data is missing or invalid.
+ *
+ * @param budget - The job budget object, which may include type, minAmount, and maxAmount.
+ * @returns The formatted budget string, such as "20 - 40/hr", "500", or "N/A".
  */
 function formatBudget(budget: { type?: string; minAmount?: number | string; maxAmount?: number | string }): string {
   if (!budget) {
@@ -178,10 +183,12 @@ function formatBudget(budget: { type?: string; minAmount?: number | string; maxA
 }
 
 /**
- * Initializes scroll hint shadows for a scrollable list within a container.
- * A top shadow appears when scrolled down, and a bottom shadow disappears when scrolled to the end.
- * @param {HTMLElement} containerEl The container element that will have the pseudo-elements for shadows.
- * @param {HTMLElement} listEl The scrollable list element inside the container.
+ * Sets up dynamic shadow hints on a scrollable list container to indicate scroll position.
+ *
+ * Adds or removes CSS classes on the container element based on the scroll position of the list, showing a top shadow when scrolled down and hiding the bottom shadow when scrolled to the end. Does nothing if either element is missing.
+ *
+ * @param containerEl - The container element that will display scroll hint shadows
+ * @param listEl - The scrollable list element inside the container
  */
 function initializeScrollHints(containerEl: HTMLElement, listEl: HTMLElement) {
   if (!containerEl || !listEl) {
