@@ -1,5 +1,6 @@
 /* exported constructUpworkSearchURL, timeAgo, formatClientInfo, formatSkills, formatBudget, initializeScrollHints */
 // utils.ts
+import { Job } from './types.js';
 
 type Tier = 'EntryLevel' | 'IntermediateLevel' | 'ExpertLevel';
 
@@ -82,20 +83,20 @@ function timeAgo(dateInput: string | Date | number): string {
  * @param {object} client The client object from a job.
  * @returns {string} The formatted HTML string for client info.
  */
-function formatClientInfo(client: any): string {
+function formatClientInfo(client: Job['client'] | undefined): string {
   let clientInfo = 'Client info N/A';
   if (client) {
     clientInfo = `Client: ${client.country || 'N/A'}`;
 
     // Client Rating
-    if (client.rating !== null) {
-      const rating = parseFloat(client.rating);
+    if (client.rating !== null && client.rating !== undefined) {
+      const rating = client.rating;
       const ratingClass = rating >= 4.9 ? ' job-item__client-rating--positive' : '';
       clientInfo += ` | <span class="job-item__client-rating${ratingClass}" title="Client Rating">Rating: ${rating.toFixed(2)}</span>`;
     }
 
     // Client Total Spent
-    if (client.totalSpent !== null && Number(client.totalSpent) > 0) {
+    if (client.totalSpent && Number(client.totalSpent) > 0) {
       const spentAmount = Number(client.totalSpent);
       const spentClass = spentAmount > 10000 ? ' job-item__client-spent--positive' : ''; // Threshold for high spender
       clientInfo += ` | <span class="job-item__client-spent${spentClass}" title="Client Spend">Spent: ${spentAmount.toFixed(0)}</span>`;

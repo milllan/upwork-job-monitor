@@ -2,9 +2,8 @@ import { StorageManager } from '../../storage/storage-manager.js';
 import { config } from '../../background/config.js';
 
 // Define interfaces for state and other complex types
-import { Job, JobDetails as JobDetailsType } from '../../types.js';
-
-interface JobDetail extends JobDetailsType {}
+import { Job, JobDetails } from '../../types.js';
+import { JobItem } from '../components/JobItem.js';
 
 interface State {
   theme: 'light' | 'dark';
@@ -15,15 +14,19 @@ interface State {
   lastCheckTimestamp: number | null;
   currentUserQuery: string;
   jobs: Job[];
-  jobDetailsCache: Map<string, { data: JobDetail; timestamp: number }>;
-  jobComponents: Map<string, any>; // Consider a more specific component type
+  jobDetailsCache: Map<string, { data: JobDetails; timestamp: number }>;
+  jobComponents: Map<string, JobItem>;
   cacheExpiryMs: number;
 }
 
+type StateListener = (newState: State, prevState: State) => void;
+type SelectorListener<T> = (newValue: T, prevValue: T) => void;
+
 export class AppState {
   private state: State;
-  private listeners: Set<(newState: State, prevState: State) => void> = new Set();
-  private selectorListeners: Map<keyof State, Set<(newValue: any, prevValue: any) => void>> = new Map();
+  private listeners: Set<StateListener> = new Set();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- This is an internal implementation detail to work around TypeScript's variance limitations with generics. The public `subscribeToSelector` method enforces strict typing.
+  private selectorListeners: Map<keyof State, Set<SelectorListener<any>>> = new Map();
   private debouncedSave: () => void;
 
   constructor() {
@@ -52,8 +55,7 @@ export class AppState {
 
   setState(updates: Partial<State>, options: { skipPersistence?: boolean } = {}): void {
     const prevState = { ...this.state };
-    const processedUpdates = this._processStateUpdates(updates);
-    this.state = { ...this.state, ...processedUpdates };
+    this.state = { ...this.state, ...updates };
     this._notifyListeners(this.state, prevState);
 
     if (!options.skipPersistence) {
@@ -63,14 +65,14 @@ export class AppState {
     console.log('AppState: State updated', { updates, newState: this.state });
   }
 
-  subscribe(listener: (newState: State, prevState: State) => void): () => void {
+  subscribe(listener: StateListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
 
   subscribeToSelector<K extends keyof State>(
     selector: K,
-    listener: (newValue: State[K], prevValue: State[K]) => void
+    listener: SelectorListener<State[K]>
   ): () => void {
     if (!this.selectorListeners.has(selector)) {
       this.selectorListeners.set(selector, new Set());
@@ -122,7 +124,7 @@ export class AppState {
     return [...this.state.jobs];
   }
 
-  getJobComponents(): Map<string, any> {
+  getJobComponents(): Map<string, JobItem> {
     return new Map(this.state.jobComponents);
   }
 
@@ -183,7 +185,7 @@ export class AppState {
 
   // === Job Details Cache Management ===
 
-  getCachedJobDetails(ciphertext: string): JobDetail | null {
+  getCachedJobDetails(ciphertext: string): JobDetails | null {
     const cached = this.state.jobDetailsCache.get(ciphertext);
     if (!cached) {
       return null;
@@ -199,7 +201,7 @@ export class AppState {
     return cached.data;
   }
 
-  setCachedJobDetails(ciphertext: string, data: JobDetail): void {
+  setCachedJobDetails(ciphertext: string, data: JobDetails): void {
     const jobDetailsCache = new Map(this.state.jobDetailsCache);
     jobDetailsCache.set(ciphertext, { data, timestamp: Date.now() });
     this.setState({ jobDetailsCache }, { skipPersistence: true });
@@ -207,7 +209,7 @@ export class AppState {
 
   // === Component Management ===
 
-  setJobComponent(jobId: string, component: any): void {
+  setJobComponent(jobId: string, component: JobItem): void {
     const jobComponents = new Map(this.state.jobComponents);
     jobComponents.set(jobId, component);
     this.setState({ jobComponents }, { skipPersistence: true });
@@ -273,21 +275,6 @@ export class AppState {
 
   // === Private Methods ===
 
-  private _processStateUpdates(updates: Partial<State>): Partial<State> {
-    const processed: Partial<State> = {};
-    for (const key in updates) {
-      const value = updates[key as keyof State];
-      if (value instanceof Set) {
-        (processed as any)[key] = new Set(value);
-      } else if (value instanceof Map) {
-        (processed as any)[key] = new Map(value);
-      } else {
-        (processed as any)[key] = value;
-      }
-    }
-    return processed;
-  }
-
   private _notifyListeners(newState: State, prevState: State): void {
     this.listeners.forEach((listener) => {
       try {
@@ -301,7 +288,7 @@ export class AppState {
       const newValue = newState[selector];
       const prevValue = prevState[selector];
 
-      if (this._hasSelectorChanged(selector, newValue, prevValue)) {
+      if (this._hasSelectorChanged(newValue, prevValue)) {
         listeners.forEach((listener) => {
           try {
             listener(newValue, prevValue);
@@ -313,7 +300,7 @@ export class AppState {
     });
   }
 
-  private _hasSelectorChanged(selector: keyof State, newValue: any, prevValue: any): boolean {
+  private _hasSelectorChanged(newValue: unknown, prevValue: unknown): boolean {
     if (newValue !== prevValue) {
       if (newValue instanceof Set && prevValue instanceof Set) {
         return !this._areSetsEqual(newValue, prevValue);
@@ -326,7 +313,7 @@ export class AppState {
     return false;
   }
 
-  private _areSetsEqual(set1: Set<any>, set2: Set<any>): boolean {
+  private _areSetsEqual(set1: Set<unknown>, set2: Set<unknown>): boolean {
     if (set1.size !== set2.size) {
       return false;
     }
@@ -338,7 +325,7 @@ export class AppState {
     return true;
   }
 
-  private _areMapsEqual(map1: Map<any, any>, map2: Map<any, any>): boolean {
+  private _areMapsEqual(map1: Map<unknown, unknown>, map2: Map<unknown, unknown>): boolean {
     if (map1.size !== map2.size) {
       return false;
     }
@@ -363,9 +350,9 @@ export class AppState {
     }
   }
 
-  private _debounce(func: (...args: any[]) => void, wait: number): () => void {
+  private _debounce(func: (...args: unknown[]) => void, wait: number): () => void {
     let timeout: NodeJS.Timeout;
-    return function executedFunction(...args: any[]) {
+    return function executedFunction(...args: unknown[]) {
       const later = () => {
         clearTimeout(timeout);
         func(...args);

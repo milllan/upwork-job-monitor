@@ -63,8 +63,9 @@ async function getAllPotentialApiTokens(): Promise<string[]> {
     console.log('API_DEBUG: Found candidate tokens:', candidateTokens);
 
     return [...new Set(candidateTokens)]; // Ensure uniqueness
-  } catch (error: any) {
-    console.error('API: Error getting all cookies:', error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error getting cookies';
+    console.error('API: Error getting all cookies:', message);
     return [];
   }
 }
@@ -83,7 +84,7 @@ async function _executeGraphQLQuery<T>(
   bearerToken: string,
   endpointAlias: string,
   query: string,
-  variables: any
+  variables: Record<string, unknown>
 ): Promise<GraphQLResponse<T>> {
   const endpoint = `${config.UPWORK_GRAPHQL_ENDPOINT_BASE}?alias=${endpointAlias}`;
   const graphqlPayload = { query, variables };
@@ -117,16 +118,18 @@ async function _executeGraphQLQuery<T>(
         return { error: true, type: 'graphql', details: { errors: data.errors } };
       }
       return data; // Success
-    } catch (parsingError: any) {
+    } catch (parsingError: unknown) {
+      const message = parsingError instanceof Error ? parsingError.message : 'Unknown parsing error';
       console.warn(`Response text that failed parsing: ${responseBodyText.substring(0, 500)}`);
       return {
         error: true,
         type: 'parsing',
-        details: { message: parsingError.message, body: responseBodyText.substring(0, 500) },
+        details: { message, body: responseBodyText.substring(0, 500) },
       };
     }
-  } catch (error: any) {
-    return { error: true, type: 'network', details: { message: error.message } };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown network error';
+    return { error: true, type: 'network', details: { message } };
   }
 }
 
@@ -134,7 +137,49 @@ async function _executeGraphQLQuery<T>(
  * Internal-only function to fetch Upwork jobs.
  * @private
  */
-async function _fetchUpworkJobs(bearerToken: string, userQuery: string): Promise<Job[] | GraphQLResponse<any>> {
+
+interface RawUpworkJob {
+  id: string;
+  title: string;
+  description: string;
+  applied: boolean;
+  ontologySkills?: { prettyName?: string; prefLabel?: string }[];
+  jobTile: {
+    job: {
+      id: string;
+      ciphertext: string;
+      publishTime: string;
+      createTime: string;
+      jobType: string;
+      hourlyBudgetMin?: number;
+      hourlyBudgetMax?: number;
+      fixedPriceAmount?: { amount: number; isoCurrencyCode: string };
+    };
+  };
+  upworkHistoryData?: {
+    client?: {
+      paymentVerificationStatus: string;
+      country: string;
+      totalSpent?: { amount: number };
+      totalFeedback: number;
+    };
+  };
+}
+
+interface UserJobSearchResponse {
+  search: {
+    universalSearchNuxt: {
+      userJobSearchV1: {
+        results: RawUpworkJob[];
+      };
+    };
+  };
+}
+
+async function _fetchUpworkJobs(
+  bearerToken: string,
+  userQuery: string
+): Promise<Job[] | GraphQLResponse<unknown>> {
   const endpointAlias = 'userJobSearch';
   const fullRawQueryString = `
   query UserJobSearch($requestVariables: UserJobSearchV1Request!) {
@@ -165,7 +210,7 @@ async function _fetchUpworkJobs(bearerToken: string, userQuery: string): Promise
       paging: { offset: 0, count: config.API_FETCH_COUNT },
     },
   };
-  const responseData = await _executeGraphQLQuery<{ search: any }>(
+  const responseData = await _executeGraphQLQuery<UserJobSearchResponse>(
     bearerToken,
     endpointAlias,
     fullRawQueryString,
@@ -178,9 +223,9 @@ async function _fetchUpworkJobs(bearerToken: string, userQuery: string): Promise
   }
 
   const results = responseData.data?.search?.universalSearchNuxt?.userJobSearchV1?.results;
-  if (!results) return [];
+  if (!results) {return [];}
 
-  return results.map((job: any): Job => ({
+  return results.map((job: RawUpworkJob): Job => ({
     id: job.jobTile.job.ciphertext || job.jobTile.job.id,
     ciphertext: job.jobTile.job.ciphertext,
     title: job.title,
@@ -190,22 +235,22 @@ async function _fetchUpworkJobs(bearerToken: string, userQuery: string): Promise
     budget: {
       type: job.jobTile.job.jobType,
       currencyCode: job.jobTile.job.fixedPriceAmount?.isoCurrencyCode || 'USD',
-      minAmount: job.jobTile.job.jobType.toLowerCase().includes('hourly')
+      minAmount: (job.jobTile.job.jobType.toLowerCase().includes('hourly')
         ? job.jobTile.job.hourlyBudgetMin
-        : job.jobTile.job.fixedPriceAmount?.amount,
-      maxAmount: job.jobTile.job.jobType.toLowerCase().includes('hourly')
+        : job.jobTile.job.fixedPriceAmount?.amount) || 0,
+      maxAmount: (job.jobTile.job.jobType.toLowerCase().includes('hourly')
         ? job.jobTile.job.hourlyBudgetMax
-        : job.jobTile.job.fixedPriceAmount?.amount,
+        : job.jobTile.job.fixedPriceAmount?.amount) || 0,
     },
     client: {
-      paymentVerificationStatus: job.upworkHistoryData?.client?.paymentVerificationStatus,
-      country: job.upworkHistoryData?.client?.country,
+      paymentVerificationStatus: job.upworkHistoryData?.client?.paymentVerificationStatus || 'N/A',
+      country: job.upworkHistoryData?.client?.country || 'N/A',
       totalSpent: job.upworkHistoryData?.client?.totalSpent?.amount || 0,
-      rating: job.upworkHistoryData?.client?.totalFeedback,
+      rating: job.upworkHistoryData?.client?.totalFeedback || null,
     },
     skills:
-      job.ontologySkills?.map((skill: any) => ({ name: skill.prettyName || skill.prefLabel })) || [],
-    _fullJobData: job, // Keep this for debugging if needed
+      job.ontologySkills?.map((skill) => ({ name: skill.prettyName || skill.prefLabel || '' })) || [],
+    _fullJobData: job as unknown as Record<string, unknown>, // Keep this for debugging if needed
   }));
 }
 
@@ -213,7 +258,10 @@ async function _fetchUpworkJobs(bearerToken: string, userQuery: string): Promise
  * Internal-only function to fetch job details.
  * @private
  */
-async function _fetchJobDetails(bearerToken: string, jobCiphertext: string): Promise<JobDetails | null | GraphQLResponse<any>> {
+async function _fetchJobDetails(
+  bearerToken: string,
+  jobCiphertext: string
+): Promise<JobDetails | null | GraphQLResponse<unknown>> {
   const endpointAlias = 'gql-query-get-auth-job-details';
   const graphqlQuery = `
   query JobAuthDetailsQuery($id: ID!) {
@@ -287,7 +335,10 @@ async function _fetchJobDetails(bearerToken: string, jobCiphertext: string): Pro
  * Internal-only function to fetch talent profile details.
  * @private
  */
-async function _fetchTalentProfile(bearerToken: string, profileCiphertext: string): Promise<TalentProfile | null | GraphQLResponse<any>> {
+async function _fetchTalentProfile(
+  bearerToken: string,
+  profileCiphertext: string
+): Promise<TalentProfile | null | GraphQLResponse<unknown>> {
   const endpointAlias = 'getDetails';
   const graphqlQuery = `
     query GetTalentProfile($profileUrl: String) {
@@ -305,7 +356,7 @@ async function _fetchTalentProfile(bearerToken: string, profileCiphertext: strin
     variables
   );
 
-  if (responseData.error) return responseData;
+  if (responseData.error) {return responseData;}
   return responseData.data?.talentVPDAuthProfile || null;
 }
 
@@ -317,9 +368,10 @@ async function _fetchTalentProfile(bearerToken: string, profileCiphertext: strin
  */
 async function _executeApiCallWithTokenRotation<T>(
   apiIdentifier: string,
-  apiCallFunction: (...args: any[]) => Promise<T>,
-  ...params: any[]
-): Promise<{ result: T; token: string } | GraphQLResponse<any>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  apiCallFunction: (bearerToken: string, ...args: any[]) => Promise<T>,
+  ...params: unknown[]
+): Promise<{ result: T; token: string } | GraphQLResponse<unknown>> {
   const operationName = apiCallFunction.name;
   const lastKnownGoodToken = await StorageManager.getApiEndpointToken(apiIdentifier);
 
@@ -337,7 +389,7 @@ async function _executeApiCallWithTokenRotation<T>(
     return { error: true, type: 'auth', details: { message: 'No candidate API tokens found.' } };
   }
 
-  let lastError: GraphQLResponse<any> | null = null; // <<<< IMPORTANT: Keep track of the last error
+  let lastError: GraphQLResponse<unknown> | null = null; // <<<< IMPORTANT: Keep track of the last error
   for (const token of candidateTokens) {
     const result = await apiCallFunction(token, ...params);
     if (result && !isGraphQLResponse(result)) {
@@ -401,7 +453,7 @@ const UpworkAPI = {
    * Fetches a list of jobs, handling token rotation automatically.
    * @returns {Promise<{jobs: Job[]}|GraphQLResponse<any>>}
    */
-  fetchJobs: async (userQuery: string): Promise<{ jobs: Job[] } | GraphQLResponse<any>> => {
+  fetchJobs: async (userQuery: string): Promise<{ jobs: Job[] } | GraphQLResponse<unknown>> => {
     const response = await _executeApiCallWithTokenRotation(
       API_IDENTIFIERS.JOB_SEARCH,
       _fetchUpworkJobs,
@@ -417,7 +469,9 @@ const UpworkAPI = {
    * Fetches the details for a specific job, handling token rotation automatically.
    * @returns {Promise<{jobDetails: JobDetails | null}|GraphQLResponse<any>>}
    */
-  fetchJobDetails: async (jobCiphertext: string): Promise<{ jobDetails: JobDetails | null } | GraphQLResponse<any>> => {
+  fetchJobDetails: async (
+    jobCiphertext: string
+  ): Promise<{ jobDetails: JobDetails | null } | GraphQLResponse<unknown>> => {
     const response = await _executeApiCallWithTokenRotation(
       API_IDENTIFIERS.JOB_DETAILS,
       _fetchJobDetails,
@@ -434,7 +488,9 @@ const UpworkAPI = {
    * @param {string} profileCiphertext The freelancer's ciphertext ID.
    * @returns {Promise<{profileDetails: TalentProfile | null}|GraphQLResponse<any>>}
    */
-  fetchTalentProfile: async (profileCiphertext: string): Promise<{ profileDetails: TalentProfile | null } | GraphQLResponse<any>> => {
+  fetchTalentProfile: async (
+    profileCiphertext: string
+  ): Promise<{ profileDetails: TalentProfile | null } | GraphQLResponse<unknown>> => {
     const response = await _executeApiCallWithTokenRotation(
       API_IDENTIFIERS.TALENT_PROFILE,
       _fetchTalentProfile,

@@ -18,10 +18,10 @@ export interface Job {
         paymentVerificationStatus: string;
         country: string;
         totalSpent: number;
-        rating: number;
+        rating: number | null;
     };
     skills: { name: string }[];
-    _fullJobData: any;
+    _fullJobData: Record<string, unknown>;
     isExcludedByTitleFilter?: boolean;
     isLowPriorityBySkill?: boolean;
     isLowPriorityByClientCountry?: boolean;
@@ -111,12 +111,14 @@ export interface TalentProfile {
 
 export interface GraphQLResponse<T> {
     data?: T;
-    errors?: any[];
+    errors?: Record<string, unknown>[];
     error?: boolean;
     type?: string;
-    details?: any;
+    details?: Record<string, unknown>;
 }
 
-export function isGraphQLResponse<T>(response: any): response is GraphQLResponse<T> {
-    return response && typeof response === 'object' && typeof response.error === 'boolean';
+export function isGraphQLResponse<T>(response: unknown): response is GraphQLResponse<T> {
+    return (
+        response !== null && typeof response === 'object' && 'error' in response && typeof response.error === 'boolean'
+    );
 }

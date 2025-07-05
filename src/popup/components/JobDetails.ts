@@ -39,7 +39,7 @@ export class JobDetails {
     this.container.innerHTML = '<div class="details-panel__loading">Loading details...</div>';
   }
 
-  showError(error: any): void {
+  showError(error: unknown): void {
     const errorMessage = error instanceof Error ? error.message : String(error);
     this.container.innerHTML = `<p class="details-panel__error">Failed to load job details: ${errorMessage}. Please try again later.</p>`;
   }
@@ -48,7 +48,7 @@ export class JobDetails {
     this.container.innerHTML = `<p class="details-panel__no-jobs">${message}</p>`;
   }
 
-  render(details: any): void {
+  render(details: JobDetailsType | null): void {
     if (!details) {
       this.showInitialMessage('No details available for this job.');
       return;
@@ -145,7 +145,7 @@ export class JobDetails {
     this.container.appendChild(clone);
   }
 
-  private _prepareViewModel(details: any): JobDetailsViewModel {
+  private _prepareViewModel(details: JobDetailsType): JobDetailsViewModel {
     const vm: JobDetailsViewModel = {
       clientJobsPosted: null,
       clientHours: null,
@@ -211,7 +211,7 @@ export class JobDetails {
     const workHistory = details?.buyer?.workHistory || [];
     if (workHistory.length > 0) {
       const contractors = new Map<string, string>();
-      workHistory.forEach((h: any) => {
+      workHistory.forEach((h) => {
         const info = h.contractorInfo;
         if (info && info.contractorName && info.ciphertext && !contractors.has(info.ciphertext)) {
           contractors.set(info.ciphertext, info.contractorName);
@@ -224,7 +224,7 @@ export class JobDetails {
     }
 
     const questions = details?.opening?.questions || [];
-    vm.questions = questions.map((q: any) => q.question);
+    vm.questions = questions.map((q) => q.question);
 
     const jobDescription = details?.opening?.job?.description;
     if (jobDescription && jobDescription.trim().length > 0) {

@@ -12,8 +12,8 @@
     "lib": "lib"
   },
   "scripts": {
-    "lint": "eslint . --ext .js",
-    "lint:fix": "eslint . --ext .js --fix",
+    "lint": "eslint . --ext .js,.ts",
+    "lint:fix": "eslint . --ext .js,.ts --fix",
     "format": "prettier --write \"**/*.{js,json,html,css,md}\"",
     "type-check": "tsc --noEmit",
     "clean": "shx rm -rf dist",

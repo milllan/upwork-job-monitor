@@ -31,7 +31,7 @@ interface JobItemViewModel {
 export class JobItem {
   private jobData: Job;
   private options: JobItemOptions;
-  private element: HTMLElement | null = null;
+  public element: HTMLElement | null = null;
   private viewModel: JobItemViewModel | null = null;
 
   constructor(jobData: Job, options: Partial<JobItemOptions> = {}) {
@@ -92,7 +92,7 @@ export class JobItem {
   }
 
   private _attachEventListeners(): void {
-    if (!this.element) return;
+    if (!this.element) {return;}
 
     const toggleButton = this.element.querySelector('.job-item__toggle');
     if (toggleButton) {
@@ -117,7 +117,7 @@ export class JobItem {
   }
 
   private _updateElement(): void {
-    if (!this.element) return;
+    if (!this.element) {return;}
 
     this.viewModel = this._prepareViewModel();
     this._populateFromViewModel();
@@ -126,18 +126,17 @@ export class JobItem {
 
   private _prepareViewModel(): JobItemViewModel {
     const job = this.jobData;
-    const isLowPriority =
-      (job as any).isLowPriorityBySkill || (job as any).isLowPriorityByClientCountry;
+    const isLowPriority = job.isLowPriorityBySkill || job.isLowPriorityByClientCountry;
 
     let priorityTagText = '';
-    if ((job as any).isExcludedByTitleFilter) {
+    if (job.isExcludedByTitleFilter) {
       priorityTagText = 'Filtered';
-    } else if ((job as any).isLowPriorityByClientCountry && job.client && job.client.country) {
+    } else if (job.isLowPriorityByClientCountry && job.client?.country) {
       const countryName =
         job.client.country.charAt(0).toUpperCase() +
         job.client.country.slice(1).toLowerCase();
       priorityTagText = countryName;
-    } else if ((job as any).isLowPriorityBySkill) {
+    } else if (job.isLowPriorityBySkill) {
       priorityTagText = 'Skill';
     }
 
@@ -163,18 +162,15 @@ export class JobItem {
       priorityTagText: priorityTagText,
       hasPriorityTag: !!priorityTagText,
       isLowPriority: !!isLowPriority,
-      isExcludedByTitleFilter: !!(job as any).isExcludedByTitleFilter,
+      isExcludedByTitleFilter: !!job.isExcludedByTitleFilter,
       isApplied: !!job.applied,
-      isHighRating: job.client && parseFloat(job.client.rating as any) >= 4.9,
-      isHighSpent:
-        job.client &&
-        job.client.totalSpent !== null &&
-        Number(job.client.totalSpent) > 10000,
+      isHighRating: !!(job.client?.rating && job.client.rating >= 4.9),
+      isHighSpent: !!(job.client?.totalSpent && job.client.totalSpent > 10000),
     };
   }
 
   private _populateFromViewModel(): void {
-    if (!this.element || !this.viewModel) return;
+    if (!this.element || !this.viewModel) {return;}
 
     const vm = this.viewModel;
 
@@ -183,27 +179,27 @@ export class JobItem {
       const budgetMeta = budgetField.closest('.job-item__meta');
       if (vm.budget && vm.budget !== 'N/A') {
         budgetField.textContent = vm.budget;
-        if (budgetMeta) budgetMeta.classList.remove('hidden');
+        if (budgetMeta) {budgetMeta.classList.remove('hidden');}
       } else {
         budgetField.textContent = '';
-        if (budgetMeta) budgetMeta.classList.add('hidden');
+        if (budgetMeta) {budgetMeta.classList.add('hidden');}
       }
     }
 
     const clientInfoEl = this.element.querySelector('[data-field="client-info"]');
-    if (clientInfoEl) clientInfoEl.innerHTML = vm.clientInfo;
+    if (clientInfoEl) {clientInfoEl.innerHTML = vm.clientInfo;}
 
     const skillsEl = this.element.querySelector('[data-field="skills"]');
-    if (skillsEl) skillsEl.textContent = vm.skills;
+    if (skillsEl) {skillsEl.textContent = vm.skills;}
 
     const priorityTagEl = this.element.querySelector('[data-field="priority-tag-text"]');
-    if (priorityTagEl) priorityTagEl.textContent = vm.priorityTagText;
+    if (priorityTagEl) {priorityTagEl.textContent = vm.priorityTagText;}
 
     const postedOnEl = this.element.querySelector('[data-field="posted-on"]');
-    if (postedOnEl) postedOnEl.textContent = vm.postedOn;
+    if (postedOnEl) {postedOnEl.textContent = vm.postedOn;}
 
     const timeAgoEl = this.element.querySelector('[data-field="time-ago"]');
-    if (timeAgoEl) timeAgoEl.textContent = vm.timeAgo;
+    if (timeAgoEl) {timeAgoEl.textContent = vm.timeAgo;}
 
     const titleLink = this.element.querySelector('.job-item__title') as HTMLAnchorElement;
     if (titleLink) {
@@ -214,7 +210,7 @@ export class JobItem {
   }
 
   private _updateClasses(): void {
-    if (!this.element || !this.viewModel) return;
+    if (!this.element || !this.viewModel) {return;}
 
     const vm = this.viewModel;
 
@@ -228,4 +224,3 @@ export class JobItem {
     this.element.classList.toggle('job-item--high-spent', vm.isHighSpent);
   }
 }
-

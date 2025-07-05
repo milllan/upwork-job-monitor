@@ -29,13 +29,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   await appState.loadFromStorage();
   console.log('Popup: AppState loaded from storage.');
 
-  let statusHeaderComponent = new StatusHeader(consolidatedStatusEl);
-  let jobDetailsComponent = new JobDetails(jobDetailsPanelEl);
-  let searchFormComponent = new SearchForm(
+  const statusHeaderComponent = new StatusHeader(consolidatedStatusEl);
+  const jobDetailsComponent = new JobDetails(jobDetailsPanelEl);
+  const searchFormComponent = new SearchForm(
     document.querySelector('.query-section') as HTMLElement,
     handleSearchSubmit
   );
-  let apiService = new ApiService(appState);
+  const apiService = new ApiService(appState);
 
   initializeUIFromState();
   console.log('Popup: initializeUIFromState called.');
@@ -168,7 +168,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     setupIntersectionObserver(
-      Array.from(appState.getJobComponents().values()).map((c) => c.element)
+      Array.from(appState.getJobComponents().values())
+        .map((c) => c.element)
+        .filter((el): el is HTMLElement => el !== null)
     );
   }
 
@@ -197,8 +199,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const response = await apiService.triggerCheck(query);
       console.log('Popup: Manual check message sent, background responded:', response);
-    } catch (error: any) {
-      console.error('Popup: Error sending manual check message:', error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Popup: Error sending manual check message:', message);
       appState.loadFromStorage();
     }
   }
@@ -215,16 +218,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     appState.setTheme(newTheme);
   });
 
-  browser.runtime.onMessage.addListener((request: any, sender: Runtime.MessageSender, sendResponse: (response?: any) => void): true => {
-    if (request.action === 'updatePopupDisplay') {
+  interface BackgroundMessage {
+    action: 'updatePopupDisplay';
+    [key: string]: unknown;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  browser.runtime.onMessage.addListener((request: any, _sender: Runtime.MessageSender) => {
+    const message = request as BackgroundMessage;
+    if (message && message.action === 'updatePopupDisplay') {
       console.log('Popup: Received updatePopupDisplay message from background. Refreshing data.');
       appState.loadFromStorage();
-      if (sendResponse) {
-        sendResponse({ status: 'Popup display refreshed.' });
-      }
-      return true;
+      // This is a one-way notification, so we don't need to send a response.
     }
-    return true; // Ensure a boolean is always returned
   });
 
   function setupIntersectionObserver(elementsToObserve: HTMLElement[] = []): void {
@@ -243,7 +249,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       threshold: 0.1,
     };
 
-    jobItemObserver = new IntersectionObserver(async (entries: IntersectionObserverEntry[], _observer: IntersectionObserver) => {
+    jobItemObserver = new IntersectionObserver(async (entries, _observer) => {
       for (const entry of entries) {
         if (entry.isIntersecting) {
           const jobItem = entry.target as HTMLElement;
@@ -252,7 +258,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log(`Popup (Observer): Pre-fetching details for visible job ${jobCiphertext}`);
             try {
               await apiService.fetchJobDetailsWithCache(jobCiphertext);
-            } catch (_err: any) {
+            } catch (_err: unknown) {
+              // Pre-fetching is a best-effort optimization.
+              // We can ignore errors here as the user can still click to fetch manually.
             }
           }
         }
@@ -276,7 +284,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     statusHeaderComponent.update({ deletedJobsCount: appState.getDeletedJobIds().size });
     displayRecentJobs();
   });
-  appState.subscribeToSelector('jobs', displayRecentJobs);
+  appState.subscribeToSelector('jobs', () => displayRecentJobs());
   appState.subscribeToSelector('monitorStatus', (newStatus: string) => {
     statusHeaderComponent.update({ statusText: newStatus });
   });

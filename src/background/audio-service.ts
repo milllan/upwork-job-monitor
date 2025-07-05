@@ -11,7 +11,7 @@ export const AudioService = (() => {
    * initialization to complete.
    */
   function initialize() {
-    if (audioPlayerPromise) return;
+    if (audioPlayerPromise) {return;}
 
     audioPlayerPromise = new Promise((resolve, reject) => {
       if (typeof document === 'undefined') {

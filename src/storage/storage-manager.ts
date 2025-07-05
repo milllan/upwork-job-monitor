@@ -1,6 +1,7 @@
-declare const browser: any;
+declare const browser: typeof import('webextension-polyfill');
 
 import { config } from '../background/config.js';
+import { Job } from '../types.js';
 
 /**
  * Manages all interactions with chrome.storage.local.
@@ -20,22 +21,22 @@ export const StorageManager = {
    * @param {string|string[]} keyOrKeys The key(s) to retrieve.
    * @returns {Promise<Object>} A promise that resolves with the storage data.
    */
-  async getStorage(keyOrKeys: string | string[]): Promise<any> {
+  async getStorage(keyOrKeys: string | string[] | null): Promise<Record<string, unknown>> {
     try {
       const result = await browser.storage.local.get(keyOrKeys);
       return result;
-    } catch (error: any) {
-      console.error('StorageManager: Error getting storage:', error.message);
+    } catch (error: unknown) {
+      console.error('StorageManager: Error getting storage:', error instanceof Error ? error.message : error);
       if (typeof keyOrKeys === 'string') {
         return { [keyOrKeys]: undefined };
       }
       if (Array.isArray(keyOrKeys)) {
-        return keyOrKeys.reduce((acc: any, key) => {
+        return keyOrKeys.reduce((acc: Record<string, unknown>, key) => {
           acc[key] = undefined;
           return acc;
         }, {});
       }
-      if (keyOrKeys === null || typeof keyOrKeys === 'object') {
+      if (keyOrKeys === null || (typeof keyOrKeys === 'object' && !Array.isArray(keyOrKeys))) {
         return {};
       }
       return {};
@@ -47,17 +48,17 @@ export const StorageManager = {
    * @param {Object} items An object containing key-value pairs to set.
    * @returns {Promise<void>} A promise that resolves when the data is set.
    */
-  async setStorage(items: any): Promise<void> {
+  async setStorage(items: Record<string, unknown>): Promise<void> {
     try {
       await browser.storage.local.set(items);
-    } catch (error: any) {
-      console.error('StorageManager: Error setting storage:', error.message);
+    } catch (error: unknown) {
+      console.error('StorageManager: Error setting storage:', error instanceof Error ? error.message : error);
     }
   },
 
   async getSeenJobIds(): Promise<Set<string>> {
     const result = await this.getStorage(STORAGE_KEYS.SEEN_JOB_IDS);
-    return new Set(result[STORAGE_KEYS.SEEN_JOB_IDS] || []);
+    return new Set((result[STORAGE_KEYS.SEEN_JOB_IDS] as string[]) || []);
   },
 
   async addSeenJobIds(newJobIdsArray: string[]): Promise<void> {
@@ -69,7 +70,7 @@ export const StorageManager = {
 
   async getDeletedJobIds(): Promise<Set<string>> {
     const result = await this.getStorage(STORAGE_KEYS.DELETED_JOB_IDS);
-    return new Set(result[STORAGE_KEYS.DELETED_JOB_IDS] || []);
+    return new Set((result[STORAGE_KEYS.DELETED_JOB_IDS] as string[]) || []);
   },
 
   async setDeletedJobIds(deletedIdsArray: string[]): Promise<void> {
@@ -87,7 +88,7 @@ export const StorageManager = {
 
   async getMonitorStatus(): Promise<string> {
     const result = await this.getStorage(STORAGE_KEYS.MONITOR_STATUS);
-    return result[STORAGE_KEYS.MONITOR_STATUS] || 'Unknown';
+    return (result[STORAGE_KEYS.MONITOR_STATUS] as string) || 'Unknown';
   },
 
   async setMonitorStatus(status: string): Promise<void> {
@@ -96,7 +97,7 @@ export const StorageManager = {
 
   async getLastCheckTimestamp(): Promise<number | null> {
     const result = await this.getStorage(STORAGE_KEYS.LAST_CHECK_TIMESTAMP);
-    return result[STORAGE_KEYS.LAST_CHECK_TIMESTAMP] || null;
+    return (result[STORAGE_KEYS.LAST_CHECK_TIMESTAMP] as number) || null;
   },
 
   async setLastCheckTimestamp(timestamp: number): Promise<void> {
@@ -105,7 +106,7 @@ export const StorageManager = {
 
   async getNewJobsInLastRun(): Promise<number> {
     const result = await this.getStorage(STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN);
-    return result[STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN] || 0;
+    return (result[STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN] as number) || 0;
   },
 
   async setNewJobsInLastRun(count: number): Promise<void> {
@@ -114,25 +115,25 @@ export const StorageManager = {
 
   async getCurrentUserQuery(): Promise<string | null> {
     const result = await this.getStorage(STORAGE_KEYS.CURRENT_USER_QUERY);
-    return result[STORAGE_KEYS.CURRENT_USER_QUERY] || null;
+    return (result[STORAGE_KEYS.CURRENT_USER_QUERY] as string) || null;
   },
 
   async setCurrentUserQuery(query: string): Promise<void> {
     await this.setStorage({ [STORAGE_KEYS.CURRENT_USER_QUERY]: query });
   },
 
-  async getRecentFoundJobs(): Promise<any[]> {
+  async getRecentFoundJobs(): Promise<Job[]> {
     const result = await this.getStorage(STORAGE_KEYS.RECENT_FOUND_JOBS);
-    return result[STORAGE_KEYS.RECENT_FOUND_JOBS] || [];
+    return (result[STORAGE_KEYS.RECENT_FOUND_JOBS] as Job[]) || [];
   },
 
-  async setRecentFoundJobs(jobs: any[]): Promise<void> {
+  async setRecentFoundJobs(jobs: Job[]): Promise<void> {
     await this.setStorage({ [STORAGE_KEYS.RECENT_FOUND_JOBS]: jobs.slice(0, MAX_RECENT_JOBS) });
   },
 
   async getCollapsedJobIds(): Promise<Set<string>> {
     const result = await this.getStorage(STORAGE_KEYS.COLLAPSED_JOB_IDS);
-    return new Set(result[STORAGE_KEYS.COLLAPSED_JOB_IDS] || []);
+    return new Set((result[STORAGE_KEYS.COLLAPSED_JOB_IDS] as string[]) || []);
   },
 
   async setCollapsedJobIds(collapsedIdsArray: string[]): Promise<void> {
@@ -141,13 +142,13 @@ export const StorageManager = {
 
   async getApiEndpointToken(apiIdentifier: string): Promise<string | null> {
     const result = await this.getStorage(STORAGE_KEYS.API_ENDPOINT_TOKENS);
-    const tokens = result[STORAGE_KEYS.API_ENDPOINT_TOKENS] || {};
+    const tokens = (result[STORAGE_KEYS.API_ENDPOINT_TOKENS] as Record<string, string>) || {};
     return tokens[apiIdentifier] || null;
   },
 
   async setApiEndpointToken(apiIdentifier: string, token: string | null): Promise<void> {
     const result = await this.getStorage(STORAGE_KEYS.API_ENDPOINT_TOKENS);
-    const tokens = result[STORAGE_KEYS.API_ENDPOINT_TOKENS] || {};
+    const tokens = (result[STORAGE_KEYS.API_ENDPOINT_TOKENS] as Record<string, string>) || {};
     if (token === null) {
       delete tokens[apiIdentifier];
     } else {
@@ -158,7 +159,7 @@ export const StorageManager = {
 
   async getUiTheme(): Promise<string> {
     const result = await this.getStorage(STORAGE_KEYS.UI_THEME);
-    return result[STORAGE_KEYS.UI_THEME] || 'light';
+    return (result[STORAGE_KEYS.UI_THEME] as string) || 'light';
   },
 
   async setUiTheme(theme: string): Promise<void> {
