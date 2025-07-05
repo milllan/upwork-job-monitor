@@ -2,9 +2,9 @@ export const AudioService = (() => {
   let audioPlayerPromise: Promise<HTMLAudioElement> | null = null;
 
   /**
-   * Initializes the audio player by creating a Promise that resolves with the <audio> element
-   * once the DOM is ready. This ensures that any call to playSound() will wait for
-   * initialization to complete.
+   * Prepares the notification audio player by creating or retrieving a persistent `<audio>` element once the DOM is ready.
+   *
+   * Ensures that subsequent calls to play the notification sound will wait for the audio player to be available.
    */
   function initialize() {
     if (audioPlayerPromise) return;
@@ -44,7 +44,9 @@ export const AudioService = (() => {
   }
 
   /**
-   * Plays the notification sound.
+   * Plays the notification sound if the audio player is available.
+   *
+   * In Manifest V2 environments, resets and plays the notification audio element. In Manifest V3 environments, playback is not implemented and the function returns without playing sound.
    */
   async function playSound() {
     // MV3 implementation (for the future)
