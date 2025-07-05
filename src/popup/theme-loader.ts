@@ -1,3 +1,6 @@
+
+declare const browser: typeof import('webextension-polyfill');
+
 (function (): void {
   browser.storage.local.get('uiTheme').then((result: { uiTheme?: string }) => {
     const theme = result.uiTheme || 'light';

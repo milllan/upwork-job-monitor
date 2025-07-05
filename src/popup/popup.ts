@@ -1,4 +1,6 @@
 import { AppState } from './state/AppState.js';
+import { Runtime } from 'webextension-polyfill';
+declare const browser: typeof import('webextension-polyfill');
 import { ApiService } from './services/ApiService.js';
 import { JobDetails } from './components/JobDetails.js';
 import { JobItem } from './components/JobItem.js';
@@ -273,7 +275,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     appState.setTheme(newTheme);
   });
 
-  browser.runtime.onMessage.addListener((request: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
+  browser.runtime.onMessage.addListener((request: any, sender: Runtime.MessageSender, sendResponse: (response?: any) => void): true => {
     if (request.action === 'updatePopupDisplay') {
       console.log('Popup: Received updatePopupDisplay message from background. Refreshing data.');
       appState.loadFromStorage();
@@ -282,6 +284,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       return true;
     }
+    return true; // Ensure a boolean is always returned
   });
 
   /**
