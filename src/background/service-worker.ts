@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import { Job, JobDetails, TalentProfile, isGraphQLResponse, GraphQLResponse } from '../types.js';
 
 declare const browser: any;

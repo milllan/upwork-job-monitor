@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import { JobDetails as JobDetailsType } from '../../types.js';
 import { AppState } from '../state/AppState.js';
 

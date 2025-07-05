@@ -1,9 +1,9 @@
-/* eslint-disable no-unused-vars */
 import {
   Job,
   JobDetails,
   TalentProfile,
   GraphQLResponse,
+  isGraphQLResponse,
 } from '../types.js';
 
 import { config } from '../background/config.js';
@@ -324,7 +324,7 @@ async function _executeApiCallWithTokenRotation<T>(
 
   if (lastKnownGoodToken) {
     const result = await apiCallFunction(lastKnownGoodToken, ...params);
-    if (result && !(result as any).error) {
+    if (result && !isGraphQLResponse(result)) {
       return { result, token: lastKnownGoodToken }; // Return consistent object
     }
     // If the sticky token failed, clear it and proceed to full rotation.
@@ -339,14 +339,14 @@ async function _executeApiCallWithTokenRotation<T>(
   let lastError: GraphQLResponse<any> | null = null; // <<<< IMPORTANT: Keep track of the last error
   for (const token of candidateTokens) {
     const result = await apiCallFunction(token, ...params);
-    if (result && !(result as any).error) {
+    if (result && !isGraphQLResponse(result)) {
       await StorageManager.setApiEndpointToken(apiIdentifier, token);
       return { result, token }; // Return consistent object
     }
 
     // --- THIS IS THE ROBUST LOGIC THAT WAS MISSING ---
-    else if (result && (result as any).error) {
-      lastError = result as any; // Keep track of the specific error from the failed attempt
+    else if (isGraphQLResponse(result)) {
+      lastError = result; // Keep track of the specific error from the failed attempt
       const tokenSnippet = `token ${token.substring(0, 15)}`;
       if (lastError) {
         const { type, details = {} } = lastError;
@@ -406,10 +406,10 @@ const UpworkAPI = {
       _fetchUpworkJobs,
       userQuery
     );
-    if ((response as any).error) {
-      return response as GraphQLResponse<any>;
+    if ('result' in response) {
+      return { jobs: response.result as Job[] };
     }
-    return { jobs: (response as any).result };
+    return response;
   },
 
   /**
@@ -422,10 +422,10 @@ const UpworkAPI = {
       _fetchJobDetails,
       jobCiphertext
     );
-    if ((response as any).error) {
-      return response as GraphQLResponse<any>;
+    if ('result' in response) {
+      return { jobDetails: response.result as JobDetails | null };
     }
-    return { jobDetails: (response as any).result };
+    return response;
   },
 
   /**
@@ -439,10 +439,10 @@ const UpworkAPI = {
       _fetchTalentProfile,
       profileCiphertext
     );
-    if ((response as any).error) {
-      return response as GraphQLResponse<any>;
+    if ('result' in response) {
+      return { profileDetails: response.result as TalentProfile | null };
     }
-    return { profileDetails: (response as any).result };
+    return response;
   },
 };
 
