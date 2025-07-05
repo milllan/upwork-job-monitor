@@ -107,14 +107,14 @@ async function _processAndNotifyNewJobs(
   );
   // From these, determine which are truly new AND notifiable (not excluded by title filter)
   const notifiableNewJobs = allNewOrUpdatedJobs.filter(
-    (job: any) =>
+    (job: Job) =>
       !job.isExcludedByTitleFilter &&
       !job.isLowPriorityBySkill &&
       !job.isLowPriorityByClientCountry &&
       job.applied !== true
   );
   const newJobIdsToMarkSeen: string[] = [];
-  fetchedJobs.forEach((job: any) => {
+  fetchedJobs.forEach((job: Job) => {
     if (job && job.id && !historicalSeenJobIds.has(job.id)) {
       newJobIdsToMarkSeen.push(job.id);
       // If it's a new, low-priority job OR a new "Filtered" (excluded by title) job,
@@ -250,18 +250,16 @@ async function _performJobCheckLogic(triggeredByUserQuery?: string) {
     (await StorageManager.getCurrentUserQuery()) ||
     config.DEFAULT_USER_QUERY;
 
-  let fetchedJobs: Job[] = []; // Declare fetchedJobs here
-
   const apiResult = await UpworkAPI.fetchJobs(userQueryToUse);
 
-  if (isGraphQLResponse(apiResult) && apiResult.error) {
+  if (isGraphQLResponse(apiResult)) {
     console.error('MV2: Failed to fetch jobs after trying all tokens.', apiResult);
     await _handleApiTokenFailure(apiResult, 'jobSearch', {});
     return;
-  } else {
-    // If it's not a GraphQLResponse error, it must be the successful job list.
-    fetchedJobs = (apiResult as { jobs: Job[] }).jobs;
   }
+
+  // If we reach here, the API call was successful.
+  let fetchedJobs: Job[] = (apiResult as { jobs: Job[] }).jobs;
 
   // Apply client-side title exclusion and skill-based low-priority marking
   if (fetchedJobs && fetchedJobs.length > 0) {
@@ -444,42 +442,48 @@ browser.runtime.onMessage.addListener(async (request: any, _sender: any) => {
 });
 
 // MODIFIED: This now contains the smart error handling logic
-async function _fetchAndProcessJobDetails(jobCiphertext: string): Promise<{ jobDetails: JobDetails } | GraphQLResponse<any>> {
+async function _fetchAndProcessJobDetails(jobCiphertext: string): Promise<{ jobDetails: JobDetails | null } | GraphQLResponse<any>> {
   const apiResult = await UpworkAPI.fetchJobDetails(jobCiphertext);
 
-  // On success, apiResult is { jobDetails: {...} }. We need to return this object.
-  if (apiResult && !isGraphQLResponse(apiResult)) {
-    // The message handler expects the object { jobDetails: ... } which is exactly what the API returns.
-
-    return apiResult;
-  } else if (isGraphQLResponse(apiResult)) {
+  if (isGraphQLResponse(apiResult)) {
     console.error('MV2: Failed to fetch job details.', apiResult);
+    // Handle the specific 403 case for token failures
     if (apiResult.type === 'http' && apiResult.details.status === 403) {
       await _handleApiTokenFailure(apiResult, 'jobDetails', { ciphertext: jobCiphertext });
     }
+    // For all other errors, just return the GraphQL error response
     return apiResult;
-  } else {
-    throw new Error('Unknown error fetching job details.');
   }
+
+  // On success, apiResult is { jobDetails: JobDetails | null }.
+  // We need to handle the null case explicitly.
+  if ('jobDetails' in apiResult && apiResult.jobDetails === null) {
+    console.log(`MV2: Job details for ${jobCiphertext} not found (returned null).`);
+  }
+
+  return apiResult;
 }
 
 // NEW: Processing function for talent profiles
 async function _fetchAndProcessTalentProfile(
   profileCiphertext: string
-): Promise<{ profileDetails: TalentProfile } | GraphQLResponse<any>> {
+): Promise<{ profileDetails: TalentProfile | null } | GraphQLResponse<any>> {
   const apiResult = await UpworkAPI.fetchTalentProfile(profileCiphertext);
 
-  if (apiResult && !isGraphQLResponse(apiResult)) {
-    return apiResult;
-  } else if (isGraphQLResponse(apiResult)) {
+  if (isGraphQLResponse(apiResult)) {
     console.error('MV2: Failed to fetch talent profile.', apiResult);
     if (apiResult.type === 'http' && apiResult.details.status === 403) {
       await _handleApiTokenFailure(apiResult, 'talentProfile', { ciphertext: profileCiphertext });
     }
     return apiResult;
-  } else {
-    throw new Error('Unknown error fetching talent profile.');
   }
+
+  // Handle the null case for talent profiles
+  if ('profileDetails' in apiResult && apiResult.profileDetails === null) {
+    console.log(`MV2: Talent profile for ${profileCiphertext} not found (returned null).`);
+  }
+
+  return apiResult;
 }
 
 setupAlarms();

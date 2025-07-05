@@ -15,8 +15,8 @@
     "lint:fix": "eslint . --ext .js --fix",
     "format": "prettier --write \"**/*.{js,json,html,css,md}\"",
     "type-check": "tsc --noEmit",
-    "clean": "rm -rf dist",
-    "copy-assets": "mkdir -p dist/popup dist/icons dist/audio dist/lib && cp manifest.json dist/ && cp background.html dist/ && cp icons/*.png dist/icons/ && cp popup/popup.html dist/popup/ && cp popup/popup.css dist/popup/ && cp popup/popup-dark.css dist/popup/ && cp popup/neue-montreal-variable.latin.woff2 dist/popup/ && cp -r popup/icons/ dist/popup/icons/ && cp audio/notification.mp3 dist/audio/ && cp lib/browser-polyfill.min.js dist/lib/",
+    "clean": "shx rm -rf dist",
+    "copy-assets": "shx mkdir -p dist/popup dist/icons dist/audio dist/lib && shx cp manifest.json dist/ && shx cp background.html dist/ && shx cp icons/*.png dist/icons/ && shx cp popup/popup.html dist/popup/ && shx cp popup/popup.css dist/popup/ && shx cp popup/popup-dark.css dist/popup/ && shx cp popup/neue-montreal-variable.latin.woff2 dist/popup/ && shx cp -r popup/icons dist/popup/icons && shx cp audio/notification.mp3 dist/audio/ && shx cp lib/browser-polyfill.min.js dist/lib/",
     "build": "npm run clean && tsc && npm run copy-assets"
   },
   "repository": {
@@ -41,6 +41,8 @@
     "eslint-plugin-prettier": "^5.5.1",
     "globals": "^16.2.0",
     "prettier": "^3.6.1",
+    "rimraf": "^6.0.1",
+    "shx": "^0.4.0",
     "typescript": "^5.8.3"
   }
 }

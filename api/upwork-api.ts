@@ -212,7 +212,7 @@ async function _fetchUpworkJobs(bearerToken: string, userQuery: string): Promise
  * Internal-only function to fetch job details.
  * @private
  */
-async function _fetchJobDetails(bearerToken: string, jobCiphertext: string): Promise<JobDetails | GraphQLResponse<any>> {
+async function _fetchJobDetails(bearerToken: string, jobCiphertext: string): Promise<JobDetails | null | GraphQLResponse<any>> {
   const endpointAlias = 'gql-query-get-auth-job-details';
   const graphqlQuery = `
   query JobAuthDetailsQuery($id: ID!) {
@@ -279,14 +279,14 @@ async function _fetchJobDetails(bearerToken: string, jobCiphertext: string): Pro
   if (responseData.error) {
     return responseData;
   }
-  return responseData.data?.jobAuthDetails || ({} as JobDetails);
+  return responseData.data?.jobAuthDetails || null;
 }
 
 /**
  * Internal-only function to fetch talent profile details.
  * @private
  */
-async function _fetchTalentProfile(bearerToken: string, profileCiphertext: string): Promise<TalentProfile | GraphQLResponse<any>> {
+async function _fetchTalentProfile(bearerToken: string, profileCiphertext: string): Promise<TalentProfile | null | GraphQLResponse<any>> {
   const endpointAlias = 'getDetails';
   const graphqlQuery = `
     query GetTalentProfile($profileUrl: String) {
@@ -305,7 +305,7 @@ async function _fetchTalentProfile(bearerToken: string, profileCiphertext: strin
   );
 
   if (responseData.error) return responseData;
-  return responseData.data?.talentVPDAuthProfile || ({} as TalentProfile);
+  return responseData.data?.talentVPDAuthProfile || null;
 }
 
 /**
@@ -414,9 +414,9 @@ const UpworkAPI = {
 
   /**
    * Fetches the details for a specific job, handling token rotation automatically.
-   * @returns {Promise<{jobDetails: JobDetails}|GraphQLResponse<any>>}
+   * @returns {Promise<{jobDetails: JobDetails | null}|GraphQLResponse<any>>}
    */
-  fetchJobDetails: async (jobCiphertext: string): Promise<{ jobDetails: JobDetails } | GraphQLResponse<any>> => {
+  fetchJobDetails: async (jobCiphertext: string): Promise<{ jobDetails: JobDetails | null } | GraphQLResponse<any>> => {
     const response = await _executeApiCallWithTokenRotation(
       API_IDENTIFIERS.JOB_DETAILS,
       _fetchJobDetails,
@@ -431,9 +431,9 @@ const UpworkAPI = {
   /**
    * Fetches the profile for a specific freelancer, handling token rotation automatically.
    * @param {string} profileCiphertext The freelancer's ciphertext ID.
-   * @returns {Promise<{profileDetails: TalentProfile}|GraphQLResponse<any>>}
+   * @returns {Promise<{profileDetails: TalentProfile | null}|GraphQLResponse<any>>}
    */
-  fetchTalentProfile: async (profileCiphertext: string): Promise<{ profileDetails: TalentProfile } | GraphQLResponse<any>> => {
+  fetchTalentProfile: async (profileCiphertext: string): Promise<{ profileDetails: TalentProfile | null } | GraphQLResponse<any>> => {
     const response = await _executeApiCallWithTokenRotation(
       API_IDENTIFIERS.TALENT_PROFILE,
       _fetchTalentProfile,
