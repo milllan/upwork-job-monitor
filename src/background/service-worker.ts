@@ -1,4 +1,4 @@
-import { Job, JobDetails, TalentProfile, isGraphQLResponse, GraphQLResponse } from '../types.js';
+import { Job, JobDetails, TalentProfile, isGraphQLResponse, GraphQLResponse, ProcessedJob } from '../types.js';
 import { type Notifications, type Runtime } from 'webextension-polyfill';
 
 // Use declare to inform TypeScript about the global 'browser' object provided by the extension environment.
@@ -19,7 +19,7 @@ let isJobCheckRunning = false; // Flag to prevent concurrent runs
  * @returns {Object} An object containing the processed jobs and counts of filtered jobs.
  */
 function _applyClientSideFilters(jobs: Job[]): {
-  processedJobs: Job[];
+  processedJobs: ProcessedJob[];
   titleExcludedCount: number;
   skillLowPriorityCount: number;
   clientCountryLowPriorityCount: number;
@@ -28,8 +28,8 @@ function _applyClientSideFilters(jobs: Job[]): {
   let skillLowPriorityCount = 0;
   let clientCountryLowPriorityCount = 0;
 
-  const processedJobs = jobs.map((job) => {
-    const newJobData: Job = {
+  const processedJobs = jobs.map((job): ProcessedJob => {
+    const newJobData: ProcessedJob = {
       ...job,
       isExcludedByTitleFilter: false,
       isLowPriorityBySkill: false,
@@ -94,7 +94,7 @@ function _applyClientSideFilters(jobs: Job[]): {
  * @returns {Promise<Object>} An object containing counts of new/notifiable jobs and the updated collapsed job IDs.
  */
 async function _processAndNotifyNewJobs(
-  fetchedJobs: Job[],
+  fetchedJobs: ProcessedJob[],
   historicalSeenJobIds: Set<string>,
   deletedJobIds: Set<string>,
   currentCollapsedJobIds: Set<string>
@@ -109,14 +109,14 @@ async function _processAndNotifyNewJobs(
   );
   // From these, determine which are truly new AND notifiable (not excluded by title filter)
   const notifiableNewJobs = allNewOrUpdatedJobs.filter(
-    (job: Job) =>
+    (job: ProcessedJob) =>
       !job.isExcludedByTitleFilter &&
       !job.isLowPriorityBySkill &&
       !job.isLowPriorityByClientCountry &&
       job.applied !== true
   );
   const newJobIdsToMarkSeen: string[] = [];
-  fetchedJobs.forEach((job: Job) => {
+  fetchedJobs.forEach((job: ProcessedJob) => {
     if (job && job.id && !historicalSeenJobIds.has(job.id)) {
       newJobIdsToMarkSeen.push(job.id);
       // If it's a new, low-priority job OR a new "Filtered" (excluded by title) job,
@@ -166,7 +166,7 @@ async function _sendPopupUpdateMessage() {
  */
 async function _updateStorageAfterCheck(
   notifiableNewJobsCount: number,
-  fetchedJobs: Job[],
+  fetchedJobs: ProcessedJob[],
   updatedCollapsedJobIds: Set<string>,
   deletedJobIds: Set<string>
 ) {
@@ -261,13 +261,14 @@ async function _performJobCheckLogic(triggeredByUserQuery?: string) {
   }
 
   // If we reach here, the API call was successful.
-  let fetchedJobs: Job[] = (apiResult as { jobs: Job[] }).jobs;
+  const initialJobs: Job[] = (apiResult as { jobs: Job[] }).jobs;
+  let processedJobs: ProcessedJob[] = [];
 
   // Apply client-side title exclusion and skill-based low-priority marking
-  if (fetchedJobs && fetchedJobs.length > 0) {
-    const originalJobCount = fetchedJobs.length;
-    const processedJobsResult = _applyClientSideFilters(fetchedJobs);
-    fetchedJobs = processedJobsResult.processedJobs;
+  if (initialJobs && initialJobs.length > 0) {
+    const originalJobCount = initialJobs.length;
+    const processedJobsResult = _applyClientSideFilters(initialJobs);
+    processedJobs = processedJobsResult.processedJobs;
     console.log(
       `MV2: Processed ${originalJobCount} jobs. Marked ${processedJobsResult.titleExcludedCount} as excluded by title. Marked ${processedJobsResult.skillLowPriorityCount} as low-priority by skill. Marked ${processedJobsResult.clientCountryLowPriorityCount} as low-priority by client country.`
     );
@@ -279,7 +280,7 @@ async function _performJobCheckLogic(triggeredByUserQuery?: string) {
   const currentCollapsedJobIds = await StorageManager.getCollapsedJobIds();
 
   const processResult = await _processAndNotifyNewJobs(
-    fetchedJobs,
+    processedJobs,
     historicalSeenJobIds,
     deletedJobIds,
     currentCollapsedJobIds
@@ -292,7 +293,7 @@ async function _performJobCheckLogic(triggeredByUserQuery?: string) {
   // Update storage
   await _updateStorageAfterCheck(
     processResult.notifiableNewJobsCount,
-    fetchedJobs,
+    processedJobs,
     processResult.updatedCollapsedJobIds,
     deletedJobIds
   );
