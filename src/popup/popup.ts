@@ -7,21 +7,21 @@ import { JobItem } from './components/JobItem.js';
 import { SearchForm } from './components/SearchForm.js';
 import { StatusHeader } from './components/StatusHeader.js';
 import { config } from '../background/config.js';
-import { constructUpworkSearchURL, initializeScrollHints } from '../utils.js';
+import { $, constructUpworkSearchURL, initializeScrollHints } from '../utils.js';
 import { Tier, Job } from '../types.js';
 
 let jobItemObserver: IntersectionObserver | null = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('Popup: DOMContentLoaded event fired.');
-  const popupTitleLinkEl = document.querySelector('.app-header__title') as HTMLAnchorElement;
-  const consolidatedStatusEl = document.querySelector('.app-header__status') as HTMLElement;
-  const manualCheckButton = document.querySelector('.app-header__button') as HTMLButtonElement;
+  const popupTitleLinkEl = $<HTMLAnchorElement>('.app-header__title');
+  const consolidatedStatusEl = $<HTMLElement>('.app-header__status');
+  const manualCheckButton = $<HTMLButtonElement>('.app-header__button');
   const themeToggleButton = document.getElementById('theme-toggle-button') as HTMLButtonElement;
-  const mainContentArea = document.querySelector('.main-content') as HTMLElement;
-  const jobListContainerEl = document.querySelector('.job-list-container') as HTMLElement;
-  const recentJobsListDiv = document.querySelector('.job-list') as HTMLElement;
-  const jobDetailsPanelEl = document.querySelector('.details-panel') as HTMLElement;
+  const mainContentArea = $<HTMLElement>('.main-content');
+  const jobListContainerEl = $<HTMLElement>('.job-list-container');
+  const recentJobsListDiv = $<HTMLElement>('.job-list');
+  const jobDetailsPanelEl = $<HTMLElement>('.details-panel');
   const themeStylesheet = document.getElementById('theme-stylesheet') as HTMLLinkElement;
 
   const appState = new AppState();
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const statusHeaderComponent = new StatusHeader(consolidatedStatusEl);
   const jobDetailsComponent = new JobDetails(jobDetailsPanelEl);
   const searchFormComponent = new SearchForm(
-    document.querySelector('.query-section') as HTMLElement,
+    $<HTMLElement>('.query-section'),
     handleSearchSubmit
   );
   const apiService = new ApiService(appState);

@@ -2,6 +2,21 @@
 // utils.ts
 import { Job } from './types.js';
 
+/**
+ * A robust querySelector utility that throws an error if the element is not found.
+ * @param selector The CSS selector to find.
+ * @param scope The parent element or document to search within.
+ * @returns The found element.
+ * @throws If the element is not found.
+ */
+export function $<T extends HTMLElement>(selector: string, scope: Document | HTMLElement = document): T {
+  const element = scope.querySelector<T>(selector);
+  if (!element) {
+    throw new Error(`Element with selector "${selector}" not found.`);
+  }
+  return element;
+}
+
 type Tier = 'EntryLevel' | 'IntermediateLevel' | 'ExpertLevel';
 
 /**

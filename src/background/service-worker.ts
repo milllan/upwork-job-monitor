@@ -261,7 +261,7 @@ async function _performJobCheckLogic(triggeredByUserQuery?: string) {
   }
 
   // If we reach here, the API call was successful.
-  const initialJobs: Job[] = (apiResult as { jobs: Job[] }).jobs;
+  const initialJobs: Job[] = apiResult.jobs;
   let processedJobs: ProcessedJob[] = [];
 
   // Apply client-side title exclusion and skill-based low-priority marking
