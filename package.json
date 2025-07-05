@@ -16,7 +16,7 @@
     "format": "prettier --write \"**/*.{js,json,html,css,md}\"",
     "type-check": "tsc --noEmit",
     "clean": "shx rm -rf dist",
-    "copy-assets": "shx mkdir -p dist/popup dist/icons dist/audio dist/lib && shx cp manifest.json dist/ && shx cp background.html dist/ && shx cp icons/*.png dist/icons/ && shx cp popup/popup.html dist/popup/ && shx cp popup/popup.css dist/popup/ && shx cp popup/popup-dark.css dist/popup/ && shx cp popup/neue-montreal-variable.latin.woff2 dist/popup/ && shx cp -r popup/icons dist/popup/icons && shx cp audio/notification.mp3 dist/audio/ && shx cp lib/browser-polyfill.min.js dist/lib/",
+    "copy-assets": "shx mkdir -p dist/popup dist/icons dist/audio dist/lib && shx cp src/manifest.json dist/ && shx cp src/background.html dist/ && shx cp src/icons/*.png dist/icons/ && shx cp src/popup/popup.html dist/popup/ && shx cp src/popup/popup.css dist/popup/ && shx cp src/popup/popup-dark.css dist/popup/ && shx cp src/popup/neue-montreal-variable.latin.woff2 dist/popup/ && shx cp -r src/popup/icons dist/popup/icons && shx cp src/audio/notification.mp3 dist/audio/ && shx cp src/lib/browser-polyfill.min.js dist/lib/",
     "build": "npm run clean && tsc && npm run copy-assets"
   },
   "repository": {

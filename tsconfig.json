@@ -8,11 +8,8 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "./dist",
-    "rootDir": ".",
-    "baseUrl": ".",
-    "paths": {
-      "*": ["./*"]
-    },
+    "rootDir": "./src",
+    "baseUrl": "./src",
     "checkJs": false,
     "lib": ["dom", "dom.iterable", "esnext"],
     "noEmit": false,
@@ -21,12 +18,10 @@
     "allowSyntheticDefaultImports": true
   },
   "include": [
-    "**/*.js",
-    "**/*.ts"
+    "./src/**/*.ts"
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "lib"
+    "dist"
   ]
 }
