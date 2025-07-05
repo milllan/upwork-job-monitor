@@ -354,11 +354,11 @@ export class AppState {
     let timeout: number;
     return function executedFunction(...args: unknown[]) {
       const later = () => {
-        clearTimeout(timeout);
+        window.clearTimeout(timeout);
         func(...args);
       };
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
+      window.clearTimeout(timeout);
+      timeout = window.setTimeout(later, wait);
     };
   }
 }
