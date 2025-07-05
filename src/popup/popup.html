@@ -3,11 +3,12 @@
   <head>
     <title>Upwork Monitor</title>
     <meta charset="utf-8" />
-    <link id="theme-stylesheet" rel="stylesheet" href="popup.css" />
+    <link id="theme-stylesheet" rel="stylesheet" href="./popup.css" />
     <!-- Default to light theme -->
     <!-- Pre-emptive theme loader to prevent FOUC -->
-    <script src="../lib/browser-polyfill.min.js"></script>
-    <script src="theme-loader.js"></script>
+    <!-- Load polyfill FIRST -->
+    <script src="/lib/browser-polyfill.min.js"></script>
+    <script type="module" src="/popup/theme-loader.js"></script>
   </head>
   <body>
     <header class="app-header">
@@ -58,19 +59,19 @@
         aria-atomic="true"
       ></div>
     </div>
-    <script src="../utils.js"></script>
+    <script type="module" src="../utils.js"></script>
     <!-- Add this line -->
-    <script src="../background/config.js"></script>
+    <script type="module" src="../background/config.js"></script>
     <!-- Add this line -->
-    <script src="../storage/storage-manager.js"></script>
+    <script type="module" src="../storage/storage-manager.js"></script>
     <!-- Add this line -->
-    <script src="components/JobItem.js"></script>
-    <script src="components/JobDetails.js"></script>
-    <script src="components/StatusHeader.js"></script>
-    <script src="components/SearchForm.js"></script>
-    <script src="services/ApiService.js"></script>
-    <script src="state/AppState.js"></script>
-    <script src="popup.js"></script>
+    <script type="module" src="./components/JobItem.js"></script>
+    <script type="module" src="./components/JobDetails.js"></script>
+    <script type="module" src="./components/StatusHeader.js"></script>
+    <script type="module" src="./components/SearchForm.js"></script>
+    <script type="module" src="./services/ApiService.js"></script>
+    <script type="module" src="./state/AppState.js"></script>
+    <script type="module" src="./popup.js"></script>
 
     <!-- Job Item Template -->
     <template id="job-item-template">
