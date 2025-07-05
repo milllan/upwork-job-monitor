@@ -1,18 +1,20 @@
 /* exported constructUpworkSearchURL, timeAgo, formatClientInfo, formatSkills, formatBudget, initializeScrollHints */
-// utils.js
+// utils.ts
+
+type Tier = 'EntryLevel' | 'IntermediateLevel' | 'ExpertLevel';
 
 /**
  * Constructs a direct Upwork job search URL.
  * @param {string} userQuery The raw search query string.
- * @param {string[]} contractorTiersGraphQL Array of GQL contractor tier strings (e.g., ["IntermediateLevel", "ExpertLevel"]).
+ * @param {Tier[]} contractorTiersGraphQL Array of GQL contractor tier strings (e.g., ["IntermediateLevel", "ExpertLevel"]).
  * @param {string} sortBy Sort criteria (e.g., "recency", "relevance").
  * @returns {string} The constructed Upwork search URL.
  */
-function constructUpworkSearchURL(userQuery, contractorTiersGraphQL, sortBy) {
+function constructUpworkSearchURL(userQuery: string, contractorTiersGraphQL: Tier[], sortBy: string): string {
   const baseURL = 'https://www.upwork.com/nx/search/jobs/';
   const encodedQuery = encodeURIComponent(userQuery);
 
-  const tierMap = {
+  const tierMap: { [key in Tier]: string } = {
     EntryLevel: '1',
     IntermediateLevel: '2',
     ExpertLevel: '3',
@@ -38,7 +40,7 @@ function constructUpworkSearchURL(userQuery, contractorTiersGraphQL, sortBy) {
  * @param {string|Date|number} dateInput The date to convert.
  * @returns {string} A string representing the time ago.
  */
-function timeAgo(dateInput) {
+function timeAgo(dateInput: string | Date | number): string {
   if (!dateInput) {
     return 'N/A';
   }
@@ -80,7 +82,7 @@ function timeAgo(dateInput) {
  * @param {object} client The client object from a job.
  * @returns {string} The formatted HTML string for client info.
  */
-function formatClientInfo(client) {
+function formatClientInfo(client: any): string {
   let clientInfo = 'Client info N/A';
   if (client) {
     clientInfo = `Client: ${client.country || 'N/A'}`;
@@ -96,7 +98,7 @@ function formatClientInfo(client) {
     if (client.totalSpent !== null && Number(client.totalSpent) > 0) {
       const spentAmount = Number(client.totalSpent);
       const spentClass = spentAmount > 10000 ? ' job-item__client-spent--positive' : ''; // Threshold for high spender
-      clientInfo += ` | <span class="job-item__client-spent${spentClass}" title="Client Spend">Spent: $${spentAmount.toFixed(0)}</span>`;
+      clientInfo += ` | <span class="job-item__client-spent${spentClass}" title="Client Spend">Spent: ${spentAmount.toFixed(0)}</span>`;
     }
 
     // Payment Verification Status
@@ -112,11 +114,11 @@ function formatClientInfo(client) {
  * @param {Array<object>} skills An array of skill objects, each with a 'name' property.
  * @returns {string} The formatted skills string (e.g., "Skills: Skill1, Skill2, Skill3...").
  */
-function formatSkills(skills) {
+function formatSkills(skills: { name: string }[]): string {
   if (!skills || skills.length === 0) {
     return '';
   }
-  const skillNames = skills.map((s) => s.name);
+  const skillNames = skills.map((s: { name: string }) => s.name);
   if (skillNames.length > 3) {
     return `Skills: ${skillNames.slice(0, 3).join(', ')}...`;
   }
@@ -136,39 +138,39 @@ function formatSkills(skills) {
  * @param {number|string} [budget.maxAmount] The maximum budget amount.
  * @returns {string} The formatted budget string (e.g., "$20 - $40/hr", "$500").
  */
-function formatBudget(budget) {
+function formatBudget(budget: { type?: string; minAmount?: number | string; maxAmount?: number | string }): string {
   if (!budget) {
     return 'N/A';
   }
 
   const { type, minAmount, maxAmount } = budget;
   // Helper for thousand separators
-  const formatNumber = (num) => {
-    const n = parseFloat(num);
+  const formatNumber = (num: number | string) => {
+    const n = parseFloat(num as string);
     return isNaN(n) ? null : n.toLocaleString();
   };
 
   if (type && type.toLowerCase().includes('hourly')) {
     // Always both min and max present for hourly jobs, but check for missing/invalid
-    const min = formatNumber(minAmount);
-    const max = formatNumber(maxAmount);
+    const min = formatNumber(minAmount as string);
+    const max = formatNumber(maxAmount as string);
     if (min && max) {
-      return `$${min} - $${max}/hr`;
+      return `${min} - ${max}/hr`;
     } else if (min) {
-      return `$${min}/hr`;
+      return `${min}/hr`;
     } else if (max) {
-      return `$${max}/hr`;
+      return `${max}/hr`;
     } else {
       return 'N/A';
     }
   } else {
     // Fixed price: show range if min and max differ, else just min
-    const min = formatNumber(minAmount);
-    const max = formatNumber(maxAmount);
+    const min = formatNumber(minAmount as string);
+    const max = formatNumber(maxAmount as string);
     if (min && max && min !== max) {
-      return `$${min} - $${max}`;
+      return `${min} - ${max}`;
     } else if (min) {
-      return `$${min}`;
+      return `${min}`;
     } else {
       return 'N/A';
     }
@@ -181,7 +183,7 @@ function formatBudget(budget) {
  * @param {HTMLElement} containerEl The container element that will have the pseudo-elements for shadows.
  * @param {HTMLElement} listEl The scrollable list element inside the container.
  */
-function initializeScrollHints(containerEl, listEl) {
+function initializeScrollHints(containerEl: HTMLElement, listEl: HTMLElement) {
   if (!containerEl || !listEl) {
     console.warn('Scroll hints not initialized: container or list element not found.');
     return;
@@ -200,3 +202,5 @@ function initializeScrollHints(containerEl, listEl) {
   listEl.addEventListener('scroll', updateHints);
   updateHints(); // Initial check
 }
+
+export { constructUpworkSearchURL, timeAgo, formatClientInfo, formatSkills, formatBudget, initializeScrollHints };

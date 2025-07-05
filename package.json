@@ -13,7 +13,11 @@
   "scripts": {
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix",
-    "format": "prettier --write \"**/*.{js,json,html,css,md}\""
+    "format": "prettier --write \"**/*.{js,json,html,css,md}\"",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "copy-assets": "mkdir -p dist/popup dist/icons dist/audio dist/lib && cp manifest.json dist/ && cp background.html dist/ && cp icons/*.png dist/icons/ && cp popup/popup.html dist/popup/ && cp popup/popup.css dist/popup/ && cp popup/popup-dark.css dist/popup/ && cp popup/neue-montreal-variable.latin.woff2 dist/popup/ && cp -r popup/icons/ dist/popup/icons/ && cp audio/notification.mp3 dist/audio/ && cp lib/browser-polyfill.min.js dist/lib/",
+    "build": "npm run clean && tsc && npm run copy-assets"
   },
   "repository": {
     "type": "git",
@@ -30,10 +34,13 @@
   "homepage": "https://github.com/milllan/upwork-job-monitor#readme",
   "devDependencies": {
     "@eslint/js": "^9.29.0",
+    "@types/chrome": "^0.0.329",
+    "@types/node": "^24.0.10",
     "eslint": "^9.29.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.5.1",
     "globals": "^16.2.0",
-    "prettier": "^3.6.1"
+    "prettier": "^3.6.1",
+    "typescript": "^5.8.3"
   }
 }

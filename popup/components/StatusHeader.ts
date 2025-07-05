@@ -1,10 +1,16 @@
-/**
- * StatusHeader Component
- * Manages the display of the application's status, including the monitor state,
- * last check time, and deleted jobs count.
- */
-class StatusHeader {
-  constructor(containerElement) {
+import { timeAgo } from '../../utils.js';
+
+interface StatusHeaderState {
+  statusText: string;
+  lastCheckTimestamp: number | null;
+  deletedJobsCount: number;
+}
+
+export class StatusHeader {
+  private container: HTMLElement;
+  private state: StatusHeaderState;
+
+  constructor(containerElement: HTMLElement) {
     if (!containerElement) {
       throw new Error('StatusHeader component requires a container element.');
     }
@@ -17,20 +23,12 @@ class StatusHeader {
     this.render();
   }
 
-  /**
-   * Updates the header's state and re-renders the display.
-   * @param {object} newState - An object with partial state to update.
-   */
-  update(newState = {}) {
-    // Merge new state with the current state
+  update(newState: Partial<StatusHeaderState> = {}): void {
     this.state = { ...this.state, ...newState };
     this.render();
   }
 
-  /**
-   * Renders the header's content based on the current state.
-   */
-  render() {
+  render(): void {
     const { statusText, lastCheckTimestamp, deletedJobsCount } = this.state;
 
     const statusDisplay = statusText || 'Idle';
@@ -43,7 +41,6 @@ class StatusHeader {
         hour: '2-digit',
         minute: '2-digit',
       });
-      // timeAgo function is expected to be globally available from utils.js
       lastCheckDisplay = `${timeString} (${timeAgo(lastCheckDate)})`;
     }
 
@@ -52,11 +49,4 @@ class StatusHeader {
       `<span class="app-header__status-tag" title="Last successful check time">Last: ${lastCheckDisplay}</span>` +
       `<span class="app-header__status-tag" title="Jobs you've deleted from the list">Del: ${deletedCount}</span>`;
   }
-}
-
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = StatusHeader;
-} else {
-  window.StatusHeader = StatusHeader;
 }

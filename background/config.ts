@@ -3,7 +3,7 @@
  * Centralized configuration and constants for the Upwork Job Monitor background script.
  */
 
-const config = {
+export const config = {
   UPWORK_DOMAIN: 'https://www.upwork.com',
   UPWORK_GRAPHQL_ENDPOINT_BASE: 'https://www.upwork.com/api/graphql/v1',
   TARGET_GRAPHQL_URL_PATTERN: '*://*.upwork.com/api/graphql/v1*', // For webRequest
@@ -77,6 +77,7 @@ const config = {
     RECENT_FOUND_JOBS: 'recentFoundJobs',
     COLLAPSED_JOB_IDS: 'collapsedJobIds',
     UI_THEME: 'uiTheme',
+    API_ENDPOINT_TOKENS: 'apiEndpointTokens',
   },
 
   // Other constants
