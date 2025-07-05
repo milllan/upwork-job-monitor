@@ -351,7 +351,7 @@ export class AppState {
   }
 
   private _debounce(func: (...args: unknown[]) => void, wait: number): () => void {
-    let timeout: NodeJS.Timeout;
+    let timeout: number;
     return function executedFunction(...args: unknown[]) {
       const later = () => {
         clearTimeout(timeout);
