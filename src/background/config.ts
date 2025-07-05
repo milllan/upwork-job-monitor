@@ -7,7 +7,7 @@ export const config = {
   UPWORK_DOMAIN: 'https://www.upwork.com',
   UPWORK_GRAPHQL_ENDPOINT_BASE: 'https://www.upwork.com/api/graphql/v1',
   TARGET_GRAPHQL_URL_PATTERN: '*://*.upwork.com/api/graphql/v1*', // For webRequest
-  X_UPWORK_API_TENANT_ID: '424307183201796097', // This might need dynamic discovery or confirmation
+  //X_UPWORK_API_TENANT_ID: '424307183201796097', // This might need dynamic discovery or confirmation
 
   // Default search parameters
   DEFAULT_USER_QUERY:
