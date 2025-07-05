@@ -206,7 +206,7 @@ async function _fetchUpworkJobs(
       userQuery: userQuery || config.DEFAULT_USER_QUERY,
       contractorTier: config.DEFAULT_CONTRACTOR_TIERS_GQL,
       sort: config.DEFAULT_SORT_CRITERIA,
-      highlight: true,
+      highlight: false,
       paging: { offset: 0, count: config.API_FETCH_COUNT },
     },
   };
