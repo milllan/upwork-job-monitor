@@ -16,9 +16,9 @@
     "lint:fix": "eslint . --ext .js,.ts --fix",
     "format": "prettier --write \"**/*.{js,json,html,css,md}\"",
     "type-check": "tsc --noEmit",
-    "clean": "shx rm -rf dist",
-    "copy-assets": "shx mkdir -p dist/popup dist/icons dist/audio dist/lib && shx cp src/manifest.json dist/ && shx cp src/background.html dist/ && shx cp src/icons/*.png dist/icons/ && shx cp src/popup/popup.html dist/popup/ && shx cp src/popup/popup.css dist/popup/ && shx cp src/popup/popup-dark.css dist/popup/ && shx cp src/popup/neue-montreal-variable.latin.woff2 dist/popup/ && shx cp -r src/popup/icons dist/popup/icons && shx cp src/audio/notification.mp3 dist/audio/ && shx cp node_modules/webextension-polyfill/dist/browser-polyfill.min.js dist/lib/",
-    "build": "npm run clean && tsc && npm run copy-assets"
+    "clean": "rimraf dist",
+    "copy-assets": "npx cpx2 \"src/**\" dist && npx cpx2 \"node_modules/webextension-polyfill/dist/browser-polyfill.min.js\" dist/lib",
+    "build": "npm run clean && npm run copy-assets && tsc && npx rimraf --glob \"dist/**/*.ts\""
   },
   "repository": {
     "type": "git",
@@ -37,13 +37,13 @@
     "@eslint/js": "^9.29.0",
     "@types/chrome": "^0.0.329",
     "@types/node": "^24.0.10",
+    "cpx2": "^7.0.1",
     "eslint": "^9.29.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.5.1",
     "globals": "^16.2.0",
     "prettier": "^3.6.1",
     "rimraf": "^6.0.1",
-    "shx": "^0.4.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.35.1"
   }
