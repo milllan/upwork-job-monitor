@@ -1,1 +1,2 @@
-declare const browser: any;
+import { WebExtension } from 'webextension-polyfill';
+declare const browser: WebExtension.Browser;
