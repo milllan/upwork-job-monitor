@@ -16,8 +16,8 @@
     "format": "prettier --write \"**/*.{js,json,html,css,md}\"",
     "type-check": "tsc --noEmit",
     "clean": "rimraf dist",
-    "copy-assets": "npx cpx2 \"src/**\" dist && npx cpx2 \"node_modules/webextension-polyfill/dist/browser-polyfill.min.js\" dist/lib",
-    "build": "npm run clean && npm run copy-assets && tsc && npx rimraf --glob \"dist/**/*.ts\""
+    "copy-assets": "npx cpx2 \"src/**/!(*.ts)\" dist && npx cpx2 \"node_modules/webextension-polyfill/dist/browser-polyfill.min.js\" dist/lib",
+    "build": "npm run clean && npm run copy-assets && tsc"
   },
   "repository": {
     "type": "git",

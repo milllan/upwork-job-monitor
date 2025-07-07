@@ -44,6 +44,7 @@ export const config = {
     'Logo Designer',
     'Unity Performance Specialist',
     'Specialist for TikTok',
+    'Spanish Fluent',
     // Add more strings to exclude as needed
   ].map((s) => s.toLowerCase()),
 
