@@ -28,10 +28,6 @@ export class JobDetails {
       throw new Error('JobDetails component requires a template element with id "job-details-template".');
     }
     this.template = template;
-
-    if (!this.container) {
-      throw new Error('JobDetails component requires a container element.');
-    }
     this.showInitialMessage();
   }
 

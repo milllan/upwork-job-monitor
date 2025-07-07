@@ -63,6 +63,7 @@ export const config = {
     'Philippines',
     'Lebanon',
     'Nigeria',
+    'IND',
   ].map((s) => s.toLowerCase()),
 
   // Storage keys

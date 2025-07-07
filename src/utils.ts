@@ -134,7 +134,7 @@ function formatSkills(skills: { name: string }[]): string {
   if (!skills || skills.length === 0) {
     return '';
   }
-  const skillNames = skills.map((s: { name: string }) => s.name);
+  const skillNames = skills.map((s) => s.name);
   if (skillNames.length > 3) {
     return `Skills: ${skillNames.slice(0, 3).join(', ')}...`;
   }
@@ -166,7 +166,7 @@ function formatBudget(budget: { type?: string; minAmount?: number | string; maxA
     return isNaN(n) ? null : n.toLocaleString();
   };
 
-  if (type && type.toLowerCase().includes('hourly')) {
+  if (type?.toLowerCase().includes('hourly')) {
     // Always both min and max present for hourly jobs, but check for missing/invalid
     const min = formatNumber(minAmount as string);
     const max = formatNumber(maxAmount as string);

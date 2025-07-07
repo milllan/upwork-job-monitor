@@ -178,7 +178,6 @@ export const StorageManager = {
       [STORAGE_KEYS.RECENT_FOUND_JOBS]: [],
       [STORAGE_KEYS.COLLAPSED_JOB_IDS]: [],
       [STORAGE_KEYS.CURRENT_USER_QUERY]: defaultUserQuery,
-      //[STORAGE_KEYS.LAST_KNOWN_GOOD_TOKEN]: null,
       [STORAGE_KEYS.API_ENDPOINT_TOKENS]: {},
       [STORAGE_KEYS.UI_THEME]: 'light',
     });

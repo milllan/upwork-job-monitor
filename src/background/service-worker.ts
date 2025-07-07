@@ -55,8 +55,7 @@ function _applyClientSideFilters(jobs: Job[]): {
     ) {
       for (const skill of job.skills) {
         if (
-          skill &&
-          skill.name &&
+          skill?.name &&
           config.SKILL_LOW_PRIORITY_TERMS.includes(skill.name.toLowerCase())
         ) {
           newJobData.isLowPriorityBySkill = true;
@@ -104,7 +103,7 @@ async function _processAndNotifyNewJobs(
 }> {
   // Filter out jobs that are already seen OR have been explicitly deleted by the user from the *fetched* list
   const allNewOrUpdatedJobs = fetchedJobs.filter(
-    (job) => job && job.id && !historicalSeenJobIds.has(job.id) && !deletedJobIds.has(job.id)
+    (job) => job?.id && !historicalSeenJobIds.has(job.id) && !deletedJobIds.has(job.id)
   );
   // From these, determine which are truly new AND notifiable (not excluded by title filter)
   const notifiableNewJobs = allNewOrUpdatedJobs.filter(

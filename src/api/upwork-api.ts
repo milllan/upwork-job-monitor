@@ -133,6 +133,20 @@ async function _executeGraphQLQuery<T>(
 }
 
 /**
+ * Helper to determine the budget amount from a raw job object.
+ * @param job The raw job data from the API.
+ * @param isMin True to get the minimum amount, false for the maximum.
+ * @returns The budget amount.
+ */
+function getBudgetAmount(job: RawUpworkJob, isMin: boolean): number {
+  const isHourly = job.jobTile.job.jobType.toLowerCase().includes('hourly');
+  if (isHourly) {
+    return (isMin ? job.jobTile.job.hourlyBudgetMin : job.jobTile.job.hourlyBudgetMax) || 0;
+  }
+  return job.jobTile.job.fixedPriceAmount?.amount || 0;
+}
+
+/**
  * Internal-only function to fetch Upwork jobs.
  * @private
  */
@@ -222,7 +236,9 @@ async function _fetchUpworkJobs(
   }
 
   const results = responseData.data?.search?.universalSearchNuxt?.userJobSearchV1?.results;
-  if (!results) {return [];}
+  if (!results) {
+    return [];
+  }
 
   return results.map((job: RawUpworkJob): Job => ({
     id: job.jobTile.job.ciphertext || job.jobTile.job.id,
@@ -234,12 +250,8 @@ async function _fetchUpworkJobs(
     budget: {
       type: job.jobTile.job.jobType,
       currencyCode: job.jobTile.job.fixedPriceAmount?.isoCurrencyCode || 'USD',
-      minAmount: (job.jobTile.job.jobType.toLowerCase().includes('hourly')
-        ? job.jobTile.job.hourlyBudgetMin
-        : job.jobTile.job.fixedPriceAmount?.amount) || 0,
-      maxAmount: (job.jobTile.job.jobType.toLowerCase().includes('hourly')
-        ? job.jobTile.job.hourlyBudgetMax
-        : job.jobTile.job.fixedPriceAmount?.amount) || 0,
+      minAmount: getBudgetAmount(job, true),
+      maxAmount: getBudgetAmount(job, false),
     },
     client: {
       paymentVerificationStatus: job.upworkHistoryData?.client?.paymentVerificationStatus || 'N/A',
