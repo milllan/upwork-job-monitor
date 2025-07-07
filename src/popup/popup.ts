@@ -267,8 +267,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, observerOptions);
 
     elementsToObserve.forEach((item) => {
-      if (item && item.dataset.ciphertextForTooltip) {
-        jobItemObserver.observe(item);
+      if (item?.dataset.ciphertextForTooltip) {
+        jobItemObserver?.observe(item);
       }
     });
   }
