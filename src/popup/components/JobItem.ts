@@ -71,9 +71,7 @@ export class JobItem {
   }
 
   destroy(): void {
-    if (this.element && this.element.parentNode) {
-      this.element.parentNode.removeChild(this.element);
-    }
+    this.element?.remove();
     this.element = null;
     this.viewModel = null;
   }
