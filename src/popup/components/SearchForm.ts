@@ -10,13 +10,16 @@ export class SearchForm {
     }
     this.container = containerElement;
     this.onSearch = onSearch;
-
-    this.inputEl = this.container.querySelector('.query-section__input') as HTMLInputElement;
-    this.buttonEl = this.container.querySelector('.query-section__button') as HTMLButtonElement;
-
-    if (!this.inputEl || !this.buttonEl) {
-      throw new Error('SearchForm requires an input and a button with specific classes.');
+    const inputEl = this.container.querySelector('.query-section__input');
+    const buttonEl = this.container.querySelector('.query-section__button');
+    if (!(inputEl instanceof HTMLInputElement)) {
+      throw new Error('SearchForm requires an input element with class .query-section__input');
     }
+    if (!(buttonEl instanceof HTMLButtonElement)) {
+      throw new Error('SearchForm requires a button element with class .query-section__button');
+    }
+    this.inputEl = inputEl;
+    this.buttonEl = buttonEl;
 
     this._attachEventListeners();
   }
