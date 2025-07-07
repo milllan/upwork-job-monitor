@@ -48,7 +48,9 @@ class ApiService {
         response?.details || response
       );
       throw new Error(
-        (response?.details?.message as string) || 'An unknown error occurred in the background script.'
+        typeof response?.details?.message === 'string'
+          ? response.details.message
+          : 'An unknown error occurred in the background script.'
       );
     }
   }
