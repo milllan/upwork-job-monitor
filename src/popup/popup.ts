@@ -266,13 +266,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }, observerOptions);
 
-    if (jobItemObserver) { // Added check
-      elementsToObserve.forEach((item) => {
-        if (item && item.dataset.ciphertextForTooltip) {
-          jobItemObserver!.observe(item);
-        }
-      });
-    }
+    elementsToObserve.forEach((item) => {
+      if (item && item.dataset.ciphertextForTooltip) {
+        jobItemObserver.observe(item);
+      }
+    });
   }
 
   initializeScrollHints(jobListContainerEl, recentJobsListDiv);
