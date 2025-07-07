@@ -59,3 +59,10 @@ jobs:
       # If there are any TypeScript errors, this step will fail.
       - name: Run TypeScript Compiler (Type Check)
         run: npm run type-check
+
+      # --- Step 6: Run Tests ---
+      # Executes the 'test' script from your package.json.
+      # This step is conditional and only runs if test files are found.
+      - name: Run Tests
+        if: hashFiles('**/*.test.ts') != ''
+        run: npm test
