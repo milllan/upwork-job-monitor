@@ -1,5 +1,3 @@
-declare const browser: typeof import('webextension-polyfill');
-
 import { config } from '../background/config.js';
 import { Job } from '../types.js';
 

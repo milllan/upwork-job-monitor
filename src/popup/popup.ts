@@ -1,6 +1,5 @@
 import { AppState } from './state/AppState.js';
 import { Runtime } from 'webextension-polyfill';
-declare const browser: typeof import('webextension-polyfill');
 import { ApiService } from './services/ApiService.js';
 import { JobDetails } from './components/JobDetails.js';
 import { JobItem } from './components/JobItem.js';

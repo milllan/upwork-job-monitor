@@ -1,8 +1,6 @@
 import { JobDetails, GraphQLResponse } from '../../types.js';
 import { AppState } from '../state/AppState.js';
 
-declare const browser: typeof import('webextension-polyfill');
-
 interface GetJobDetailsResponse extends GraphQLResponse<{ jobDetails: JobDetails | null }> {
   jobDetails?: JobDetails | null;
 }

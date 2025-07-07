@@ -1,7 +1,4 @@
 
-
-declare const browser: typeof import('webextension-polyfill');
-
 export const AudioService = (() => {
   let audioPlayerPromise: Promise<HTMLAudioElement> | null = null;
 
@@ -77,5 +74,3 @@ export const AudioService = (() => {
     playSound,
   };
 })();
-
-

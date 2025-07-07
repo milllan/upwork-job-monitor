@@ -2,7 +2,6 @@ import { Job, JobDetails, TalentProfile, isGraphQLResponse, GraphQLResponse, Pro
 import { type Notifications, type Runtime } from 'webextension-polyfill';
 
 // Use declare to inform TypeScript about the global 'browser' object provided by the extension environment.
-declare const browser: typeof import('webextension-polyfill');
 
 import { config } from '../background/config.js';
 import { StorageManager } from '../storage/storage-manager.js';

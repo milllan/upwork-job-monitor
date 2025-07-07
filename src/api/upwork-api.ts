@@ -7,7 +7,6 @@ import {
 } from '../types.js';
 
 import { config } from '../background/config.js';
-declare const browser: typeof import('webextension-polyfill');
 import { StorageManager } from '../storage/storage-manager.js';
 
 const API_IDENTIFIERS = {
