@@ -46,12 +46,20 @@ export class JobItem {
   }
 
   render(): HTMLElement {
-    if (!this.element) {
-      this.element = this._createElement();
-      this._attachEventListeners();
+    try {
+      if (!this.element) {
+        this.element = this._createElement();
+        this._attachEventListeners();
+      }
+      this._updateElement();
+    } catch (error) {
+      console.error('JobItem render error:', error);
+      if (!this.element) {
+        this.element = this._createElement(); // Attempt to create a basic element for error display
+      }
+      this.element.innerHTML = '<div class="job-item__error">Error displaying job</div>';
     }
-    this._updateElement();
-    return this.element;
+    return this.element as HTMLElement;
   }
 
   update(newJobData: Job, newOptions: Partial<JobItemOptions> = {}): void {
