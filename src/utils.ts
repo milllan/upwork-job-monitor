@@ -30,11 +30,11 @@ function constructUpworkSearchURL(userQuery: string, contractorTiersGraphQL: Tie
   const baseURL = 'https://www.upwork.com/nx/search/jobs/';
   const encodedQuery = encodeURIComponent(userQuery);
 
-  const tierMap: { [key in Tier]: string } = {
+  const tierMap: Readonly<Record<Tier, string>> = {
     EntryLevel: '1',
     IntermediateLevel: '2',
     ExpertLevel: '3',
-  };
+  } as const;
 
   const mappedTiers = contractorTiersGraphQL
     .map((tier) => tierMap[tier])
