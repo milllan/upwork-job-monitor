@@ -1,5 +1,5 @@
 import { Job } from '../../types.js';
-import { formatBudget, formatClientInfo, formatSkills, timeAgo } from '../../utils.js';
+import { formatBudget, formatClientInfo, formatSkills, timeAgo } from '../../utils/utils.js';
 
 interface JobItemOptions {
   isCollapsed: boolean;

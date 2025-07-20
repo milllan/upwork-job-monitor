@@ -7,7 +7,7 @@ import { config } from '../background/config.js';
 import { StorageManager } from '../storage/storage-manager.js';
 import { UpworkAPI } from '../api/upwork-api.js';
 import { AudioService } from './audio-service.js';
-import { formatBudget } from '../utils.js';
+import { formatBudget } from '../utils/utils.js';
 
 let isJobCheckRunning = false; // Flag to prevent concurrent runs
 

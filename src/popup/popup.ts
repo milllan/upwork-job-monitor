@@ -6,7 +6,7 @@ import { JobItem } from './components/JobItem.js';
 import { SearchForm } from './components/SearchForm.js';
 import { StatusHeader } from './components/StatusHeader.js';
 import { config } from '../background/config.js';
-import { $, constructUpworkSearchURL, initializeScrollHints } from '../utils.js';
+import { $, constructUpworkSearchURL, initializeScrollHints } from '../utils/utils.js';
 import { Job } from '../types.js';
 
 let jobItemObserver: IntersectionObserver | null = null;
