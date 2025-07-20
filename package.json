@@ -15,7 +15,7 @@
     "lint:fix": "eslint . --ext .js,.ts --fix",
     "format": "prettier --write \"**/*.{js,ts,json,html,css,md}\"",
     "type-check": "tsc --noEmit",
-    "test": "echo \"No tests specified yet\" && exit 0",
+    "test": "jest",
     "clean": "rimraf dist",
     "copy-assets": "npx cpx2 \"src/**/!(*.ts)\" dist && npx cpx2 \"node_modules/webextension-polyfill/dist/browser-polyfill.min.js\" dist/lib",
     "build": "npm run clean && npm run copy-assets && tsc"
@@ -37,6 +37,7 @@
     "@eslint/js": "^9.29.0",
     "@types/chrome": "^0.0.329",
     "@types/dom-chromium-ai": "^0.0.9",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.0.10",
     "@types/webextension-polyfill": "^0.12.3",
     "cpx2": "^7.0.1",
@@ -44,8 +45,12 @@
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.5.1",
     "globals": "^16.2.0",
+    "jest": "^30.0.4",
+    "jest-environment-jsdom": "^30.0.4",
+    "jest-webextension-mock": "^4.0.0",
     "prettier": "^3.6.1",
     "rimraf": "^6.0.1",
+    "ts-jest": "^29.4.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.35.1"
   }

@@ -1,5 +1,5 @@
-import { config } from '../background/config.js';
-import { Job } from '../types.js';
+import { config } from '@background/config';
+import { Job } from '../types';
 
 /**
  * Manages all interactions with chrome.storage.local.
