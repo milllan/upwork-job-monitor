@@ -70,6 +70,7 @@ export const config = {
     'Philippines',
     'Lebanon',
     'Nigeria',
+    // 'IND' is sometimes returned by the API instead of 'India'
     'IND',
   ].map((s) => s.toLowerCase()),
 

@@ -410,45 +410,41 @@ async function _executeApiCallWithTokenRotation<T>(
       return { result, token }; // Return consistent object
     }
 
-    // --- THIS IS THE ROBUST LOGIC THAT WAS MISSING ---
     else if (isGraphQLResponse(result)) {
       lastError = result; // Keep track of the specific error from the failed attempt
       const tokenSnippet = `token ${token.substring(0, 15)}`;
-      if (lastError) {
-        const { type, details = {} } = lastError;
-        switch (type) {
-          case 'graphql':
-            console.warn(
-              `API: GraphQL error with ${tokenSnippet} for ${operationName} - ${JSON.stringify(
-                details.errors
-              )}`
-            );
-            break;
-          case 'http':
-            console.warn(
-              `API: HTTP error ${details.status} with ${tokenSnippet} for ${operationName}`
-            );
-            break;
-          case 'network':
-            console.warn(
-              `API: Network error with ${tokenSnippet} for ${operationName}: ${details.message}`
-            );
-            break;
-          case 'parsing':
-            console.warn(
-              `API: JSON parsing error with ${tokenSnippet} for ${operationName}: ${
-                details.message
-              }`
-            );
-            break;
-          default:
-            console.warn(
-              `API: An unknown error occurred with ${tokenSnippet} for ${operationName}`
-            );
+      const { type, details = {} } = lastError;
+      switch (type) {
+        case 'graphql':
+          console.warn(
+            `API: GraphQL error with ${tokenSnippet} for ${operationName} - ${JSON.stringify(
+              details.errors
+            )}`
+          );
+          break;
+        case 'http':
+          console.warn(
+            `API: HTTP error ${details.status} with ${tokenSnippet} for ${operationName}`
+          );
+          break;
+        case 'network':
+          console.warn(
+            `API: Network error with ${tokenSnippet} for ${operationName}: ${details.message}`
+          );
+          break;
+        case 'parsing':
+          console.warn(
+            `API: JSON parsing error with ${tokenSnippet} for ${operationName}: ${
+              details.message
+            }`
+          );
+          break;
+        default:
+          console.warn(
+            `API: An unknown error occurred with ${tokenSnippet} for ${operationName}`
+          );
         }
-      }
     }
-    // --- END OF ROBUST LOGIC ---
   }
 
   console.error(`API: All candidate tokens failed for ${operationName} (${apiIdentifier}).`);
