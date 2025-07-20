@@ -493,7 +493,7 @@ async function _fetchAndProcessJobDetails(
 // NEW: Processing function for talent profiles
 async function _fetchAndProcessTalentProfile(
   profileCiphertext: string
-): Promise<{ profileDetails: TalentProfile | null } | GraphQLResponse<unknown>> {
+): Promise<GraphQLResponse<{ profileDetails: TalentProfile | null }>> {
   const apiResult = await UpworkAPI.fetchTalentProfile(profileCiphertext);
 
   if (isGraphQLResponse(apiResult)) {
@@ -501,7 +501,7 @@ async function _fetchAndProcessTalentProfile(
     if (apiResult.type === 'http' && apiResult.details && apiResult.details.status === 403) {
       await _handleApiTokenFailure(apiResult, 'talentProfile', { ciphertext: profileCiphertext });
     }
-    return apiResult;
+    return apiResult as GraphQLResponse<{ profileDetails: TalentProfile | null }>;
   }
 
   // Handle the null case for talent profiles
@@ -509,7 +509,7 @@ async function _fetchAndProcessTalentProfile(
     console.log(`MV2: Talent profile for ${profileCiphertext} not found (returned null).`);
   }
 
-  return apiResult;
+  return { data: apiResult };
 }
 
 setupAlarms();
