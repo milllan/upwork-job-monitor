@@ -18,7 +18,12 @@ export const AudioService = (() => {
       const createPlayer = () => {
         const existingPlayer = document.getElementById('notification-sound-player');
         if (existingPlayer) {
-          return resolve(existingPlayer as HTMLAudioElement);
+          if (existingPlayer instanceof HTMLAudioElement) {
+            return resolve(existingPlayer);
+          } else {
+            // Element exists but is the wrong type, so remove it and proceed to create a new one.
+            existingPlayer.remove();
+          }
         }
 
         const player = document.createElement('audio');
