@@ -123,7 +123,7 @@ export class JobDetails {
           const li = document.createElement('li');
           const a = document.createElement('a');
           a.href = `https://www.upwork.com/freelancers/${contractor.ciphertext}`;
-          a.textContent = contractor.name.split(' ')[0]; // Only first name
+          a.textContent = contractor.name.split(' ')[0] || contractor.name || 'Unknown';
           a.target = '_blank';
           a.rel = 'noopener noreferrer';
           li.appendChild(a);
