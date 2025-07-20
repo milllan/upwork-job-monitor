@@ -11,9 +11,14 @@
     "lib": "lib"
   },
   "scripts": {
-    "lint": "eslint . --ext .js",
-    "lint:fix": "eslint . --ext .js --fix",
-    "format": "prettier --write \"**/*.{js,json,html,css,md}\""
+    "lint": "eslint . --ext .js,.ts",
+    "lint:fix": "eslint . --ext .js,.ts --fix",
+    "format": "prettier --write \"**/*.{js,ts,json,html,css,md}\"",
+    "type-check": "tsc --noEmit",
+    "test": "echo \"No tests specified yet\" && exit 0",
+    "clean": "rimraf dist",
+    "copy-assets": "npx cpx2 \"src/**/!(*.ts)\" dist && npx cpx2 \"node_modules/webextension-polyfill/dist/browser-polyfill.min.js\" dist/lib",
+    "build": "npm run clean && npm run copy-assets && tsc"
   },
   "repository": {
     "type": "git",
@@ -30,10 +35,18 @@
   "homepage": "https://github.com/milllan/upwork-job-monitor#readme",
   "devDependencies": {
     "@eslint/js": "^9.29.0",
+    "@types/chrome": "^0.0.329",
+    "@types/dom-chromium-ai": "^0.0.9",
+    "@types/node": "^24.0.10",
+    "@types/webextension-polyfill": "^0.12.3",
+    "cpx2": "^7.0.1",
     "eslint": "^9.29.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.5.1",
     "globals": "^16.2.0",
-    "prettier": "^3.6.1"
+    "prettier": "^3.6.1",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.35.1"
   }
 }
