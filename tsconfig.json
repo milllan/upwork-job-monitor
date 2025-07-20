@@ -9,20 +9,31 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "baseUrl": "./src",
+    "baseUrl": "./",
+    "paths": {
+      "@background/*": ["src/background/*"],
+      "@popup/*": ["src/popup/*"],
+      "@storage/*": ["src/storage/*"],
+      "@utils/*": ["src/*"],
+      "@api/*": ["src/api/*"],
+      "@types/*": ["src/types/*"]
+    },
     "checkJs": false,
     "lib": ["dom", "dom.iterable", "esnext"],
     "noEmit": false,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "declaration": false,
+    "sourceMap": true
   },
   "include": [
-    "./src/**/*.ts",
-    "src/global.d.ts"
+    "src/**/*.ts"
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }

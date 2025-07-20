@@ -38,6 +38,16 @@ For detailed usage instructions, see the [**User Guide**](docs/1-user/guide.md).
 - [Developer Documentation](docs/2-developer/01-architecture.md) - Technical architecture, API reference, and development process.
 - [Archived Development Plan](docs/4-archive/original-development-plan.md) - Original project planning documentation.
 
+## Running Tests
+
+To run the tests for this project, use the following command:
+
+```bash
+npm test
+```
+
+This will execute all unit and integration tests defined in the project.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
