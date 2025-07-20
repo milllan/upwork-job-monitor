@@ -25,8 +25,7 @@ type SelectorListener<T> = (newValue: T, prevValue: T) => void;
 export class AppState {
   private state: State;
   private listeners: Set<StateListener> = new Set();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- This is an internal implementation detail to work around TypeScript's variance limitations with generics. The public `subscribeToSelector` method enforces strict typing.
-  private selectorListeners: Map<keyof State, Set<SelectorListener<any>>> = new Map();
+  private selectorListeners: Map<keyof State, Set<SelectorListener<unknown>>> = new Map();
   private debouncedSave: () => void;
 
   constructor() {
@@ -77,12 +76,12 @@ export class AppState {
     if (!this.selectorListeners.has(selector)) {
       this.selectorListeners.set(selector, new Set());
     }
-    this.selectorListeners.get(selector)!.add(listener);
+    this.selectorListeners.get(selector)!.add(listener as SelectorListener<unknown>);
 
     return () => {
       const listeners = this.selectorListeners.get(selector);
       if (listeners) {
-        listeners.delete(listener);
+        listeners.delete(listener as SelectorListener<unknown>);
         if (listeners.size === 0) {
           this.selectorListeners.delete(selector);
         }
