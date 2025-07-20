@@ -194,8 +194,7 @@ describe('StorageManager', () => {
       { id: 'job13', ciphertext: '', title: 'Job 13', description: '', postedOn: '', applied: false, budget: { type: '', currencyCode: '', minAmount: 0, maxAmount: 0 }, client: { paymentVerificationStatus: '', country: '', totalSpent: 0, rating: 0 }, skills: [], _fullJobData: {} }, // This one should be sliced off
     ];
 
-    // Assuming MAX_RECENT_JOBS is 5 for this test based on config.ts
-    // If it's different, this test might need adjustment or the value should be mocked
+    // The number of jobs is sliced to `config.API_FETCH_COUNT` (12) by `setRecentFoundJobs`.
     await StorageManager.setRecentFoundJobs(jobs);
     const retrievedJobs = await StorageManager.getRecentFoundJobs();
     expect(retrievedJobs.length).toBe(config.API_FETCH_COUNT);
