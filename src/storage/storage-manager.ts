@@ -10,6 +10,7 @@ import { Job } from '../types.js';
 const STORAGE_KEYS = config.STORAGE_KEYS;
 const MAX_SEEN_IDS = config.MAX_SEEN_IDS;
 const MAX_DELETED_IDS = config.MAX_DELETED_IDS;
+// Use the same limit as API fetch to ensure we don't store more than we fetch, might be useful for consistency
 const MAX_RECENT_JOBS = config.API_FETCH_COUNT;
 
 export const StorageManager = {

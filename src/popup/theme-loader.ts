@@ -8,8 +8,8 @@
     .then((result: { uiTheme?: 'light' | 'dark' }) => {
       const theme = result.uiTheme || 'light';
       if (theme === 'dark') {
-        const themeStylesheet = document.getElementById('theme-stylesheet') as HTMLLinkElement;
-        if (themeStylesheet) {
+        const themeStylesheet = document.getElementById('theme-stylesheet');
+        if (themeStylesheet instanceof HTMLLinkElement) {
           themeStylesheet.href = '/popup/popup-dark.css';
         }
       }
