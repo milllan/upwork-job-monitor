@@ -25,13 +25,11 @@ export class SearchForm {
   }
 
   setQuery(query: string): void {
-    if (this.inputEl) {
-      this.inputEl.value = query || '';
-    }
+    this.inputEl.value = query || '';
   }
 
   getQuery(): string {
-    return this.inputEl ? this.inputEl.value.trim() : '';
+    return this.inputEl.value.trim();
   }
 
   private _attachEventListeners(): void {
