@@ -5,7 +5,6 @@ import { Job } from '../types.js';
  * Manages all interactions with chrome.storage.local.
  * Centralizes storage logic and provides a clean API for other parts of the extension.
  */
-console.log('Storage manager loaded.');
 
 // Use constants from the global config object
 const STORAGE_KEYS = config.STORAGE_KEYS;
