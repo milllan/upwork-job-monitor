@@ -1,5 +1,6 @@
-const AudioService = (() => {
-  let audioPlayerPromise = null;
+
+export const AudioService = (() => {
+  let audioPlayerPromise: Promise<HTMLAudioElement> | null = null;
 
   /**
    * Initializes the audio player by creating a Promise that resolves with the <audio> element
@@ -7,7 +8,7 @@ const AudioService = (() => {
    * initialization to complete.
    */
   function initialize() {
-    if (audioPlayerPromise) return;
+    if (audioPlayerPromise) {return;}
 
     audioPlayerPromise = new Promise((resolve, reject) => {
       if (typeof document === 'undefined') {
@@ -17,7 +18,7 @@ const AudioService = (() => {
       const createPlayer = () => {
         const existingPlayer = document.getElementById('notification-sound-player');
         if (existingPlayer) {
-          return resolve(existingPlayer);
+          return resolve(existingPlayer as HTMLAudioElement);
         }
 
         const player = document.createElement('audio');
@@ -56,8 +57,10 @@ const AudioService = (() => {
     // MV2 implementation
     try {
       const audioPlayer = await audioPlayerPromise;
-      audioPlayer.currentTime = 0;
-      await audioPlayer.play();
+      if (audioPlayer) {
+        audioPlayer.currentTime = 0;
+        await audioPlayer.play();
+      }
     } catch (error) {
       console.warn('AudioService: Error playing notification sound:', error);
     }

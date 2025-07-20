@@ -3,11 +3,11 @@
  * Centralized configuration and constants for the Upwork Job Monitor background script.
  */
 
-const config = {
+export const config = {
   UPWORK_DOMAIN: 'https://www.upwork.com',
   UPWORK_GRAPHQL_ENDPOINT_BASE: 'https://www.upwork.com/api/graphql/v1',
   TARGET_GRAPHQL_URL_PATTERN: '*://*.upwork.com/api/graphql/v1*', // For webRequest
-  X_UPWORK_API_TENANT_ID: '424307183201796097', // This might need dynamic discovery or confirmation
+  //X_UPWORK_API_TENANT_ID: '424307183201796097', // This might need dynamic discovery or confirmation. Looks liek its not needed form GraphQL requests. Only the bearer token is required.
 
   // Default search parameters
   DEFAULT_USER_QUERY:
@@ -44,6 +44,7 @@ const config = {
     'Logo Designer',
     'Unity Performance Specialist',
     'Specialist for TikTok',
+    'Spanish Fluent',
     // Add more strings to exclude as needed
   ].map((s) => s.toLowerCase()),
 
@@ -62,6 +63,7 @@ const config = {
     'Philippines',
     'Lebanon',
     'Nigeria',
+    'IND',
   ].map((s) => s.toLowerCase()),
 
   // Storage keys
@@ -70,13 +72,14 @@ const config = {
     SEEN_JOB_IDS: 'seenJobIds',
     DELETED_JOB_IDS: 'deletedJobIds',
     MONITOR_STATUS: 'monitorStatus',
-    LAST_KNOWN_GOOD_TOKEN: 'lastKnownGoodToken',
+    //LAST_KNOWN_GOOD_TOKEN: 'lastKnownGoodToken',
     LAST_CHECK_TIMESTAMP: 'lastCheckTimestamp',
     NEW_JOBS_IN_LAST_RUN: 'newJobsInLastRun',
     CURRENT_USER_QUERY: 'currentUserQuery',
     RECENT_FOUND_JOBS: 'recentFoundJobs',
     COLLAPSED_JOB_IDS: 'collapsedJobIds',
     UI_THEME: 'uiTheme',
+    API_ENDPOINT_TOKENS: 'apiEndpointTokens',
   },
 
   // Other constants
@@ -85,25 +88,4 @@ const config = {
   FETCH_ALARM_NAME: 'fetchUpworkJobsAlarm_MV2',
   FETCH_INTERVAL_MINUTES: 4, // How often to check for new jobs
   API_FETCH_COUNT: 12, // Number of jobs to fetch per API request, upwork.com website defaults to 10
-
-  // Specific headers for webRequest modification
-  WEBREQUEST_HEADERS: {
-    USER_AGENT:
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
-    ACCEPT_LANGUAGE:
-      'en-US,en;q=0.9,hr;q=0.8,sr-Latn-RS;q=0.7,sr;q=0.6,sh;q=0.5,sr-Cyrl-RS;q=0.4,sr-Cyrl-BA;q=0.3,en-GB;q=0.2',
-    X_UPWORK_ACCEPT_LANGUAGE: 'en-US',
-    DNT: '1',
-    // Headers to remove from the request (case-insensitive)
-    HEADERS_TO_REMOVE: [
-      'sec-fetch-site',
-      'sec-fetch-mode',
-      'sec-fetch-dest',
-      'origin',
-      'referer',
-      'x-upwork-api-tenantid',
-      'x-upwork-accept-language',
-      'dnt',
-    ],
-  },
 };

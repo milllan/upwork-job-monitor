@@ -1,0 +1,68 @@
+# .github/workflows/ci.yml
+
+# A descriptive name for your workflow, which will appear in the GitHub Actions UI.
+name: Build and Test
+
+# --- Triggers ---
+# Defines when this workflow will run.
+on:
+  # Run on pushes to the 'typescript' and 'main' branches.
+  # This ensures the branches themselves are always verified.
+  push:
+    branches: ['typescript', 'main']
+
+  # Run on any pull request that targets the 'typescript' or 'main' branch.
+  # This is the primary quality gate for new code.
+  pull_request:
+    branches: ['typescript', 'main']
+
+# --- Jobs ---
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel.
+jobs:
+  # We'll define a single job called 'build-and-lint'.
+  build-and-lint:
+    # The type of virtual machine to run the job on. 'ubuntu-latest' is the standard and most cost-effective.
+    runs-on: ubuntu-latest
+
+    # A sequence of tasks that will be executed as part of the job.
+    steps:
+      # --- Step 1: Check out the code ---
+      # This action checks out your repository under $GITHUB_WORKSPACE, so your job can access it.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # --- Step 2: Set up Node.js ---
+      # This action sets up a Node.js environment for us to use.
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Specify the Node.js version. '20' is a good, stable LTS choice.
+          node-version: '20'
+          # This is a crucial performance optimization. It will cache the npm
+          # dependency folder, making subsequent runs much faster.
+          cache: 'npm'
+
+      # --- Step 3: Install Dependencies ---
+      # Use 'npm ci' instead of 'npm install' in CI environments. It's faster and
+      # ensures a clean, exact install based on your package-lock.json.
+      - name: Install dependencies
+        run: npm ci
+
+      # --- Step 4: Run the Linter ---
+      # Executes the 'lint' script from your package.json file.
+      # If the linter finds any errors, this step will fail, and the workflow will stop.
+      - name: Run ESLint
+        run: npm run lint
+
+      # --- Step 5: Run the Type Checker ---
+      # Executes the 'type-check' script from your package.json, which runs 'tsc --noEmit'.
+      # If there are any TypeScript errors, this step will fail.
+      - name: Run TypeScript Compiler (Type Check)
+        run: npm run type-check
+
+      # --- Step 6: Run Tests ---
+      # Executes the 'test' script from your package.json.
+      # This step is conditional and only runs if test files are found.
+      - name: Run Tests
+        if: hashFiles('**/*.test.ts') != ''
+        run: npm test
