@@ -1,4 +1,4 @@
-import { config } from '@background/config';
+import { config } from '../background/config.js';
 import { Job } from '../types';
 
 /**

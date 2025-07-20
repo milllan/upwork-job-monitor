@@ -14,4 +14,13 @@ module.exports = {
     '^@api/(.*)$': '<rootDir>/src/api/$1',
     '^@types/(.*)$': '<rootDir>/src/types/$1',
   },
+  transform: {
+    '^.+\\.ts$': [
+      'ts-jest',
+      {
+        tsconfig: 'tsconfig.test.json',
+      },
+    ],
+  },
+  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.test.ts', '!src/**/*.spec.ts'],
 };

@@ -23,15 +23,17 @@
     "noEmit": false,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "declaration": false,
+    "sourceMap": true
   },
   "include": [
-    "src/**/*.ts",
-    "src/global.d.ts",
-    "**/*.test.ts" // Include test files for type checking
+    "src/**/*.ts"
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }

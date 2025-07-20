@@ -18,7 +18,9 @@
     "test": "jest",
     "clean": "rimraf dist",
     "copy-assets": "npx cpx2 \"src/**/!(*.ts)\" dist && npx cpx2 \"node_modules/webextension-polyfill/dist/browser-polyfill.min.js\" dist/lib",
-    "build": "npm run clean && npm run copy-assets && tsc"
+    "build": "npm run clean && npm run copy-assets && tsc --build",
+    "build:dev": "npm run clean && npm run copy-assets && tsc --build --sourceMap",
+    "postbuild": "echo 'Build completed. Files are in ./dist/'"
   },
   "repository": {
     "type": "git",
