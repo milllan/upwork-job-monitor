@@ -30,26 +30,24 @@ class ApiService {
     }
 
     console.log(`ApiService: Fetching fresh job details for ${jobCiphertext}`);
-    const response: GetJobDetailsResponse = await browser.runtime.sendMessage({
-      action: 'getJobDetails',
-      jobCiphertext: jobCiphertext,
-    });
+    try {
+      const response = (await browser.runtime.sendMessage({
+        action: 'getJobDetails',
+        jobCiphertext: jobCiphertext,
+      })) as { jobDetails: JobDetails | null };
 
-    if (response && response.data && typeof response.data.jobDetails !== 'undefined') {
-      if (response.data.jobDetails) {
-        this.appState.setCachedJobDetails(jobCiphertext, response.data.jobDetails);
+      if (response && typeof response.jobDetails !== 'undefined') {
+        if (response.jobDetails) {
+          this.appState.setCachedJobDetails(jobCiphertext, response.jobDetails);
+        }
+        return response.jobDetails;
+      } else {
+        // This case should ideally not be reached if the background script always returns a value or throws.
+        throw new Error('Invalid response from background script.');
       }
-      return response.data.jobDetails;
-    } else {
-      console.error(
-        'ApiService: Failed to get job details from background:',
-        response?.details || response
-      );
-      throw new Error(
-        typeof response?.details?.message === 'string'
-          ? response.details.message
-          : 'An unknown error occurred in the background script.'
-      );
+    } catch (error) {
+      console.error('ApiService: Failed to get job details from background:', error);
+      throw error; // Re-throw the error to be handled by the UI
     }
   }
 

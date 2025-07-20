@@ -470,7 +470,7 @@ browser.runtime.onMessage.addListener(async (request: unknown, _sender: Runtime.
 // MODIFIED: This now contains the smart error handling logic
 async function _fetchAndProcessJobDetails(
   jobCiphertext: string
-): Promise<GraphQLResponse<{ jobDetails: JobDetails | null }>> {
+): Promise<{ jobDetails: JobDetails | null }> {
   const apiResult = await UpworkAPI.fetchJobDetails(jobCiphertext);
 
   if (isGraphQLResponse(apiResult)) {
@@ -479,8 +479,10 @@ async function _fetchAndProcessJobDetails(
     if (apiResult.type === 'http' && apiResult.details && apiResult.details.status === 403) {
       await _handleApiTokenFailure(apiResult, 'jobDetails', { ciphertext: jobCiphertext });
     }
-    // For all other errors, just return the GraphQL error response
-    return apiResult as GraphQLResponse<{ jobDetails: JobDetails | null }>;
+    // Throw an error to be caught by the popup's logic and displayed in the UI.
+    throw new Error(
+      (apiResult.details?.message as string) || `API Error: ${apiResult.type}`
+    );
   }
 
   // On success, apiResult is { jobDetails: JobDetails | null }.
@@ -489,13 +491,13 @@ async function _fetchAndProcessJobDetails(
     console.log(`MV2: Job details for ${jobCiphertext} not found (returned null).`);
   }
 
-  return { data: apiResult };
+  return apiResult;
 }
 
 // NEW: Processing function for talent profiles
 async function _fetchAndProcessTalentProfile(
   profileCiphertext: string
-): Promise<GraphQLResponse<{ profileDetails: TalentProfile | null }>> {
+): Promise<{ profileDetails: TalentProfile | null }> {
   const apiResult = await UpworkAPI.fetchTalentProfile(profileCiphertext);
 
   if (isGraphQLResponse(apiResult)) {
@@ -503,7 +505,9 @@ async function _fetchAndProcessTalentProfile(
     if (apiResult.type === 'http' && apiResult.details && apiResult.details.status === 403) {
       await _handleApiTokenFailure(apiResult, 'talentProfile', { ciphertext: profileCiphertext });
     }
-    return apiResult as GraphQLResponse<{ profileDetails: TalentProfile | null }>;
+    throw new Error(
+      (apiResult.details?.message as string) || `API Error: ${apiResult.type}`
+    );
   }
 
   // Handle the null case for talent profiles
@@ -511,7 +515,7 @@ async function _fetchAndProcessTalentProfile(
     console.log(`MV2: Talent profile for ${profileCiphertext} not found (returned null).`);
   }
 
-  return { data: apiResult };
+  return apiResult;
 }
 
 setupAlarms();
