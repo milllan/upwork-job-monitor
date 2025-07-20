@@ -1,4 +1,4 @@
-import { timeAgo } from '../../utils.js';
+import { timeAgo } from '../../utils.ts';
 
 interface StatusHeaderState {
   statusText: string;
@@ -23,7 +23,7 @@ export class StatusHeader {
     this.render();
   }
 
-  update(newState: Partial<StatusHeaderState> = {}): void {
+  update(newState: Partial<StatusHeaderState>): void {
     this.state = { ...this.state, ...newState };
     this.render();
   }
