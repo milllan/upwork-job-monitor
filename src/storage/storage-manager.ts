@@ -55,7 +55,9 @@ export const StorageManager = {
 
   async getSeenJobIds(): Promise<Set<string>> {
     const result = await this.getStorage(STORAGE_KEYS.SEEN_JOB_IDS);
-    return new Set((result[STORAGE_KEYS.SEEN_JOB_IDS] as string[]) || []);
+    const value = result[STORAGE_KEYS.SEEN_JOB_IDS];
+    const ids = Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
+    return new Set(ids);
   },
 
   async addSeenJobIds(newJobIdsArray: string[]): Promise<void> {
@@ -67,7 +69,9 @@ export const StorageManager = {
 
   async getDeletedJobIds(): Promise<Set<string>> {
     const result = await this.getStorage(STORAGE_KEYS.DELETED_JOB_IDS);
-    return new Set((result[STORAGE_KEYS.DELETED_JOB_IDS] as string[]) || []);
+    const value = result[STORAGE_KEYS.DELETED_JOB_IDS];
+    const ids = Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
+    return new Set(ids);
   },
 
   async setDeletedJobIds(deletedIdsArray: string[]): Promise<void> {
@@ -121,7 +125,9 @@ export const StorageManager = {
 
   async getRecentFoundJobs(): Promise<Job[]> {
     const result = await this.getStorage(STORAGE_KEYS.RECENT_FOUND_JOBS);
-    return (result[STORAGE_KEYS.RECENT_FOUND_JOBS] as Job[]) || [];
+    const value = result[STORAGE_KEYS.RECENT_FOUND_JOBS];
+    // A more thorough type check for jobs could be added here if needed
+    return Array.isArray(value) ? (value as Job[]) : [];
   },
 
   async setRecentFoundJobs(jobs: Job[]): Promise<void> {
@@ -130,7 +136,9 @@ export const StorageManager = {
 
   async getCollapsedJobIds(): Promise<Set<string>> {
     const result = await this.getStorage(STORAGE_KEYS.COLLAPSED_JOB_IDS);
-    return new Set((result[STORAGE_KEYS.COLLAPSED_JOB_IDS] as string[]) || []);
+    const value = result[STORAGE_KEYS.COLLAPSED_JOB_IDS];
+    const ids = Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
+    return new Set(ids);
   },
 
   async setCollapsedJobIds(collapsedIdsArray: string[]): Promise<void> {
@@ -139,8 +147,11 @@ export const StorageManager = {
 
   async getApiEndpointToken(apiIdentifier: string): Promise<string | null> {
     const result = await this.getStorage(STORAGE_KEYS.API_ENDPOINT_TOKENS);
-    const tokens = (result[STORAGE_KEYS.API_ENDPOINT_TOKENS] as Record<string, string>) || {};
-    return tokens[apiIdentifier] || null;
+    const tokens = result[STORAGE_KEYS.API_ENDPOINT_TOKENS];
+    if (tokens && typeof tokens === 'object' && !Array.isArray(tokens)) {
+      return (tokens as Record<string, string>)[apiIdentifier] || null;
+    }
+    return null;
   },
 
   async setApiEndpointToken(apiIdentifier: string, token: string | null): Promise<void> {
