@@ -136,5 +136,5 @@ export function isGraphQLResponse<T>(response: unknown): response is GraphQLResp
 export type BackgroundMessage =
   | { action: 'updatePopupDisplay' }
   | { action: 'manualCheck'; userQuery?: string }
-  | { action: 'getJobDetails'; jobCiphertext?: string }
-  | { action: 'getTalentProfile'; profileCiphertext?: string };
+  | { action: 'getJobDetails'; jobCiphertext: string }
+  | { action: 'getTalentProfile'; profileCiphertext: string };
