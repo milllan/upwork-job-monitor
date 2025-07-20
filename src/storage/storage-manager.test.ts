@@ -12,6 +12,22 @@ import { StorageManager } from '@storage/storage-manager';
 import { config } from '@background/config'; // Import the actual config for its type and other properties
 import { Job } from '../types';
 
+// Helper function to create mock job objects
+function createMockJob(id: string): Job {
+  return {
+    id: id,
+    ciphertext: `cipher${id}`,
+    title: `Job ${id}`,
+    description: `Description for ${id}`,
+    postedOn: new Date().toISOString(),
+    applied: false,
+    budget: { type: 'fixed', currencyCode: 'USD', minAmount: 100, maxAmount: 200 },
+    client: { paymentVerificationStatus: 'VERIFIED', country: 'USA', totalSpent: 1000, rating: 4.5 },
+    skills: [{ name: 'skill1' }, { name: 'skill2' }],
+    _fullJobData: {},
+  };
+}
+
 
 const STORAGE_KEYS = config.STORAGE_KEYS;
 
@@ -178,21 +194,7 @@ describe('StorageManager', () => {
   });
 
   it('should set and get recent found jobs, respecting MAX_RECENT_JOBS', async () => {
-    const jobs: Job[] = [
-      { id: 'job1', ciphertext: '', title: 'Job 1', description: '', postedOn: '', applied: false, budget: { type: '', currencyCode: '', minAmount: 0, maxAmount: 0 }, client: { paymentVerificationStatus: '', country: '', totalSpent: 0, rating: 0 }, skills: [], _fullJobData: {} },
-      { id: 'job2', ciphertext: '', title: 'Job 2', description: '', postedOn: '', applied: false, budget: { type: '', currencyCode: '', minAmount: 0, maxAmount: 0 }, client: { paymentVerificationStatus: '', country: '', totalSpent: 0, rating: 0 }, skills: [], _fullJobData: {} },
-      { id: 'job3', ciphertext: '', title: 'Job 3', description: '', postedOn: '', applied: false, budget: { type: '', currencyCode: '', minAmount: 0, maxAmount: 0 }, client: { paymentVerificationStatus: '', country: '', totalSpent: 0, rating: 0 }, skills: [], _fullJobData: {} },
-      { id: 'job4', ciphertext: '', title: 'Job 4', description: '', postedOn: '', applied: false, budget: { type: '', currencyCode: '', minAmount: 0, maxAmount: 0 }, client: { paymentVerificationStatus: '', country: '', totalSpent: 0, rating: 0 }, skills: [], _fullJobData: {} },
-      { id: 'job5', ciphertext: '', title: 'Job 5', description: '', postedOn: '', applied: false, budget: { type: '', currencyCode: '', minAmount: 0, maxAmount: 0 }, client: { paymentVerificationStatus: '', country: '', totalSpent: 0, rating: 0 }, skills: [], _fullJobData: {} },
-      { id: 'job6', ciphertext: '', title: 'Job 6', description: '', postedOn: '', applied: false, budget: { type: '', currencyCode: '', minAmount: 0, maxAmount: 0 }, client: { paymentVerificationStatus: '', country: '', totalSpent: 0, rating: 0 }, skills: [], _fullJobData: {} },
-      { id: 'job7', ciphertext: '', title: 'Job 7', description: '', postedOn: '', applied: false, budget: { type: '', currencyCode: '', minAmount: 0, maxAmount: 0 }, client: { paymentVerificationStatus: '', country: '', totalSpent: 0, rating: 0 }, skills: [], _fullJobData: {} },
-      { id: 'job8', ciphertext: '', title: 'Job 8', description: '', postedOn: '', applied: false, budget: { type: '', currencyCode: '', minAmount: 0, maxAmount: 0 }, client: { paymentVerificationStatus: '', country: '', totalSpent: 0, rating: 0 }, skills: [], _fullJobData: {} },
-      { id: 'job9', ciphertext: '', title: 'Job 9', description: '', postedOn: '', applied: false, budget: { type: '', currencyCode: '', minAmount: 0, maxAmount: 0 }, client: { paymentVerificationStatus: '', country: '', totalSpent: 0, rating: 0 }, skills: [], _fullJobData: {} },
-      { id: 'job10', ciphertext: '', title: 'Job 10', description: '', postedOn: '', applied: false, budget: { type: '', currencyCode: '', minAmount: 0, maxAmount: 0 }, client: { paymentVerificationStatus: '', country: '', totalSpent: 0, rating: 0 }, skills: [], _fullJobData: {} },
-      { id: 'job11', ciphertext: '', title: 'Job 11', description: '', postedOn: '', applied: false, budget: { type: '', currencyCode: '', minAmount: 0, maxAmount: 0 }, client: { paymentVerificationStatus: '', country: '', totalSpent: 0, rating: 0 }, skills: [], _fullJobData: {} },
-      { id: 'job12', ciphertext: '', title: 'Job 12', description: '', postedOn: '', applied: false, budget: { type: '', currencyCode: '', minAmount: 0, maxAmount: 0 }, client: { paymentVerificationStatus: '', country: '', totalSpent: 0, rating: 0 }, skills: [], _fullJobData: {} },
-      { id: 'job13', ciphertext: '', title: 'Job 13', description: '', postedOn: '', applied: false, budget: { type: '', currencyCode: '', minAmount: 0, maxAmount: 0 }, client: { paymentVerificationStatus: '', country: '', totalSpent: 0, rating: 0 }, skills: [], _fullJobData: {} }, // This one should be sliced off
-    ];
+    const jobs: Job[] = Array.from({ length: 13 }, (_, i) => createMockJob(`job${i + 1}`));
 
     // The number of jobs is sliced to `config.API_FETCH_COUNT` (12) by `setRecentFoundJobs`.
     await StorageManager.setRecentFoundJobs(jobs);
