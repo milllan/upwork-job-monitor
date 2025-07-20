@@ -7,7 +7,7 @@ import { SearchForm } from './components/SearchForm.js';
 import { StatusHeader } from './components/StatusHeader.js';
 import { config } from '../background/config.js';
 import { $, constructUpworkSearchURL, initializeScrollHints } from '../utils.js';
-import { Tier, Job } from '../types.js';
+import { Tier, Job, BackgroundMessage } from '../types.js';
 
 let jobItemObserver: IntersectionObserver | null = null;
 
@@ -217,15 +217,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     appState.setTheme(newTheme);
   });
 
-  interface BackgroundMessage {
-    action: 'updatePopupDisplay';
-    [key: string]: unknown;
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   browser.runtime.onMessage.addListener((request: any, _sender: Runtime.MessageSender) => {
-    const message = request as BackgroundMessage;
-    if (message && message.action === 'updatePopupDisplay') {
+    if (request && request.action === 'updatePopupDisplay') {
       console.log('Popup: Received updatePopupDisplay message from background. Refreshing data.');
       appState.loadFromStorage();
       // This is a one-way notification, so we don't need to send a response.

@@ -129,3 +129,8 @@ export function isGraphQLResponse<T>(response: unknown): response is GraphQLResp
         response !== null && typeof response === 'object' && 'error' in response && typeof response.error === 'boolean'
     );
 }
+
+export interface BackgroundMessage {
+    action: 'updatePopupDisplay';
+    [key: string]: unknown;
+}

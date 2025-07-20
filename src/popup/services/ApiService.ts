@@ -64,7 +64,4 @@ class ApiService {
   }
 }
 
-// Export for use in other modules
-((window as unknown) as { ApiService: typeof ApiService }).ApiService = ApiService;
-
 export { ApiService };

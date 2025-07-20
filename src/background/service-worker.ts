@@ -475,7 +475,7 @@ async function _fetchAndProcessJobDetails(
       await _handleApiTokenFailure(apiResult, 'jobDetails', { ciphertext: jobCiphertext });
     }
     // For all other errors, just return the GraphQL error response
-    return apiResult;
+    return apiResult as GraphQLResponse<{ jobDetails: JobDetails | null }>;
   }
 
   // On success, apiResult is { jobDetails: JobDetails | null }.
