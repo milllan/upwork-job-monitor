@@ -125,7 +125,12 @@ export interface GraphQLResponse<T> {
 
 export function isGraphQLResponse<T>(response: unknown): response is GraphQLResponse<T> {
     return (
-        response !== null && typeof response === 'object' && 'error' in response && typeof response.error === 'boolean'
+        response !== null &&
+        typeof response === 'object' &&
+        'error' in response &&
+        typeof response.error === 'boolean' &&
+        (!('data' in response) || response.data === undefined || typeof response.data === 'object') &&
+        (!('errors' in response) || Array.isArray(response.errors))
     );
 }
 
