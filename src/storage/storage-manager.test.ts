@@ -255,4 +255,22 @@ describe('StorageManager', () => {
       'StorageManager: Invalid theme "invalid" provided. Not setting.'
     );
   });
+
+  it('should correctly handle a last check timestamp of 0', async () => {
+    await StorageManager.setLastCheckTimestamp(0);
+    const retrievedTimestamp = await StorageManager.getLastCheckTimestamp();
+    expect(retrievedTimestamp).toEqual(0);
+  });
+
+  it('should correctly handle an empty string for the user query', async () => {
+    await StorageManager.setCurrentUserQuery('');
+    const retrievedQuery = await StorageManager.getCurrentUserQuery();
+    expect(retrievedQuery).toEqual('');
+  });
+
+  it('should correctly handle a new jobs count of 0', async () => {
+    await StorageManager.setNewJobsInLastRun(0);
+    const count = await StorageManager.getNewJobsInLastRun();
+    expect(count).toEqual(0);
+  });
 });
