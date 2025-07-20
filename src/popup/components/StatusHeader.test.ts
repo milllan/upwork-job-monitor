@@ -38,13 +38,15 @@ describe('StatusHeader', () => {
   it('should display last check timestamp correctly when provided', () => {
     const now = Date.now();
     const statusHeader = new StatusHeader(container);
+    (timeAgo as jest.Mock).mockReturnValue('1 minute ago'); // Mock timeAgo to return a value
     statusHeader.update({ lastCheckTimestamp: now });
 
     const expectedTime = new Date(now).toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
     });
-    expect(container.innerHTML).toContain(`Last: ${expectedTime}`);
+    const lastCheckElement = container.querySelector('[title="Last successful check time"]');
+    expect(lastCheckElement?.textContent).toBe(`Last: ${expectedTime} (1 minute ago)`);
     expect(timeAgo).toHaveBeenCalledWith(new Date(now));
   });
 
