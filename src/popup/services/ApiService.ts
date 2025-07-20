@@ -1,7 +1,5 @@
-import { JobDetails, GraphQLResponse } from '../../types.js';
+import { JobDetails } from '../../types.js';
 import { AppState } from '../state/AppState.js';
-
-type GetJobDetailsResponse = GraphQLResponse<{ jobDetails: JobDetails | null }>;
 
 interface TriggerCheckResponse {
   status: string;
