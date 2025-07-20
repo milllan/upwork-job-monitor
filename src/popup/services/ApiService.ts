@@ -35,11 +35,11 @@ class ApiService {
       jobCiphertext: jobCiphertext,
     });
 
-    if (response && typeof response.jobDetails !== 'undefined') {
-      if (response.jobDetails) {
-        this.appState.setCachedJobDetails(jobCiphertext, response.jobDetails);
+    if (response && response.data && typeof response.data.jobDetails !== 'undefined') {
+      if (response.data.jobDetails) {
+        this.appState.setCachedJobDetails(jobCiphertext, response.data.jobDetails);
       }
-      return response.jobDetails;
+      return response.data.jobDetails;
     } else {
       console.error(
         'ApiService: Failed to get job details from background:',
