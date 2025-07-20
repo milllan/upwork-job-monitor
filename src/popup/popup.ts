@@ -217,9 +217,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     appState.setTheme(newTheme);
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  browser.runtime.onMessage.addListener((request: BackgroundMessage, _sender: Runtime.MessageSender) => {
-    if (request && request.action === 'updatePopupDisplay') {
+  browser.runtime.onMessage.addListener((request: unknown, _sender: Runtime.MessageSender) => {
+    // Type guard to ensure the message is in the expected format.
+    if (
+      request &&
+      typeof request === 'object' &&
+      'action' in request &&
+      request.action === 'updatePopupDisplay'
+    ) {
       console.log('Popup: Received updatePopupDisplay message from background. Refreshing data.');
       appState.loadFromStorage();
       // This is a one-way notification, so we don't need to send a response.

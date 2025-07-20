@@ -170,7 +170,7 @@ function formatBudget(budget: { type?: string; minAmount?: number | string; maxA
   const { type, minAmount, maxAmount } = budget;
   // Helper for thousand separators
   const formatNumber = (num: number | string | undefined) => {
-    if (num === undefined) return null;
+    if (num === undefined) { return null; }
     const n = typeof num === 'string' ? parseFloat(num) : num;
     return isNaN(n) ? null : n.toLocaleString();
   };
