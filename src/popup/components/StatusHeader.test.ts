@@ -2,13 +2,7 @@ import { StatusHeader } from './StatusHeader';
 
 // Mock the timeAgo utility function
 jest.mock('../../utils.js', () => ({
-  timeAgo: jest.fn((date: Date) => {
-    const now = new Date();
-    const diffSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    if (diffSeconds < 60) { return `${diffSeconds} seconds ago`; }
-    if (diffSeconds < 3600) { return `${Math.floor(diffSeconds / 60)} minutes ago`; }
-    return `${Math.floor(diffSeconds / 3600)} hours ago`;
-  }),
+  timeAgo: jest.fn(),
 }));
 
 // Import the mocked function to assert its usage
