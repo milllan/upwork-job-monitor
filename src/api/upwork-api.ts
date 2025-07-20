@@ -59,7 +59,9 @@ async function getAllPotentialApiTokens(): Promise<string[]> {
     );
     otherPotentials.forEach((t) => candidateTokens.push(t.value));
 
-    console.log('API_DEBUG: Found candidate tokens:', candidateTokens);
+    if (config.DEBUG_MODE) {
+      console.log('API_DEBUG: Found candidate tokens:', candidateTokens);
+    }
 
     return [...new Set(candidateTokens)]; // Ensure uniqueness
   } catch (error: unknown) {

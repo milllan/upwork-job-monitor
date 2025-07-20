@@ -41,7 +41,7 @@ export class AppState {
       jobs: [],
       jobDetailsCache: new Map(),
       jobComponents: new Map(),
-      cacheExpiryMs: 15 * 60 * 1000, // 15 minutes
+      cacheExpiryMs: config.JOB_DETAILS_CACHE_EXPIRY_MS,
     };
 
     this.debouncedSave = this._debounce(this._saveToStorage.bind(this), 300);
@@ -351,14 +351,14 @@ export class AppState {
   }
 
   private _debounce(func: (...args: unknown[]) => void, wait: number): () => void {
-    let timeout: number;
+    let timeout: ReturnType<typeof setTimeout>;
     return function executedFunction(...args: unknown[]) {
       const later = () => {
-        window.clearTimeout(timeout);
+        clearTimeout(timeout);
         func(...args);
       };
-      window.clearTimeout(timeout);
-      timeout = window.setTimeout(later, wait);
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
     };
   }
 }

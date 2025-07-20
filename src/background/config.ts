@@ -7,6 +7,9 @@ export const config = {
   UPWORK_DOMAIN: 'https://www.upwork.com',
   UPWORK_GRAPHQL_ENDPOINT_BASE: 'https://www.upwork.com/api/graphql/v1',
   TARGET_GRAPHQL_URL_PATTERN: '*://*.upwork.com/api/graphql/v1*', // For webRequest
+
+  // Set to true to enable verbose logging for development
+  DEBUG_MODE: false,
   /**
    * X-Upwork-API-Tenant-ID header value. Currently not required for GraphQL requests
    * as only the bearer token is needed. Kept for reference in case API requirements change.
@@ -91,4 +94,5 @@ export const config = {
   FETCH_ALARM_NAME: 'fetchUpworkJobsAlarm_MV2',
   FETCH_INTERVAL_MINUTES: 4, // How often to check for new jobs
   API_FETCH_COUNT: 12, // Number of jobs to fetch per API request, upwork.com website defaults to 10
+  JOB_DETAILS_CACHE_EXPIRY_MS: 15 * 60 * 1000, // 15 minutes for popup job details cache
 };

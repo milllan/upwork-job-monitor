@@ -27,7 +27,6 @@ export interface Job {
     isLowPriorityByClientCountry?: boolean;
 }
 
-// Add this new interface
 export interface ProcessedJob extends Job {
   isExcludedByTitleFilter: boolean;
   isLowPriorityBySkill: boolean;

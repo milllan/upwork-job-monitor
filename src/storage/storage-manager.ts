@@ -15,8 +15,8 @@ const MAX_RECENT_JOBS = config.API_FETCH_COUNT;
 export const StorageManager = {
   /**
    * Retrieves a value from chrome.storage.local.
-   * @param {string|string[]} keyOrKeys The key(s) to retrieve.
-   * @returns {Promise<Object>} A promise that resolves with the storage data.
+   * @param keyOrKeys The key(s) to retrieve.
+   * @returns A promise that resolves with the storage data.
    */
   async getStorage(keyOrKeys: string | string[] | null): Promise<Record<string, unknown>> {
     try {
@@ -42,8 +42,8 @@ export const StorageManager = {
 
   /**
    * Sets a value(s) in browser.storage.local.
-   * @param {Object} items An object containing key-value pairs to set.
-   * @returns {Promise<void>} A promise that resolves when the data is set.
+   * @param items An object containing key-value pairs to set.
+   * @returns A promise that resolves when the data is set.
    */
   async setStorage(items: Record<string, unknown>): Promise<void> {
     try {

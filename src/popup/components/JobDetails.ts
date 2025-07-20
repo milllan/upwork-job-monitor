@@ -224,10 +224,10 @@ export class JobDetails {
 
     const jobDescription = details?.opening?.job?.description;
     if (jobDescription && jobDescription.trim().length > 0) {
-      vm.descriptionHTML = jobDescription
-        .replace(/<\/?[^>]+(>|$)/g, '')
-        .trim()
-        .replace(/\n/g, '<br>');
+      // Use DOMParser for robust and safe HTML stripping, then reformat for display.
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(jobDescription, 'text/html');
+      vm.descriptionHTML = doc.body.textContent?.trim().replace(/\n/g, '<br>') || null;
     }
 
     return vm;
