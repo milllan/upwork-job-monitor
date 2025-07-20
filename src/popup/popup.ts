@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  browser.runtime.onMessage.addListener((request: any, _sender: Runtime.MessageSender) => {
+  browser.runtime.onMessage.addListener((request: BackgroundMessage, _sender: Runtime.MessageSender) => {
     if (request && request.action === 'updatePopupDisplay') {
       console.log('Popup: Received updatePopupDisplay message from background. Refreshing data.');
       appState.loadFromStorage();
