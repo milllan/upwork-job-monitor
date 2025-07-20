@@ -16,8 +16,9 @@ const API_IDENTIFIERS = {
 };
 
 /**
- * Retrieves and prioritizes potential OAuth2 API tokens from cookies.
- * @returns {Promise<string[]>} A promise that resolves with an array of token strings.
+ * Retrieves all potential OAuth2 API tokens from Upwork cookies, prioritizing tokens likely to be active for GraphQL API calls.
+ *
+ * @returns A promise that resolves to an array of unique OAuth2 token strings, ordered by likelihood of validity.
  */
 async function getAllPotentialApiTokens(): Promise<string[]> {
   try {
@@ -70,14 +71,11 @@ async function getAllPotentialApiTokens(): Promise<string[]> {
 }
 
 /**
- * Private helper to execute a generic GraphQL query against the Upwork API.
- * This centralizes fetch logic, header creation, and error handling.
- * @param {string} bearerToken The OAuth2 bearer token.
- * @param {string} endpointAlias The alias for the GraphQL endpoint (e.g., 'userJobSearch').
- * @param {string} query The GraphQL query string.
- * @param {Object} variables The variables for the GraphQL query.
- * @returns {Promise<Object>} A promise that resolves with the full GraphQL response on success,
- *                            or a standardized error object {error: true, type: '...', ...} on failure.
+ * Executes a GraphQL POST request to the Upwork API using the provided bearer token and endpoint alias.
+ *
+ * Handles HTTP, network, and parsing errors, and returns either the parsed GraphQL response or a standardized error object.
+ *
+ * @returns The parsed GraphQL response on success, or an error object with details on failure.
  */
 async function _executeGraphQLQuery<T>(
   bearerToken: string,
@@ -133,10 +131,11 @@ async function _executeGraphQLQuery<T>(
 }
 
 /**
- * Helper to determine the budget amount from a raw job object.
- * @param job The raw job data from the API.
- * @param isMin True to get the minimum amount, false for the maximum.
- * @returns The budget amount.
+ * Returns the minimum or maximum budget amount for a job based on its type.
+ *
+ * @param job - The raw job data object
+ * @param isMin - If true, returns the minimum hourly budget; if false, returns the maximum hourly budget or fixed price
+ * @returns The budget amount, or 0 if unavailable
  */
 function getBudgetAmount(job: RawUpworkJob, isMin: boolean): number {
   const isHourly = job.jobTile.job.jobType.toLowerCase().includes('hourly');
@@ -189,6 +188,15 @@ interface UserJobSearchResponse {
   };
 }
 
+/**
+ * Fetches a list of jobs from Upwork matching the specified user query.
+ *
+ * Returns an array of simplified `Job` objects containing job details, client information, and skills, or an error response if the API call fails.
+ *
+ * @param bearerToken - The OAuth2 bearer token used for authentication
+ * @param userQuery - The search query string to filter jobs
+ * @returns An array of `Job` objects on success, or a `GraphQLResponse` error object on failure
+ */
 async function _fetchUpworkJobs(
   bearerToken: string,
   userQuery: string
@@ -266,8 +274,9 @@ async function _fetchUpworkJobs(
 }
 
 /**
- * Internal-only function to fetch job details.
- * @private
+ * Retrieves detailed information for a specific Upwork job using its ciphertext ID.
+ *
+ * Returns the job details object if found, `null` if the job does not exist, or an error response if the query fails.
  */
 async function _fetchJobDetails(
   bearerToken: string,
@@ -343,8 +352,10 @@ async function _fetchJobDetails(
 }
 
 /**
- * Internal-only function to fetch talent profile details.
- * @private
+ * Retrieves a freelancer's talent profile details by ciphertext profile URL.
+ *
+ * @param profileCiphertext - The ciphertext identifier for the freelancer's profile
+ * @returns The talent profile object if found, `null` if not found, or a GraphQL error response on failure
  */
 async function _fetchTalentProfile(
   bearerToken: string,
@@ -372,10 +383,14 @@ async function _fetchTalentProfile(
 }
 
 /**
- * Internal helper to manage API calls with sticky token and rotation logic.
- * This version MERGES the robust error handling from the old function
- * with the new refactored structure.
- * @private
+ * Executes an API call with automatic token rotation and sticky token caching.
+ *
+ * Attempts the API call using the last known good token for the specified API identifier. If that token fails, iterates through all available candidate tokens until a successful call is made or all tokens fail. On success, caches the working token for future use. Returns the result and token on success, or the last encountered error response if all tokens fail.
+ *
+ * @param apiIdentifier - Unique identifier for the API endpoint to associate with sticky token caching
+ * @param apiCallFunction - The API call function to execute, which accepts a bearer token as its first argument
+ * @param params - Additional arguments to pass to the API call function
+ * @returns An object containing the successful result and token, or a detailed error response if all tokens fail
  */
 async function _executeApiCallWithTokenRotation<T>(
   apiIdentifier: string,

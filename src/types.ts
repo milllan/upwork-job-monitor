@@ -1,4 +1,3 @@
-
 export type Tier = 'EntryLevel' | 'IntermediateLevel' | 'ExpertLevel';
 
 export interface Job {
@@ -124,6 +123,11 @@ export interface GraphQLResponse<T> {
     details?: Record<string, unknown>;
 }
 
+/**
+ * Determines whether the given value is a GraphQLResponse object by checking for an `error` property of boolean type.
+ *
+ * @returns `true` if the input is a GraphQLResponse; otherwise, `false`.
+ */
 export function isGraphQLResponse<T>(response: unknown): response is GraphQLResponse<T> {
     return (
         response !== null && typeof response === 'object' && 'error' in response && typeof response.error === 'boolean'
