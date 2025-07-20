@@ -114,7 +114,7 @@ function formatClientInfo(client: Job['client'] | undefined): string {
     if (client.totalSpent && Number(client.totalSpent) > 0) {
       const spentAmount = Number(client.totalSpent);
       const spentClass = spentAmount > 10000 ? ' job-item__client-spent--positive' : ''; // Threshold for high spender
-      clientInfo += ` | <span class="job-item__client-spent${spentClass}" title="Client Spend">Spent: ${spentAmount.toFixed(0)}</span>`;
+      clientInfo += ` | <span class="job-item__client-spent${spentClass}" title="Client Spend">Spent: $${spentAmount.toFixed(0)}</span>`;
     }
 
     // Payment Verification Status
