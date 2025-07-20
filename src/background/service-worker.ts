@@ -433,8 +433,11 @@ async function _handleGetTalentProfile(request: GetTalentProfileRequest) {
 
 type MessageRequest = ManualCheckRequest | GetJobDetailsRequest | GetTalentProfileRequest;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-browser.runtime.onMessage.addListener(async (request: any, _sender: Runtime.MessageSender) => {
+browser.runtime.onMessage.addListener(async (request: unknown, _sender: Runtime.MessageSender) => {
+  if (!request || typeof request !== 'object' || !('action' in request)) {
+    console.warn('Invalid message format received');
+    return;
+  }
   const message = request as MessageRequest;
   try {
     switch (message.action) {
