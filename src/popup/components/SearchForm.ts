@@ -32,16 +32,23 @@ export class SearchForm {
     return this.inputEl.value.trim();
   }
 
-  private _attachEventListeners(): void {
-    this.buttonEl.addEventListener('click', () => this._handleSearch());
-    this.inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        this._handleSearch();
-      }
-    });
+  private _handleKeyDown = (e: KeyboardEvent): void => {
+    if (e.key === 'Enter') {
+      this._handleSearch();
+    }
+  };
+
+  destroy(): void {
+    this.buttonEl.removeEventListener('click', this._handleSearch);
+    this.inputEl.removeEventListener('keydown', this._handleKeyDown);
   }
 
-  private _handleSearch(): void {
+  private _attachEventListeners(): void {
+    this.buttonEl.addEventListener('click', this._handleSearch);
+    this.inputEl.addEventListener('keydown', this._handleKeyDown);
+  }
+
+  private _handleSearch = (): void => {
     const query = this.getQuery();
     if (query && typeof this.onSearch === 'function') {
       this.onSearch(query);
