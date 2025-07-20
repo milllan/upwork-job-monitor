@@ -17,7 +17,7 @@ export function $<T extends HTMLElement>(selector: string, scope: Document | HTM
   return element;
 }
 
-type Tier = 'EntryLevel' | 'IntermediateLevel' | 'ExpertLevel';
+import { Tier } from './types.js';
 
 /**
  * Constructs a direct Upwork job search URL.
