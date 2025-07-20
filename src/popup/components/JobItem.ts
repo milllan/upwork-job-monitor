@@ -165,7 +165,7 @@ export class JobItem {
       id: job.id,
       ciphertext: job.ciphertext || job.id,
       budget: formatBudget(job.budget),
-      clientInfo: formatClientInfo(job.client),
+      clientInfo: '', // This will be handled by the DOM fragment
       skills: formatSkills(job.skills),
       title: job.title || 'No Title',
       jobUrl: `https://www.upwork.com/jobs/${job.ciphertext || job.id}`,
@@ -212,7 +212,8 @@ export class JobItem {
 
     const clientInfoEl = this.element.querySelector('[data-field="client-info"]');
     if (clientInfoEl) {
-      clientInfoEl.innerHTML = vm.clientInfo;
+      clientInfoEl.textContent = ''; // Clear existing content
+      clientInfoEl.appendChild(formatClientInfo(this.jobData.client));
     }
 
     const skillsEl = this.element.querySelector('[data-field="skills"]');
