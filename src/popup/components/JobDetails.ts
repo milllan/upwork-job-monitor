@@ -123,7 +123,7 @@ export class JobDetails {
           const li = document.createElement('li');
           const a = document.createElement('a');
           a.href = `https://www.upwork.com/freelancers/${contractor.ciphertext}`;
-          a.textContent = contractor.name.split(' ')[0]; // Only first name
+          a.textContent = contractor.name.split(' ')[0] || contractor.name || 'Unknown';
           a.target = '_blank';
           a.rel = 'noopener noreferrer';
           li.appendChild(a);
@@ -200,8 +200,8 @@ export class JobDetails {
     const minBid = bidStats.minRateBid?.amount;
     const maxBid = bidStats.maxRateBid?.amount;
     if (avgBid || minBid || maxBid) {
-      vm.bidAvg = `Avg: ${(avgBid || 0).toFixed(1)}`;
-      vm.bidRange = `Range: ${minBid || 0} - ${maxBid || 0}`;
+      vm.bidAvg = `Avg: $${(avgBid || 0).toFixed(1)}`;
+      vm.bidRange = `Range: ${minBid || 0} - $${maxBid || 0}`;
     }
 
     const workHistory = details?.buyer?.workHistory || [];
