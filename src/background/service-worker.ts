@@ -39,7 +39,7 @@ function _applyClientSideFilters(jobs: Job[]): {
     const titleLower = (job.title || '').toLowerCase(); // Ensure title is lowercase for comparison
     if (
       config.TITLE_EXCLUSION_STRINGS.length > 0 &&
-      config.TITLE_EXCLUSION_STRINGS.some((excludeString: string) =>
+      config.TITLE_EXCLUSION_STRINGS.some((excludeString) =>
         titleLower.includes(excludeString)
       )
     ) {
@@ -204,24 +204,23 @@ async function _handleApiTokenFailure(
     await StorageManager.setMonitorStatus('Rate limited. Waiting to retry...');
   } else if (isAuthFailure) {
     await StorageManager.setMonitorStatus('Authentication failed. Please log in to Upwork.');
-    let recoveryUrl: string = config.UPWORK_DOMAIN;
-
     // Build context-specific recovery URL
-    switch (context) {
-      case 'jobSearch':
-        recoveryUrl = `${config.UPWORK_DOMAIN}/nx/find-work/`;
-        break;
-      case 'jobDetails':
-        if (options.ciphertext) {
-          recoveryUrl = `${config.UPWORK_DOMAIN}/jobs/${options.ciphertext}`;
-        }
-        break;
-      case 'talentProfile':
-        if (options.ciphertext) {
-          recoveryUrl = `${config.UPWORK_DOMAIN}/freelancers/${options.ciphertext}`;
-        }
-        break;
-    }
+    const recoveryUrl: string = (() => {
+      switch (context) {
+        case 'jobSearch':
+          return `${config.UPWORK_DOMAIN}/nx/find-work/`;
+        case 'jobDetails':
+          return options.ciphertext
+            ? `${config.UPWORK_DOMAIN}/jobs/${options.ciphertext}`
+            : config.UPWORK_DOMAIN;
+        case 'talentProfile':
+          return options.ciphertext
+            ? `${config.UPWORK_DOMAIN}/freelancers/${options.ciphertext}`
+            : config.UPWORK_DOMAIN;
+        default:
+          return config.UPWORK_DOMAIN;
+      }
+    })();
 
     try {
       await browser.tabs.create({ url: recoveryUrl });
