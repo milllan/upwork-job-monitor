@@ -1,4 +1,4 @@
-import { timeAgo } from '../../utils.js';
+import { timeAgo } from '../../utils/utils.js';
 
 interface StatusHeaderState {
   statusText: string;

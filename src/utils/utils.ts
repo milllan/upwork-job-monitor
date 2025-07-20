@@ -1,6 +1,7 @@
+// This file was created to house the contents of the original `src/utils.ts`.
 /* exported constructUpworkSearchURL, timeAgo, formatClientInfo, formatSkills, formatBudget, initializeScrollHints */
 // utils.ts
-import { Job, Tier } from './types.js';
+import { Job, Tier } from '../types.js';
 
 /**
  * A robust querySelector utility that throws an error if the element is not found.

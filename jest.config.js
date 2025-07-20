@@ -14,7 +14,7 @@ module.exports = {
     '^@background/(.*?)(\\.js)?$': '<rootDir>/src/background/$1',
     '^@popup/(.*?)(\\.js)?$': '<rootDir>/src/popup/$1',
     '^@storage/(.*?)(\\.js)?$': '<rootDir>/src/storage/$1',
-    '^@utils/(.*?)(\.js)?$': '<rootDir>/src/$1',
+    '^@utils/(.*?)(\\.js)?$': '<rootDir>/src/utils/$1',
     '^@api/(.*?)(\\.js)?$': '<rootDir>/src/api/$1',
     '^@types/(.*?)(\\.js)?$': '<rootDir>/src/types/$1',
   },

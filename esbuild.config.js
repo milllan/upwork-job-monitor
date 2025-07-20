@@ -41,7 +41,7 @@ esbuild
 esbuild
   .build({
     ...commonConfig,
-    entryPoints: ['./src/utils.ts'],
+    entryPoints: ['./src/utils/utils.ts'],
     outfile: './dist/utils.js',
   })
   .catch(() => process.exit(1));

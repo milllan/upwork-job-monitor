@@ -1,5 +1,5 @@
 import { JobDetails as JobDetailsType } from '../../types.js';
-import { timeAgo } from '../../utils.js';
+import { timeAgo } from '../../utils/utils.js';
 
 interface JobDetailsViewModel {
   clientJobsPosted: string | null;
