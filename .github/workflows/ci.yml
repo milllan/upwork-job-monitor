@@ -60,6 +60,11 @@ jobs:
       - name: Run TypeScript Compiler (Type Check)
         run: npm run type-check
 
+      # --- Step 5.5: Build the Project ---
+      # Compile TypeScript to JavaScript to ensure build succeeds
+      - name: Build TypeScript
+        run: npm run build
+
       # --- Step 6: Run Tests ---
       # Executes the 'test' script from your package.json.
       # This step is conditional and only runs if test files are found.
