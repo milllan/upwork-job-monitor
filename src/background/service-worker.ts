@@ -198,9 +198,11 @@ async function _handleApiTokenFailure(
     errorResult.type === 'auth' ||
     errorResult.type === 'graphql' || // A GraphQL error often indicates a permissions issue with the token.
     (errorResult.type === 'http' &&
-      [401, 403, 429].includes(errorResult.details?.status as number)); // 401 Unauthorized, 403 Forbidden, 429 Too Many Requests
+      [401, 403].includes(errorResult.details?.status as number)); // 401 Unauthorized, 403 Forbidden
 
-  if (isAuthFailure) {
+  if (errorResult.type === 'http' && errorResult.details?.status === 429) {
+    await StorageManager.setMonitorStatus('Rate limited. Waiting to retry...');
+  } else if (isAuthFailure) {
     await StorageManager.setMonitorStatus('Authentication failed. Please log in to Upwork.');
     let recoveryUrl: string = config.UPWORK_DOMAIN;
 
