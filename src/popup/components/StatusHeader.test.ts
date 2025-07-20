@@ -23,9 +23,9 @@ describe('StatusHeader', () => {
 
   it('should render with default initial state', () => {
     new StatusHeader(container); // Removed unused statusHeader variable
-    expect(container.innerHTML).toContain('Current monitor status">Initializing...</span>');
-    expect(container.innerHTML).toContain('Last: N/A</span>');
-    expect(container.innerHTML).toContain('Del: 0</span>');
+    expect(container.querySelector('[title="Current monitor status"]')?.textContent).toBe('Initializing...');
+    expect(container.querySelector('[title="Last successful check time"]')?.textContent).toBe('Last: N/A');
+    expect(container.querySelector('[title="Jobs you\'ve deleted from the list"]')?.textContent).toBe('Del: 0');
     expect(timeAgo).not.toHaveBeenCalled();
   });
 
