@@ -10,128 +10,49 @@ const commonConfig = {
   external: ['webextension-polyfill'], // Exclude polyfill as it's loaded separately
 };
 
-// Build Popup Script
-esbuild
-  .build({
-    ...commonConfig,
-    entryPoints: ['./src/popup/popup.ts'],
-    outfile: './dist/popup.js',
-  })
-  .catch(() => process.exit(1));
+// Define all build targets.
+// Each target is an object with an entry point and an output file.
+// This structure allows for parallel building and centralized error handling.
+const buildTargets = [
+  // Popup scripts
+  { entry: './src/popup/popup.ts', output: './dist/popup.js' },
+  { entry: './src/popup/theme-loader.ts', output: './dist/theme-loader.js' },
+  { entry: './src/popup/services/ApiService.ts', output: './dist/api-service.js' },
+  { entry: './src/popup/state/AppState.ts', output: './dist/app-state.js' },
 
-// Build Background Script
-esbuild
-  .build({
-    ...commonConfig,
-    entryPoints: ['./src/background/service-worker.ts'],
-    outfile: './dist/service-worker.js',
-  })
-  .catch(() => process.exit(1));
+  // Popup component scripts
+  { entry: './src/popup/components/JobDetails.ts', output: './dist/job-details.js' },
+  { entry: './src/popup/components/JobItem.ts', output: './dist/job-item.js' },
+  { entry: './src/popup/components/SearchForm.ts', output: './dist/search-form.js' },
+  { entry: './src/popup/components/StatusHeader.ts', output: './dist/status-header.js' },
 
-// Build Theme Loader Script
-esbuild
-  .build({
-    ...commonConfig,
-    entryPoints: ['./src/popup/theme-loader.ts'],
-    outfile: './dist/theme-loader.js',
-  })
-  .catch(() => process.exit(1));
+  // Background scripts
+  { entry: './src/background/service-worker.ts', output: './dist/service-worker.js' },
+  { entry: './src/background/config.ts', output: './dist/background-config.js' },
+  { entry: './src/background/audio-service.ts', output: './dist/audio-service.js' },
 
-// Build Utility Script
-esbuild
-  .build({
-    ...commonConfig,
-    entryPoints: ['./src/utils/utils.ts'],
-    outfile: './dist/utils.js',
-  })
-  .catch(() => process.exit(1));
+  // Shared modules
+  { entry: './src/storage/storage-manager.ts', output: './dist/storage-manager.js' },
+  { entry: './src/utils/utils.ts', output: './dist/utils.js' },
+  // Note: 'types.ts' is intentionally not bundled as its types are compile-time only
+  // and its runtime code (isGraphQLResponse) is bundled with its consumers (e.g., service-worker).
+];
 
-// Build ApiService Script
-esbuild
-  .build({
-    ...commonConfig,
-    entryPoints: ['./src/popup/services/ApiService.ts'],
-    outfile: './dist/api-service.js',
+// Use Promise.all to build all targets in parallel.
+// This is faster than building sequentially and provides better error handling.
+Promise.all(
+  buildTargets.map((target) =>
+    esbuild.build({
+      ...commonConfig,
+      entryPoints: [target.entry],
+      outfile: target.output,
+    })
+  )
+)
+  .then(() => {
+    console.log('All targets built successfully.');
   })
-  .catch(() => process.exit(1));
-
-// Build StorageManager Script
-esbuild
-  .build({
-    ...commonConfig,
-    entryPoints: ['./src/storage/storage-manager.ts'],
-    outfile: './dist/storage-manager.js',
-  })
-  .catch(() => process.exit(1));
-
-// Build JobDetails Component Script
-esbuild
-  .build({
-    ...commonConfig,
-    entryPoints: ['./src/popup/components/JobDetails.ts'],
-    outfile: './dist/job-details.js',
-  })
-  .catch(() => process.exit(1));
-
-// Build JobItem Component Script
-esbuild
-  .build({
-    ...commonConfig,
-    entryPoints: ['./src/popup/components/JobItem.ts'],
-    outfile: './dist/job-item.js',
-  })
-  .catch(() => process.exit(1));
-
-// Build SearchForm Component Script
-esbuild
-  .build({
-    ...commonConfig,
-    entryPoints: ['./src/popup/components/SearchForm.ts'],
-    outfile: './dist/search-form.js',
-  })
-  .catch(() => process.exit(1));
-
-// Build StatusHeader Component Script
-esbuild
-  .build({
-    ...commonConfig,
-    entryPoints: ['./src/popup/components/StatusHeader.ts'],
-    outfile: './dist/status-header.js',
-  })
-  .catch(() => process.exit(1));
-
-// Build Background Config Script
-esbuild
-  .build({
-    ...commonConfig,
-    entryPoints: ['./src/background/config.ts'],
-    outfile: './dist/background-config.js',
-  })
-  .catch(() => process.exit(1));
-
-// Build Audio Service Script
-esbuild
-  .build({
-    ...commonConfig,
-    entryPoints: ['./src/background/audio-service.ts'],
-    outfile: './dist/audio-service.js',
-  })
-  .catch(() => process.exit(1));
-
-// Build Types Script
-esbuild
-  .build({
-    ...commonConfig,
-    entryPoints: ['./src/types.ts'],
-    outfile: './dist/types.js',
-  })
-  .catch(() => process.exit(1));
-
-// Build AppState Script
-esbuild
-  .build({
-    ...commonConfig,
-    entryPoints: ['./src/popup/state/AppState.ts'],
-    outfile: './dist/app-state.js',
-  })
-  .catch(() => process.exit(1));
+  .catch((error) => {
+    console.error('A build failed:', error);
+    process.exit(1);
+  });
