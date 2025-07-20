@@ -1,6 +1,6 @@
 /* exported constructUpworkSearchURL, timeAgo, formatClientInfo, formatSkills, formatBudget, initializeScrollHints */
 // utils.ts
-import { Job } from './types.js';
+import { Job, Tier } from './types.js';
 
 /**
  * A robust querySelector utility that throws an error if the element is not found.
@@ -16,8 +16,6 @@ export function $<T extends HTMLElement>(selector: string, scope: Document | HTM
   }
   return element;
 }
-
-import { Tier } from './types.js';
 
 /**
  * Constructs a direct Upwork job search URL.
@@ -171,32 +169,33 @@ function formatBudget(budget: { type?: string; minAmount?: number | string; maxA
 
   const { type, minAmount, maxAmount } = budget;
   // Helper for thousand separators
-  const formatNumber = (num: number | string) => {
-    const n = parseFloat(num as string);
+  const formatNumber = (num: number | string | undefined) => {
+    if (num === undefined) return null;
+    const n = typeof num === 'string' ? parseFloat(num) : num;
     return isNaN(n) ? null : n.toLocaleString();
   };
 
   if (type?.toLowerCase().includes('hourly')) {
     // Always both min and max present for hourly jobs, but check for missing/invalid
-    const min = formatNumber(minAmount as string);
-    const max = formatNumber(maxAmount as string);
+    const min = formatNumber(minAmount);
+    const max = formatNumber(maxAmount);
     if (min && max) {
-      return `${min} - ${max}/hr`;
+      return `$${min} - $${max}/hr`;
     } else if (min) {
-      return `${min}/hr`;
+      return `$${min}/hr`;
     } else if (max) {
-      return `${max}/hr`;
+      return `$${max}/hr`;
     } else {
       return 'N/A';
     }
   } else {
     // Fixed price: show range if min and max differ, else just min
-    const min = formatNumber(minAmount as string);
-    const max = formatNumber(maxAmount as string);
+    const min = formatNumber(minAmount);
+    const max = formatNumber(maxAmount);
     if (min && max && min !== max) {
-      return `${min} - ${max}`;
+      return `$${min} - $${max}`;
     } else if (min) {
-      return `${min}`;
+      return `$${min}`;
     } else {
       return 'N/A';
     }
