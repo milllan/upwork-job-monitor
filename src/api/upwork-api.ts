@@ -1,9 +1,13 @@
-/* exported UpworkAPI */
-/**
- * Handles all interactions with the Upwork API.
- * This includes token retrieval, GraphQL payload construction, and fetch requests.
- */
-console.log('Upwork API module loaded.');
+import {
+  Job,
+  JobDetails,
+  TalentProfile,
+  GraphQLResponse,
+  isGraphQLResponse,
+} from '../types.js';
+
+import { config } from '../background/config.js';
+import { StorageManager } from '../storage/storage-manager.js';
 
 const API_IDENTIFIERS = {
   JOB_SEARCH: 'jobSearch',
@@ -15,7 +19,7 @@ const API_IDENTIFIERS = {
  * Retrieves and prioritizes potential OAuth2 API tokens from cookies.
  * @returns {Promise<string[]>} A promise that resolves with an array of token strings.
  */
-async function getAllPotentialApiTokens() {
+async function getAllPotentialApiTokens(): Promise<string[]> {
   try {
     const cookies = await browser.cookies.getAll({ domain: 'upwork.com' });
     if (!cookies || cookies.length === 0) {
@@ -23,7 +27,7 @@ async function getAllPotentialApiTokens() {
       return [];
     }
 
-    const allOAuthTokens = [];
+    const allOAuthTokens: { name: string; value: string }[] = [];
     for (const cookie of cookies) {
       if (cookie.value && cookie.value.startsWith('oauth2v2_')) {
         allOAuthTokens.push({ name: cookie.name, value: cookie.value });
@@ -35,7 +39,7 @@ async function getAllPotentialApiTokens() {
       return [];
     }
 
-    const candidateTokens = [];
+    const candidateTokens: string[] = [];
 
     // Prioritize 'sb' pattern tokens as they are often the active ones for GQL calls
     const sbPatternTokens = allOAuthTokens.filter(
@@ -55,11 +59,14 @@ async function getAllPotentialApiTokens() {
     );
     otherPotentials.forEach((t) => candidateTokens.push(t.value));
 
-    console.log('API_DEBUG: Found candidate tokens:', candidateTokens);
+    if (config.DEBUG_MODE) {
+      console.log('API_DEBUG: Found candidate tokens:', candidateTokens);
+    }
 
     return [...new Set(candidateTokens)]; // Ensure uniqueness
-  } catch (error) {
-    console.error('API: Error getting all cookies:', error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error getting cookies';
+    console.error('API: Error getting all cookies:', message);
     return [];
   }
 }
@@ -74,7 +81,12 @@ async function getAllPotentialApiTokens() {
  * @returns {Promise<Object>} A promise that resolves with the full GraphQL response on success,
  *                            or a standardized error object {error: true, type: '...', ...} on failure.
  */
-async function _executeGraphQLQuery(bearerToken, endpointAlias, query, variables) {
+async function _executeGraphQLQuery<T>(
+  bearerToken: string,
+  endpointAlias: string,
+  query: string,
+  variables: Record<string, unknown>
+): Promise<GraphQLResponse<T>> {
   const endpoint = `${config.UPWORK_GRAPHQL_ENDPOINT_BASE}?alias=${endpointAlias}`;
   const graphqlPayload = { query, variables };
   const requestHeadersForFetch = {
@@ -107,24 +119,82 @@ async function _executeGraphQLQuery(bearerToken, endpointAlias, query, variables
         return { error: true, type: 'graphql', details: { errors: data.errors } };
       }
       return data; // Success
-    } catch (parsingError) {
+    } catch (parsingError: unknown) {
+      const message = parsingError instanceof Error ? parsingError.message : 'Unknown parsing error';
       console.warn(`Response text that failed parsing: ${responseBodyText.substring(0, 500)}`);
       return {
         error: true,
         type: 'parsing',
-        details: { message: parsingError.message, body: responseBodyText.substring(0, 500) },
+        details: { message, body: responseBodyText.substring(0, 500) },
       };
     }
-  } catch (error) {
-    return { error: true, type: 'network', details: { message: error.message } };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown network error';
+    return { error: true, type: 'network', details: { message } };
   }
+}
+
+/**
+ * Helper to determine the budget amount from a raw job object.
+ * @param job The raw job data from the API.
+ * @param isMin True to get the minimum amount, false for the maximum.
+ * @returns The budget amount.
+ */
+function getBudgetAmount(job: RawUpworkJob, isMin: boolean): number {
+  const isHourly = job.jobTile.job.jobType.toLowerCase().includes('hourly');
+  if (isHourly) {
+    return (isMin ? job.jobTile.job.hourlyBudgetMin : job.jobTile.job.hourlyBudgetMax) || 0;
+  }
+  return job.jobTile.job.fixedPriceAmount?.amount || 0;
 }
 
 /**
  * Internal-only function to fetch Upwork jobs.
  * @private
  */
-async function _fetchUpworkJobs(bearerToken, userQuery) {
+
+interface RawUpworkJob {
+  id: string;
+  title: string;
+  description: string;
+  applied: boolean;
+  ontologySkills?: { prettyName?: string; prefLabel?: string }[];
+  jobTile: {
+    job: {
+      id: string;
+      ciphertext: string;
+      publishTime: string;
+      createTime: string;
+      jobType: string;
+      hourlyBudgetMin?: number;
+      hourlyBudgetMax?: number;
+      fixedPriceAmount?: { amount: number; isoCurrencyCode: string };
+    };
+  };
+  upworkHistoryData?: {
+    client?: {
+      paymentVerificationStatus: string;
+      country: string;
+      totalSpent?: { amount: number };
+      totalFeedback: number;
+    };
+  };
+}
+
+interface UserJobSearchResponse {
+  search: {
+    universalSearchNuxt: {
+      userJobSearchV1: {
+        results: RawUpworkJob[];
+      };
+    };
+  };
+}
+
+async function _fetchUpworkJobs(
+  bearerToken: string,
+  userQuery: string
+): Promise<Job[] | GraphQLResponse<unknown>> {
   const endpointAlias = 'userJobSearch';
   const fullRawQueryString = `
   query UserJobSearch($requestVariables: UserJobSearchV1Request!) {
@@ -151,11 +221,11 @@ async function _fetchUpworkJobs(bearerToken, userQuery) {
       userQuery: userQuery || config.DEFAULT_USER_QUERY,
       contractorTier: config.DEFAULT_CONTRACTOR_TIERS_GQL,
       sort: config.DEFAULT_SORT_CRITERIA,
-      highlight: true,
+      highlight: false,
       paging: { offset: 0, count: config.API_FETCH_COUNT },
     },
   };
-  const responseData = await _executeGraphQLQuery(
+  const responseData = await _executeGraphQLQuery<UserJobSearchResponse>(
     bearerToken,
     endpointAlias,
     fullRawQueryString,
@@ -168,9 +238,11 @@ async function _fetchUpworkJobs(bearerToken, userQuery) {
   }
 
   const results = responseData.data?.search?.universalSearchNuxt?.userJobSearchV1?.results;
-  if (!results) return [];
+  if (!results) {
+    return [];
+  }
 
-  return results.map((job) => ({
+  return results.map((job: RawUpworkJob): Job => ({
     id: job.jobTile.job.ciphertext || job.jobTile.job.id,
     ciphertext: job.jobTile.job.ciphertext,
     title: job.title,
@@ -180,22 +252,18 @@ async function _fetchUpworkJobs(bearerToken, userQuery) {
     budget: {
       type: job.jobTile.job.jobType,
       currencyCode: job.jobTile.job.fixedPriceAmount?.isoCurrencyCode || 'USD',
-      minAmount: job.jobTile.job.jobType.toLowerCase().includes('hourly')
-        ? job.jobTile.job.hourlyBudgetMin
-        : job.jobTile.job.fixedPriceAmount?.amount,
-      maxAmount: job.jobTile.job.jobType.toLowerCase().includes('hourly')
-        ? job.jobTile.job.hourlyBudgetMax
-        : job.jobTile.job.fixedPriceAmount?.amount,
+      minAmount: getBudgetAmount(job, true),
+      maxAmount: getBudgetAmount(job, false),
     },
     client: {
-      paymentVerificationStatus: job.upworkHistoryData?.client?.paymentVerificationStatus,
-      country: job.upworkHistoryData?.client?.country,
+      paymentVerificationStatus: job.upworkHistoryData?.client?.paymentVerificationStatus || 'N/A',
+      country: job.upworkHistoryData?.client?.country || 'N/A',
       totalSpent: job.upworkHistoryData?.client?.totalSpent?.amount || 0,
-      rating: job.upworkHistoryData?.client?.totalFeedback,
+      rating: job.upworkHistoryData?.client?.totalFeedback || null,
     },
     skills:
-      job.ontologySkills?.map((skill) => ({ name: skill.prettyName || skill.prefLabel })) || [],
-    _fullJobData: job, // Keep this for debugging if needed
+      job.ontologySkills?.map((skill) => ({ name: skill.prettyName || skill.prefLabel || '' })) || [],
+    _fullJobData: job as unknown as Record<string, unknown>, // Keep this for debugging if needed
   }));
 }
 
@@ -203,7 +271,10 @@ async function _fetchUpworkJobs(bearerToken, userQuery) {
  * Internal-only function to fetch job details.
  * @private
  */
-async function _fetchJobDetails(bearerToken, jobCiphertext) {
+async function _fetchJobDetails(
+  bearerToken: string,
+  jobCiphertext: string
+): Promise<JobDetails | null | GraphQLResponse<unknown>> {
   const endpointAlias = 'gql-query-get-auth-job-details';
   const graphqlQuery = `
   query JobAuthDetailsQuery($id: ID!) {
@@ -260,7 +331,7 @@ async function _fetchJobDetails(bearerToken, jobCiphertext) {
     id: jobCiphertext,
     isLoggedIn: true,
   };
-  const responseData = await _executeGraphQLQuery(
+  const responseData = await _executeGraphQLQuery<{ jobAuthDetails: JobDetails }>(
     bearerToken,
     endpointAlias,
     graphqlQuery,
@@ -270,14 +341,17 @@ async function _fetchJobDetails(bearerToken, jobCiphertext) {
   if (responseData.error) {
     return responseData;
   }
-  return responseData.data?.jobAuthDetails || {};
+  return responseData.data?.jobAuthDetails || null;
 }
 
 /**
  * Internal-only function to fetch talent profile details.
  * @private
  */
-async function _fetchTalentProfile(bearerToken, profileCiphertext) {
+async function _fetchTalentProfile(
+  bearerToken: string,
+  profileCiphertext: string
+): Promise<TalentProfile | null | GraphQLResponse<unknown>> {
   const endpointAlias = 'getDetails';
   const graphqlQuery = `
     query GetTalentProfile($profileUrl: String) {
@@ -288,15 +362,15 @@ async function _fetchTalentProfile(bearerToken, profileCiphertext) {
       }
     }`;
   const variables = { profileUrl: profileCiphertext };
-  const responseData = await _executeGraphQLQuery(
+  const responseData = await _executeGraphQLQuery<{ talentVPDAuthProfile: TalentProfile }>(
     bearerToken,
     endpointAlias,
     graphqlQuery,
     variables
   );
 
-  if (responseData.error) return responseData;
-  return responseData.data?.talentVPDAuthProfile || {};
+  if (responseData.error) {return responseData;}
+  return responseData.data?.talentVPDAuthProfile || null;
 }
 
 /**
@@ -305,13 +379,18 @@ async function _fetchTalentProfile(bearerToken, profileCiphertext) {
  * with the new refactored structure.
  * @private
  */
-async function _executeApiCallWithTokenRotation(apiIdentifier, apiCallFunction, ...params) {
+async function _executeApiCallWithTokenRotation<T>(
+  apiIdentifier: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  apiCallFunction: (bearerToken: string, ...args: any[]) => Promise<T>,
+  ...params: unknown[]
+): Promise<{ result: T; token: string } | GraphQLResponse<unknown>> {
   const operationName = apiCallFunction.name;
   const lastKnownGoodToken = await StorageManager.getApiEndpointToken(apiIdentifier);
 
   if (lastKnownGoodToken) {
     const result = await apiCallFunction(lastKnownGoodToken, ...params);
-    if (result && !result.error) {
+    if (result && !isGraphQLResponse(result)) {
       return { result, token: lastKnownGoodToken }; // Return consistent object
     }
     // If the sticky token failed, clear it and proceed to full rotation.
@@ -323,42 +402,50 @@ async function _executeApiCallWithTokenRotation(apiIdentifier, apiCallFunction, 
     return { error: true, type: 'auth', details: { message: 'No candidate API tokens found.' } };
   }
 
-  let lastError = null; // <<<< IMPORTANT: Keep track of the last error
+  let lastError: GraphQLResponse<unknown> | null = null; // <<<< IMPORTANT: Keep track of the last error
   for (const token of candidateTokens) {
     const result = await apiCallFunction(token, ...params);
-    if (result && !result.error) {
+    if (result && !isGraphQLResponse(result)) {
       await StorageManager.setApiEndpointToken(apiIdentifier, token);
       return { result, token }; // Return consistent object
     }
 
     // --- THIS IS THE ROBUST LOGIC THAT WAS MISSING ---
-    else if (result && result.error) {
+    else if (isGraphQLResponse(result)) {
       lastError = result; // Keep track of the specific error from the failed attempt
       const tokenSnippet = `token ${token.substring(0, 15)}`;
-      const { type, details = {} } = result;
-      switch (type) {
-        case 'graphql':
-          console.warn(
-            `API: GraphQL error with ${tokenSnippet} for ${operationName} - ${JSON.stringify(details.errors)}`
-          );
-          break;
-        case 'http':
-          console.warn(
-            `API: HTTP error ${details.status} with ${tokenSnippet} for ${operationName}`
-          );
-          break;
-        case 'network':
-          console.warn(
-            `API: Network error with ${tokenSnippet} for ${operationName}: ${details.message}`
-          );
-          break;
-        case 'parsing':
-          console.warn(
-            `API: JSON parsing error with ${tokenSnippet} for ${operationName}: ${details.message}`
-          );
-          break;
-        default:
-          console.warn(`API: An unknown error occurred with ${tokenSnippet} for ${operationName}`);
+      if (lastError) {
+        const { type, details = {} } = lastError;
+        switch (type) {
+          case 'graphql':
+            console.warn(
+              `API: GraphQL error with ${tokenSnippet} for ${operationName} - ${JSON.stringify(
+                details.errors
+              )}`
+            );
+            break;
+          case 'http':
+            console.warn(
+              `API: HTTP error ${details.status} with ${tokenSnippet} for ${operationName}`
+            );
+            break;
+          case 'network':
+            console.warn(
+              `API: Network error with ${tokenSnippet} for ${operationName}: ${details.message}`
+            );
+            break;
+          case 'parsing':
+            console.warn(
+              `API: JSON parsing error with ${tokenSnippet} for ${operationName}: ${
+                details.message
+              }`
+            );
+            break;
+          default:
+            console.warn(
+              `API: An unknown error occurred with ${tokenSnippet} for ${operationName}`
+            );
+        }
       }
     }
     // --- END OF ROBUST LOGIC ---
@@ -377,50 +464,56 @@ async function _executeApiCallWithTokenRotation(apiIdentifier, apiCallFunction, 
 const UpworkAPI = {
   /**
    * Fetches a list of jobs, handling token rotation automatically.
-   * @returns {Promise<{jobs: Object[]}|{error: boolean, ...}>}
+   * @returns {Promise<{jobs: Job[]}|GraphQLResponse<any>>}
    */
-  fetchJobs: async (userQuery) => {
+  fetchJobs: async (userQuery: string): Promise<{ jobs: Job[] } | GraphQLResponse<unknown>> => {
     const response = await _executeApiCallWithTokenRotation(
       API_IDENTIFIERS.JOB_SEARCH,
       _fetchUpworkJobs,
       userQuery
     );
-    if (response.error) {
-      return response;
+    if ('result' in response) {
+      return { jobs: response.result as Job[] };
     }
-    return { jobs: response.result };
+    return response;
   },
 
   /**
    * Fetches the details for a specific job, handling token rotation automatically.
-   * @returns {Promise<{jobDetails: Object}|{error: boolean, ...}>}
+   * @returns {Promise<{jobDetails: JobDetails | null}|GraphQLResponse<any>>}
    */
-  fetchJobDetails: async (jobCiphertext) => {
+  fetchJobDetails: async (
+    jobCiphertext: string
+  ): Promise<{ jobDetails: JobDetails | null } | GraphQLResponse<unknown>> => {
     const response = await _executeApiCallWithTokenRotation(
       API_IDENTIFIERS.JOB_DETAILS,
       _fetchJobDetails,
       jobCiphertext
     );
-    if (response.error) {
-      return response;
+    if ('result' in response) {
+      return { jobDetails: response.result as JobDetails | null };
     }
-    return { jobDetails: response.result };
+    return response;
   },
 
   /**
    * Fetches the profile for a specific freelancer, handling token rotation automatically.
    * @param {string} profileCiphertext The freelancer's ciphertext ID.
-   * @returns {Promise<{profileDetails: Object}|{error: boolean, ...}>}
+   * @returns {Promise<{profileDetails: TalentProfile | null}|GraphQLResponse<any>>}
    */
-  fetchTalentProfile: async (profileCiphertext) => {
+  fetchTalentProfile: async (
+    profileCiphertext: string
+  ): Promise<{ profileDetails: TalentProfile | null } | GraphQLResponse<unknown>> => {
     const response = await _executeApiCallWithTokenRotation(
       API_IDENTIFIERS.TALENT_PROFILE,
       _fetchTalentProfile,
       profileCiphertext
     );
-    if (response.error) {
-      return response;
+    if ('result' in response) {
+      return { profileDetails: response.result as TalentProfile | null };
     }
-    return { profileDetails: response.result };
+    return response;
   },
 };
+
+export { UpworkAPI };

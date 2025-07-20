@@ -1,54 +1,13 @@
-// background/service-worker.js (Manifest V2 - Dynamic Token Attempt)
-console.log('Background Script MV2 loaded - Dynamic Token Attempt.');
-// --- WebRequest Listener to Modify Headers ---
+import { Job, JobDetails, TalentProfile, isGraphQLResponse, GraphQLResponse, ProcessedJob } from '../types.js';
+import { type Notifications, type Runtime } from 'webextension-polyfill';
 
-// Helper function to upsert (update or insert) a header in a requestHeaders array
-/*function upsertHeader(headers, name, value) {
-  const lowerName = name.toLowerCase();
-  const index = headers.findIndex((h) => h.name.toLowerCase() === lowerName);
-  if (index > -1) {
-    headers[index].value = value;
-  } else {
-    headers.push({ name: name, value: value });
-  }
-}
+// Use declare to inform TypeScript about the global 'browser' object provided by the extension environment.
 
-browser.webRequest.onBeforeSendHeaders.addListener(
-  function (details) {
-    // Check if the request matches the target GraphQL endpoint and method
-    const isTargetRequest =
-      details.url.startsWith(config.UPWORK_GRAPHQL_ENDPOINT_BASE) &&
-      details.method === 'POST' &&
-      details.type === 'xmlhttprequest';
-
-    if (!isTargetRequest) {
-      return { cancel: false }; // Don't modify other requests
-    }
-
-    // Filter out unwanted headers
-    const newHeaders = details.requestHeaders.filter((header) => {
-      // Use config for headers to remove
-      return !config.WEBREQUEST_HEADERS.HEADERS_TO_REMOVE.includes(header.name.toLowerCase());
-    });
-
-    // Add/Update required headers using the helper function and config values
-    upsertHeader(newHeaders, 'Origin', config.UPWORK_DOMAIN);
-    upsertHeader(newHeaders, 'Referer', `${config.UPWORK_DOMAIN}/nx/search/jobs/`);
-    upsertHeader(newHeaders, 'X-Upwork-API-TenantId', config.X_UPWORK_API_TENANT_ID);
-    upsertHeader(
-      newHeaders,
-      'X-Upwork-Accept-Language',
-      config.WEBREQUEST_HEADERS.X_UPWORK_ACCEPT_LANGUAGE
-    );
-    upsertHeader(newHeaders, 'DNT', config.WEBREQUEST_HEADERS.DNT);
-    upsertHeader(newHeaders, 'User-Agent', config.WEBREQUEST_HEADERS.USER_AGENT);
-    upsertHeader(newHeaders, 'Accept-Language', config.WEBREQUEST_HEADERS.ACCEPT_LANGUAGE);
-
-    return { requestHeaders: newHeaders };
-  },
-  { urls: [config.TARGET_GRAPHQL_URL_PATTERN] },
-  ['blocking', 'requestHeaders']
-);*/
+import { config } from '../background/config.js';
+import { StorageManager } from '../storage/storage-manager.js';
+import { UpworkAPI } from '../api/upwork-api.js';
+import { AudioService } from './audio-service.js';
+import { formatBudget } from '../utils.js';
 
 let isJobCheckRunning = false; // Flag to prevent concurrent runs
 
@@ -58,13 +17,18 @@ let isJobCheckRunning = false; // Flag to prevent concurrent runs
  * @param {Array<Object>} jobs - The array of job objects to process.
  * @returns {Object} An object containing the processed jobs and counts of filtered jobs.
  */
-function _applyClientSideFilters(jobs) {
+function _applyClientSideFilters(jobs: Job[]): {
+  processedJobs: ProcessedJob[];
+  titleExcludedCount: number;
+  skillLowPriorityCount: number;
+  clientCountryLowPriorityCount: number;
+} {
   let titleExcludedCount = 0;
   let skillLowPriorityCount = 0;
   let clientCountryLowPriorityCount = 0;
 
-  const processedJobs = jobs.map((job) => {
-    const newJobData = {
+  const processedJobs = jobs.map((job): ProcessedJob => {
+    const newJobData: ProcessedJob = {
       ...job,
       isExcludedByTitleFilter: false,
       isLowPriorityBySkill: false,
@@ -75,7 +39,9 @@ function _applyClientSideFilters(jobs) {
     const titleLower = (job.title || '').toLowerCase(); // Ensure title is lowercase for comparison
     if (
       config.TITLE_EXCLUSION_STRINGS.length > 0 &&
-      config.TITLE_EXCLUSION_STRINGS.some((excludeString) => titleLower.includes(excludeString))
+      config.TITLE_EXCLUSION_STRINGS.some((excludeString: string) =>
+        titleLower.includes(excludeString)
+      )
     ) {
       newJobData.isExcludedByTitleFilter = true;
       titleExcludedCount++;
@@ -83,15 +49,14 @@ function _applyClientSideFilters(jobs) {
 
     // 2. Apply SKILL based low-priority marking
     if (
-      Array.isArray(job.ontologySkills) &&
-      job.ontologySkills.length > 0 &&
+      Array.isArray(job.skills) &&
+      job.skills.length > 0 &&
       config.SKILL_LOW_PRIORITY_TERMS.length > 0
     ) {
-      for (const skill of job.ontologySkills) {
+      for (const skill of job.skills) {
         if (
-          skill &&
-          skill.prefLabel &&
-          config.SKILL_LOW_PRIORITY_TERMS.includes(skill.prefLabel.toLowerCase())
+          skill?.name &&
+          config.SKILL_LOW_PRIORITY_TERMS.includes(skill.name.toLowerCase())
         ) {
           newJobData.isLowPriorityBySkill = true;
           skillLowPriorityCount++;
@@ -127,25 +92,29 @@ function _applyClientSideFilters(jobs) {
  * @returns {Promise<Object>} An object containing counts of new/notifiable jobs and the updated collapsed job IDs.
  */
 async function _processAndNotifyNewJobs(
-  fetchedJobs,
-  historicalSeenJobIds,
-  deletedJobIds,
-  currentCollapsedJobIds
-) {
+  fetchedJobs: ProcessedJob[],
+  historicalSeenJobIds: Set<string>,
+  deletedJobIds: Set<string>,
+  currentCollapsedJobIds: Set<string>
+): Promise<{
+  allNewOrUpdatedJobsCount: number;
+  notifiableNewJobsCount: number;
+  updatedCollapsedJobIds: Set<string>;
+}> {
   // Filter out jobs that are already seen OR have been explicitly deleted by the user from the *fetched* list
   const allNewOrUpdatedJobs = fetchedJobs.filter(
-    (job) => job && job.id && !historicalSeenJobIds.has(job.id) && !deletedJobIds.has(job.id)
+    (job) => job?.id && !historicalSeenJobIds.has(job.id) && !deletedJobIds.has(job.id)
   );
   // From these, determine which are truly new AND notifiable (not excluded by title filter)
   const notifiableNewJobs = allNewOrUpdatedJobs.filter(
-    (job) =>
+    (job: ProcessedJob) =>
       !job.isExcludedByTitleFilter &&
       !job.isLowPriorityBySkill &&
       !job.isLowPriorityByClientCountry &&
       job.applied !== true
   );
-  const newJobIdsToMarkSeen = [];
-  fetchedJobs.forEach((job) => {
+  const newJobIdsToMarkSeen: string[] = [];
+  fetchedJobs.forEach((job: ProcessedJob) => {
     if (job && job.id && !historicalSeenJobIds.has(job.id)) {
       newJobIdsToMarkSeen.push(job.id);
       // If it's a new, low-priority job OR a new "Filtered" (excluded by title) job,
@@ -194,10 +163,10 @@ async function _sendPopupUpdateMessage() {
  * @param {Set<string>} deletedJobIds - The set of job IDs deleted by the user.
  */
 async function _updateStorageAfterCheck(
-  notifiableNewJobsCount,
-  fetchedJobs,
-  updatedCollapsedJobIds,
-  deletedJobIds
+  notifiableNewJobsCount: number,
+  fetchedJobs: ProcessedJob[],
+  updatedCollapsedJobIds: Set<string>,
+  deletedJobIds: Set<string>
 ) {
   await StorageManager.setMonitorStatus(`Checked. New (notifiable): ${notifiableNewJobsCount}`);
   await StorageManager.setNewJobsInLastRun(notifiableNewJobsCount);
@@ -219,13 +188,17 @@ async function _updateStorageAfterCheck(
  * @param {object} [options={}] - Context-specific options.
  * @param {string} [options.ciphertext] - The ciphertext ID for details/profile calls.
  */
-async function _handleApiTokenFailure(errorResult, context, options = {}) {
+async function _handleApiTokenFailure(
+  errorResult: GraphQLResponse<unknown> | { type: string; details?: { status?: number } },
+  context: 'jobSearch' | 'jobDetails' | 'talentProfile',
+  options: { ciphertext?: string } = {}
+) {
   // An auth failure is now defined as: no tokens found, a permissions-based GraphQL error, or specific HTTP errors.
   const isAuthFailure =
     errorResult.type === 'auth' ||
     errorResult.type === 'graphql' || // A GraphQL error often indicates a permissions issue with the token.
-    (errorResult.type === 'http' && // Or an HTTP error that indicates auth issues
-      [401, 403, 429].includes(errorResult.details?.status)); // 401 Unauthorized, 403 Forbidden, 429 Too Many Requests
+    (errorResult.type === 'http' &&
+      [401, 403, 429].includes(errorResult.details?.status as number)); // 401 Unauthorized, 403 Forbidden, 429 Too Many Requests
 
   if (isAuthFailure) {
     await StorageManager.setMonitorStatus('Authentication failed. Please log in to Upwork.');
@@ -268,7 +241,7 @@ async function _handleApiTokenFailure(errorResult, context, options = {}) {
  * This function is called by the `runJobCheck` orchestrator.
  * @param {string} triggeredByUserQuery - A specific query from a user action, or null/undefined.
  */
-async function _performJobCheckLogic(triggeredByUserQuery) {
+async function _performJobCheckLogic(triggeredByUserQuery?: string) {
   console.log('MV2: Attempting runJobCheck (Direct Background with token loop)...');
   await StorageManager.setMonitorStatus('Checking...');
 
@@ -279,22 +252,21 @@ async function _performJobCheckLogic(triggeredByUserQuery) {
 
   const apiResult = await UpworkAPI.fetchJobs(userQueryToUse);
 
-  // On success, apiResult is an object like { jobs: [...] }. On failure, it has an .error property.
-  if (apiResult.error) {
+  if (isGraphQLResponse(apiResult)) {
     console.error('MV2: Failed to fetch jobs after trying all tokens.', apiResult);
-    // The options object is not strictly needed here but keeps the pattern consistent.
     await _handleApiTokenFailure(apiResult, 'jobSearch', {});
-    return; // Exit the logic flow on failure
+    return;
   }
 
-  // Destructure the jobs array from the successful result.
-  let fetchedJobs = apiResult.jobs; // Correctly extract the jobs array from the API response
+  // If we reach here, the API call was successful.
+  const initialJobs: Job[] = apiResult.jobs;
+  let processedJobs: ProcessedJob[] = [];
 
   // Apply client-side title exclusion and skill-based low-priority marking
-  if (fetchedJobs && fetchedJobs.length > 0) {
-    const originalJobCount = fetchedJobs.length;
-    const processedJobsResult = _applyClientSideFilters(fetchedJobs);
-    fetchedJobs = processedJobsResult.processedJobs;
+  if (initialJobs && initialJobs.length > 0) {
+    const originalJobCount = initialJobs.length;
+    const processedJobsResult = _applyClientSideFilters(initialJobs);
+    processedJobs = processedJobsResult.processedJobs;
     console.log(
       `MV2: Processed ${originalJobCount} jobs. Marked ${processedJobsResult.titleExcludedCount} as excluded by title. Marked ${processedJobsResult.skillLowPriorityCount} as low-priority by skill. Marked ${processedJobsResult.clientCountryLowPriorityCount} as low-priority by client country.`
     );
@@ -306,7 +278,7 @@ async function _performJobCheckLogic(triggeredByUserQuery) {
   const currentCollapsedJobIds = await StorageManager.getCollapsedJobIds();
 
   const processResult = await _processAndNotifyNewJobs(
-    fetchedJobs,
+    processedJobs,
     historicalSeenJobIds,
     deletedJobIds,
     currentCollapsedJobIds
@@ -319,7 +291,7 @@ async function _performJobCheckLogic(triggeredByUserQuery) {
   // Update storage
   await _updateStorageAfterCheck(
     processResult.notifiableNewJobsCount,
-    fetchedJobs,
+    processedJobs,
     processResult.updatedCollapsedJobIds,
     deletedJobIds
   );
@@ -333,7 +305,7 @@ async function _performJobCheckLogic(triggeredByUserQuery) {
  * This function acts as a gatekeeper and error handler for the core logic.
  * @param {string} triggeredByUserQuery - A query from a user action, if any.
  */
-async function runJobCheck(triggeredByUserQuery) {
+async function runJobCheck(triggeredByUserQuery?: string) {
   if (isJobCheckRunning) {
     console.log('MV2: runJobCheck - Job check already in progress. Skipping this run.');
     await StorageManager.setMonitorStatus('Busy, check in progress...');
@@ -344,9 +316,12 @@ async function runJobCheck(triggeredByUserQuery) {
   try {
     // Delegate the core logic to the new helper function
     await _performJobCheckLogic(triggeredByUserQuery);
-  } catch (error) {
+  } catch (error: unknown) {
     // Catch any unexpected errors from the logic function
-    console.error('MV2: An unexpected error occurred during the job check process:', error);
+    console.error(
+      'MV2: An unexpected error occurred during the job check process:',
+      error instanceof Error ? error.message : error
+    );
     await StorageManager.setMonitorStatus('Error. Check console.');
     await _sendPopupUpdateMessage(); // Notify popup of the error status
   } finally {
@@ -386,12 +361,12 @@ browser.alarms.onAlarm.addListener(async (alarm) => {
   }
 });
 
-async function sendNotification(job) {
+async function sendNotification(job: Job) {
   // Made async
   const jobUrl = `https://www.upwork.com/jobs/${job.ciphertext || job.id}`;
   // Use formatBudget from utils.js for budget formatting
   const budgetString = formatBudget(job.budget);
-  const notificationOptions = {
+  const notificationOptions: Notifications.CreateNotificationOptions = {
     type: 'basic',
     iconUrl: 'icons/icon48.png',
     title: 'New Upwork Job!',
@@ -409,7 +384,7 @@ async function sendNotification(job) {
   }
 }
 
-browser.notifications.onClicked.addListener(async (notificationId) => {
+browser.notifications.onClicked.addListener(async (notificationId: string) => {
   // Made async
   try {
     await browser.tabs.create({ url: notificationId });
@@ -421,92 +396,122 @@ browser.notifications.onClicked.addListener(async (notificationId) => {
 
 // --- MODIFIED Message Handlers ---
 
-async function _handleManualCheck(request) {
+interface ManualCheckRequest {
+  action: 'manualCheck';
+  userQuery?: string;
+}
+async function _handleManualCheck(request: ManualCheckRequest) {
   const queryFromPopup = request.userQuery || config.DEFAULT_USER_QUERY;
   await StorageManager.setCurrentUserQuery(queryFromPopup);
   await runJobCheck(queryFromPopup); // This now has the smart error handler
   return { status: 'Manual check initiated and processing.' };
 }
 
+interface GetJobDetailsRequest {
+  action: 'getJobDetails';
+  jobCiphertext?: string;
+}
 // MODIFIED: This function now just calls the processing function
-async function _handleGetJobDetails(request) {
+async function _handleGetJobDetails(request: GetJobDetailsRequest) {
   if (!request.jobCiphertext) {
     throw new Error('jobCiphertext is required for getJobDetails action.');
   }
   return await _fetchAndProcessJobDetails(request.jobCiphertext);
 }
 
+interface GetTalentProfileRequest {
+  action: 'getTalentProfile';
+  profileCiphertext?: string;
+}
 // NEW: Handler for talent profile requests
-async function _handleGetTalentProfile(request) {
+async function _handleGetTalentProfile(request: GetTalentProfileRequest) {
   if (!request.profileCiphertext) {
     throw new Error('profileCiphertext is required for getTalentProfile action.');
   }
   return await _fetchAndProcessTalentProfile(request.profileCiphertext);
 }
 
-const messageHandlers = {
-  manualCheck: _handleManualCheck,
-  getJobDetails: _handleGetJobDetails,
-  getTalentProfile: _handleGetTalentProfile, // ADDED
-};
+type MessageRequest = ManualCheckRequest | GetJobDetailsRequest | GetTalentProfileRequest;
 
-browser.runtime.onMessage.addListener(async (request, _sender) => {
-  const handler = messageHandlers[request.action];
-  if (handler) {
-    try {
-      // Await the handler and return its result directly.
-      // This correctly propagates the successful data or the error object.
-      return await handler(request);
-    } catch (error) {
-      console.error(
-        `Background: Error handling action "${request.action}":`,
-        error.message,
-        error.stack
-      );
-      return { error: true, message: `Error during ${request.action}: ${error.message}` };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+browser.runtime.onMessage.addListener(async (request: any, _sender: Runtime.MessageSender) => {
+  const message = request as MessageRequest;
+  try {
+    switch (message.action) {
+      case 'manualCheck':
+        return await _handleManualCheck(message);
+
+      case 'getJobDetails':
+        return await _handleGetJobDetails(message);
+
+      case 'getTalentProfile':
+        return await _handleGetTalentProfile(message);
+
+      default: {
+        // This will cause a TypeScript error if any action is not handled, ensuring exhaustiveness.
+        const _exhaustiveCheck: never = message;
+        console.warn(`MV2: No message handler found for action:`, _exhaustiveCheck);
+        return;
+      }
     }
-  } else if (request.action) {
-    console.warn(`MV2: No message handler found for action: ${request.action}`);
+  } catch (error: unknown) {
+    const err = error as Error;
+    const action = (message as { action?: string }).action || 'unknown';
+    console.error(`Background: Error handling action "${action}":`, err.message, err.stack);
+    return { error: true, message: `Error during ${action}: ${err.message}` };
   }
 });
 
 // MODIFIED: This now contains the smart error handling logic
-async function _fetchAndProcessJobDetails(jobCiphertext) {
+async function _fetchAndProcessJobDetails(
+  jobCiphertext: string
+): Promise<GraphQLResponse<{ jobDetails: JobDetails | null }>> {
   const apiResult = await UpworkAPI.fetchJobDetails(jobCiphertext);
 
-  // On success, apiResult is { jobDetails: {...} }. We need to return this object.
-  if (apiResult && !apiResult.error) {
-    // The message handler expects the object { jobDetails: ... } which is exactly what the API returns.
-
-    return apiResult;
-  } else {
-    // On failure, handle the error and throw to the message handler
+  if (isGraphQLResponse(apiResult)) {
     console.error('MV2: Failed to fetch job details.', apiResult);
-    // On auth failure for a user-initiated action, we can open a tab and still return an error.
-    if (apiResult.type === 'http' && apiResult.details.status === 403) {
+    // Handle the specific 403 case for token failures
+    if (apiResult.type === 'http' && apiResult.details && apiResult.details.status === 403) {
       await _handleApiTokenFailure(apiResult, 'jobDetails', { ciphertext: jobCiphertext });
     }
-    // Throw an error to be caught by the popup's logic and displayed in the UI.
-    throw new Error(apiResult.message || `API Error: ${apiResult.type}`);
+    // For all other errors, just return the GraphQL error response
+    return apiResult as GraphQLResponse<{ jobDetails: JobDetails | null }>;
   }
+
+  // On success, apiResult is { jobDetails: JobDetails | null }.
+  // We need to handle the null case explicitly.
+  if ('jobDetails' in apiResult && apiResult.jobDetails === null) {
+    console.log(`MV2: Job details for ${jobCiphertext} not found (returned null).`);
+  }
+
+  return { data: apiResult };
 }
 
 // NEW: Processing function for talent profiles
-async function _fetchAndProcessTalentProfile(profileCiphertext) {
+async function _fetchAndProcessTalentProfile(
+  profileCiphertext: string
+): Promise<{ profileDetails: TalentProfile | null } | GraphQLResponse<unknown>> {
   const apiResult = await UpworkAPI.fetchTalentProfile(profileCiphertext);
 
-  if (apiResult && !apiResult.error) {
-    return apiResult;
-  } else {
+  if (isGraphQLResponse(apiResult)) {
     console.error('MV2: Failed to fetch talent profile.', apiResult);
-    if (apiResult.type === 'http' && apiResult.details.status === 403) {
+    if (apiResult.type === 'http' && apiResult.details && apiResult.details.status === 403) {
       await _handleApiTokenFailure(apiResult, 'talentProfile', { ciphertext: profileCiphertext });
     }
-    throw new Error(apiResult.message || `API Error: ${apiResult.type}`);
+    return apiResult;
   }
+
+  // Handle the null case for talent profiles
+  if ('profileDetails' in apiResult && apiResult.profileDetails === null) {
+    console.log(`MV2: Talent profile for ${profileCiphertext} not found (returned null).`);
+  }
+
+  return apiResult;
 }
 
 setupAlarms();
 // Defer the initial run to ensure all modules are loaded and initialized,
 // preventing a race condition where UpworkAPI might not be defined yet.
 setTimeout(() => runJobCheck(), 0);
+
+export { runJobCheck };
