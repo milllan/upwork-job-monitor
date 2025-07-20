@@ -1,10 +1,16 @@
-/**
- * ApiService
- * Handles all communication between the popup and the background service worker.
- * This includes fetching job details and triggering manual checks.
- */
+import { JobDetails, GraphQLResponse } from '../../types.js';
+import { AppState } from '../state/AppState.js';
+
+type GetJobDetailsResponse = GraphQLResponse<{ jobDetails: JobDetails | null }>;
+
+interface TriggerCheckResponse {
+  status: string;
+}
+
 class ApiService {
-  constructor(appState) {
+  private appState: AppState;
+
+  constructor(appState: AppState) {
     if (!appState) {
       throw new Error('ApiService requires an AppState instance.');
     }
@@ -16,7 +22,7 @@ class ApiService {
    * @param {string} jobCiphertext - The ciphertext ID of the job.
    * @returns {Promise<Object>} The job details data.
    */
-  async fetchJobDetailsWithCache(jobCiphertext) {
+  async fetchJobDetailsWithCache(jobCiphertext: string): Promise<JobDetails | null> {
     const cachedData = this.appState.getCachedJobDetails(jobCiphertext);
     if (cachedData) {
       console.log(`ApiService: Using cached job details for ${jobCiphertext}`);
@@ -24,20 +30,26 @@ class ApiService {
     }
 
     console.log(`ApiService: Fetching fresh job details for ${jobCiphertext}`);
-    const response = await browser.runtime.sendMessage({
+    const response: GetJobDetailsResponse = await browser.runtime.sendMessage({
       action: 'getJobDetails',
       jobCiphertext: jobCiphertext,
     });
 
-    if (response && response.jobDetails) {
-      this.appState.setCachedJobDetails(jobCiphertext, response.jobDetails);
-      return response.jobDetails;
+    if (response && response.data && typeof response.data.jobDetails !== 'undefined') {
+      if (response.data.jobDetails) {
+        this.appState.setCachedJobDetails(jobCiphertext, response.data.jobDetails);
+      }
+      return response.data.jobDetails;
     } else {
       console.error(
         'ApiService: Failed to get job details from background:',
-        response?.message || response
+        response?.details || response
       );
-      throw new Error(response?.message || 'An unknown error occurred in the background script.');
+      throw new Error(
+        typeof response?.details?.message === 'string'
+          ? response.details.message
+          : 'An unknown error occurred in the background script.'
+      );
     }
   }
 
@@ -46,11 +58,10 @@ class ApiService {
    * @param {string} queryToUse - The search query to use for the check.
    * @returns {Promise<Object>} The response from the background script.
    */
-  async triggerCheck(queryToUse) {
+  async triggerCheck(queryToUse: string): Promise<TriggerCheckResponse> {
     console.log('ApiService: Triggering check with query:', queryToUse);
     return browser.runtime.sendMessage({ action: 'manualCheck', userQuery: queryToUse });
   }
 }
 
-// Export for use in other modules
-window.ApiService = ApiService;
+export { ApiService };

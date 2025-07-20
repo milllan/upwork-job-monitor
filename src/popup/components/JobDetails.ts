@@ -1,44 +1,64 @@
-/**
- * JobDetails Component
- * Handles the rendering and state of the job details panel.
- * This replaces the updateDetailsPanel and _prepareJobDetailsViewModel functions
- * with a more organized component approach.
- */
-class JobDetails {
-  constructor(containerElement) {
-    this.container = containerElement;
-    this.template = document.getElementById('job-details-template');
+import { JobDetails as JobDetailsType } from '../../types.js';
+import { timeAgo } from '../../utils.js';
 
-    if (!this.container || !this.template) {
-      throw new Error('JobDetails component requires a container and a template element.');
+interface JobDetailsViewModel {
+  clientJobsPosted: string | null;
+  clientHours: string | null;
+  clientFeedbackCount: string | null;
+  activityApplicants: string | null;
+  activityInterviews: string | null;
+  activityHired: string | null;
+  activityLastActiveHTML: string | null;
+  bidAvg: string | null;
+  bidRange: string | null;
+  contractorHistory: { name: string; ciphertext: string }[];
+  questions: string[];
+  descriptionHTML: string | null;
+  showJobActivity: boolean;
+}
+
+export class JobDetails {
+  private container: HTMLElement;
+  private template: HTMLTemplateElement;
+
+  constructor(containerElement: HTMLElement) {
+    this.container = containerElement;
+    const template = document.getElementById('job-details-template');
+    if (!template || !(template instanceof HTMLTemplateElement)) {
+      throw new Error('JobDetails component requires a template element with id "job-details-template".');
     }
+    this.template = template;
     this.showInitialMessage();
   }
 
-  showLoading() {
+  showLoading(): void {
     this.container.innerHTML = '<div class="details-panel__loading">Loading details...</div>';
   }
 
-  showError(error) {
+  showError(error: unknown): void {
     const errorMessage = error instanceof Error ? error.message : String(error);
     this.container.innerHTML = `<p class="details-panel__error">Failed to load job details: ${errorMessage}. Please try again later.</p>`;
   }
 
-  showInitialMessage(message = 'Select a job to see details.') {
+  showInitialMessage(message = 'Select a job to see details.'): void {
     this.container.innerHTML = `<p class="details-panel__no-jobs">${message}</p>`;
   }
 
-  render(details) {
+  render(details: JobDetailsType | null): void {
     if (!details) {
       this.showInitialMessage('No details available for this job.');
       return;
     }
 
     const vm = this._prepareViewModel(details);
-    const clone = this.template.content.cloneNode(true);
+    const clone = this.template.content.cloneNode(true) as DocumentFragment;
 
-    // --- Helper to populate a field, now also handles hiding the parent section ---
-    const populateField = (fieldName, content, isHtml = false, sectionName = null) => {
+    const populateField = (
+      fieldName: string,
+      content: string | null,
+      isHtml = false,
+      sectionName: string | null = null
+    ) => {
       const field = clone.querySelector(`[data-field="${fieldName}"]`);
       const section = sectionName
         ? clone.querySelector(`[data-section="${sectionName}"]`)
@@ -58,15 +78,13 @@ class JobDetails {
       }
     };
 
-    // --- Helper to set visibility of a section based on a boolean ---
-    const setSectionVisibility = (sectionName, isVisible) => {
+    const setSectionVisibility = (sectionName: string, isVisible: boolean) => {
       const section = clone.querySelector(`[data-section="${sectionName}"]`);
       if (section) {
         section.classList.toggle('hidden', !isVisible);
       }
     };
 
-    // --- Populate from ViewModel ---
     populateField('client-jobs-posted', vm.clientJobsPosted, false, 'client-info');
     populateField('client-hours', vm.clientHours, false, 'client-info');
     populateField('client-feedback-count', vm.clientFeedbackCount, false, 'client-info');
@@ -84,33 +102,37 @@ class JobDetails {
 
     const questionsList = clone.querySelector('[data-field="questions-list"]');
     const questionsSection = clone.querySelector('[data-section="questions"]');
-    if (vm.questions.length > 0) {
-      vm.questions.forEach((qText) => {
-        const li = document.createElement('li');
-        li.textContent = qText;
-        questionsList.appendChild(li);
-      });
-      questionsSection.classList.remove('hidden');
-    } else {
-      questionsSection.classList.add('hidden');
+    if (questionsList && questionsSection) {
+      if (vm.questions.length > 0) {
+        vm.questions.forEach((qText) => {
+          const li = document.createElement('li');
+          li.textContent = qText;
+          questionsList.appendChild(li);
+        });
+        questionsSection.classList.remove('hidden');
+      } else {
+        questionsSection.classList.add('hidden');
+      }
     }
 
     const contractorList = clone.querySelector('[data-field="contractor-history-list"]');
     const contractorSection = clone.querySelector('[data-section="contractor-history"]');
-    if (vm.contractorHistory.length > 0) {
-      vm.contractorHistory.forEach((contractor) => {
-        const li = document.createElement('li');
-        const a = document.createElement('a');
-        a.href = `https://www.upwork.com/freelancers/${contractor.ciphertext}`;
-        a.textContent = contractor.name.split(' ')[0]; // Only first name
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        li.appendChild(a);
-        contractorList.appendChild(li);
-      });
-      contractorSection.classList.remove('hidden');
-    } else {
-      contractorSection.classList.add('hidden');
+    if (contractorList && contractorSection) {
+      if (vm.contractorHistory.length > 0) {
+        vm.contractorHistory.forEach((contractor) => {
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = `https://www.upwork.com/freelancers/${contractor.ciphertext}`;
+          a.textContent = contractor.name.split(' ')[0] || contractor.name || 'Unknown';
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          li.appendChild(a);
+          contractorList.appendChild(li);
+        });
+        contractorSection.classList.remove('hidden');
+      } else {
+        contractorSection.classList.add('hidden');
+      }
     }
 
     populateField('description-content', vm.descriptionHTML, true, 'description');
@@ -119,8 +141,8 @@ class JobDetails {
     this.container.appendChild(clone);
   }
 
-  _prepareViewModel(details) {
-    const vm = {
+  private _prepareViewModel(details: JobDetailsType): JobDetailsViewModel {
+    const vm: JobDetailsViewModel = {
       clientJobsPosted: null,
       clientHours: null,
       clientFeedbackCount: null,
@@ -150,8 +172,13 @@ class JobDetails {
     const clientActivity = details?.opening?.job?.clientActivity || {};
     if (clientActivity.lastBuyerActivity) {
       const lastActivityDate = new Date(clientActivity.lastBuyerActivity);
-      const fullTimestamp = `${lastActivityDate.toLocaleDateString()} ${lastActivityDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-      vm.activityLastActiveHTML = `<span title="${fullTimestamp}">${timeAgo(lastActivityDate)}</span>`;
+      const fullTimestamp = `${lastActivityDate.toLocaleDateString()} ${lastActivityDate.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      })}`;
+      vm.activityLastActiveHTML = `<span title="${fullTimestamp}">${timeAgo(
+        lastActivityDate
+      )}</span>`;
     }
     vm.activityApplicants = clientActivity.totalApplicants
       ? `Applicants: ${clientActivity.totalApplicants}`
@@ -161,7 +188,6 @@ class JobDetails {
       : null;
     vm.activityHired = `Hired: ${clientActivity.totalHired || 0}/${clientActivity.numberOfPositionsToHire || 1}`;
 
-    // Determine if the job activity section should be shown
     vm.showJobActivity = !!(
       vm.activityApplicants ||
       vm.activityInterviews ||
@@ -180,7 +206,7 @@ class JobDetails {
 
     const workHistory = details?.buyer?.workHistory || [];
     if (workHistory.length > 0) {
-      const contractors = new Map();
+      const contractors = new Map<string, string>();
       workHistory.forEach((h) => {
         const info = h.contractorInfo;
         if (info && info.contractorName && info.ciphertext && !contractors.has(info.ciphertext)) {
@@ -198,19 +224,12 @@ class JobDetails {
 
     const jobDescription = details?.opening?.job?.description;
     if (jobDescription && jobDescription.trim().length > 0) {
-      vm.descriptionHTML = jobDescription
-        .replace(/<\/?[^>]+(>|$)/g, '')
-        .trim()
-        .replace(/\n/g, '<br>');
+      // Use DOMParser for robust and safe HTML stripping, then reformat for display.
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(jobDescription, 'text/html');
+      vm.descriptionHTML = doc.body.textContent?.trim().replace(/\n/g, '<br>') || null;
     }
 
     return vm;
   }
-}
-
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = JobDetails;
-} else {
-  window.JobDetails = JobDetails;
 }

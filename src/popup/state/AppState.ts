@@ -1,76 +1,62 @@
-/**
- * AppState - Centralized state management for the Upwork Job Monitor popup
- *
- * This class manages all application state and provides a reactive system
- * for UI updates. It replaces the scattered state variables in popup.js
- * with a centralized, predictable state management system.
- */
+import { StorageManager } from '../../storage/storage-manager.js';
+import { config } from '../../background/config.js';
 
-class AppState {
+// Define interfaces for state and other complex types
+import { Job, JobDetails } from '../../types.js';
+import { JobItem } from '../components/JobItem.js';
+
+interface State {
+  theme: 'light' | 'dark';
+  selectedJobId: string | null;
+  collapsedJobIds: Set<string>;
+  deletedJobIds: Set<string>;
+  monitorStatus: string;
+  lastCheckTimestamp: number | null;
+  currentUserQuery: string;
+  jobs: Job[];
+  jobDetailsCache: Map<string, { data: JobDetails; timestamp: number }>;
+  jobComponents: Map<string, JobItem>;
+  cacheExpiryMs: number;
+}
+
+type StateListener = (newState: State, prevState: State) => void;
+type SelectorListener<T> = (newValue: T, prevValue: T) => void;
+
+export class AppState {
+  private state: State;
+  private listeners: Set<StateListener> = new Set();
+  private selectorListeners: Map<keyof State, Set<SelectorListener<unknown>>> = new Map();
+  private debouncedSave: () => void;
+
   constructor() {
-    // Initialize state with default values
     this.state = {
-      // UI State
       theme: 'light',
       selectedJobId: null,
       collapsedJobIds: new Set(),
       deletedJobIds: new Set(),
-
-      // Status State
       monitorStatus: 'Initializing...',
       lastCheckTimestamp: null,
       currentUserQuery: '',
-
-      // Job Data
       jobs: [],
       jobDetailsCache: new Map(),
-
-      // Component State
       jobComponents: new Map(),
-
-      // Cache Configuration
-      cacheExpiryMs: 15 * 60 * 1000, // 15 minutes
+      cacheExpiryMs: config.JOB_DETAILS_CACHE_EXPIRY_MS,
     };
 
-    // Subscription system for reactive updates
-    this.listeners = new Set();
-    this.selectorListeners = new Map(); // For specific state slice subscriptions
-
-    // State persistence helper
-    this.persistence = null; // Will be set after StatePersistence is loaded
-
-    // Debounced save to prevent excessive storage writes
     this.debouncedSave = this._debounce(this._saveToStorage.bind(this), 300);
   }
 
   // === Core State Management ===
 
-  /**
-   * Get the current state (read-only)
-   * @returns {Object} Current state object
-   */
-  getState() {
+  getState(): State {
     return { ...this.state };
   }
 
-  /**
-   * Update state and notify listeners
-   * @param {Object} updates - Partial state updates
-   * @param {Object} options - Update options
-   */
-  setState(updates, options = {}) {
+  setState(updates: Partial<State>, options: { skipPersistence?: boolean } = {}): void {
     const prevState = { ...this.state };
-
-    // Handle Set objects properly
-    const processedUpdates = this._processStateUpdates(updates);
-
-    // Apply updates
-    this.state = { ...this.state, ...processedUpdates };
-
-    // Notify listeners
+    this.state = { ...this.state, ...updates };
     this._notifyListeners(this.state, prevState);
 
-    // Auto-save to storage unless disabled
     if (!options.skipPersistence) {
       this.debouncedSave();
     }
@@ -78,32 +64,24 @@ class AppState {
     console.log('AppState: State updated', { updates, newState: this.state });
   }
 
-  /**
-   * Subscribe to state changes
-   * @param {Function} listener - Callback function (newState, prevState) => void
-   * @returns {Function} Unsubscribe function
-   */
-  subscribe(listener) {
+  subscribe(listener: StateListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
 
-  /**
-   * Subscribe to specific state slice changes
-   * @param {string} selector - State property name
-   * @param {Function} listener - Callback function (newValue, prevValue) => void
-   * @returns {Function} Unsubscribe function
-   */
-  subscribeToSelector(selector, listener) {
+  subscribeToSelector<K extends keyof State>(
+    selector: K,
+    listener: SelectorListener<State[K]>
+  ): () => void {
     if (!this.selectorListeners.has(selector)) {
       this.selectorListeners.set(selector, new Set());
     }
-    this.selectorListeners.get(selector).add(listener);
+    this.selectorListeners.get(selector)!.add(listener as SelectorListener<unknown>);
 
     return () => {
       const listeners = this.selectorListeners.get(selector);
       if (listeners) {
-        listeners.delete(listener);
+        listeners.delete(listener as SelectorListener<unknown>);
         if (listeners.size === 0) {
           this.selectorListeners.delete(selector);
         }
@@ -113,49 +91,53 @@ class AppState {
 
   // === State Getters ===
 
-  getTheme() {
+  getTheme(): 'light' | 'dark' {
     return this.state.theme;
   }
-  getSelectedJobId() {
+
+  getSelectedJobId(): string | null {
     return this.state.selectedJobId;
   }
-  getCollapsedJobIds() {
+
+  getCollapsedJobIds(): Set<string> {
     return new Set(this.state.collapsedJobIds);
   }
-  getDeletedJobIds() {
+
+  getDeletedJobIds(): Set<string> {
     return new Set(this.state.deletedJobIds);
   }
-  getMonitorStatus() {
+
+  getMonitorStatus(): string {
     return this.state.monitorStatus;
   }
-  getLastCheckTimestamp() {
+
+  getLastCheckTimestamp(): number | null {
     return this.state.lastCheckTimestamp;
   }
-  getCurrentUserQuery() {
+
+  getCurrentUserQuery(): string {
     return this.state.currentUserQuery;
   }
-  getJobs() {
+
+  getJobs(): Job[] {
     return [...this.state.jobs];
   }
-  getJobComponents() {
+
+  getJobComponents(): Map<string, JobItem> {
     return new Map(this.state.jobComponents);
   }
 
-  // Computed properties
-  getDeletedJobsCount() {
+  getDeletedJobsCount(): number {
     return this.state.deletedJobIds.size;
   }
-  getVisibleJobs() {
+
+  getVisibleJobs(): Job[] {
     return this.state.jobs.filter((job) => !this.state.deletedJobIds.has(job.id));
   }
 
   // === State Actions ===
 
-  /**
-   * Set the current theme
-   * @param {string} theme - 'light' or 'dark'
-   */
-  setTheme(theme) {
+  setTheme(theme: 'light' | 'dark'): void {
     if (theme !== 'light' && theme !== 'dark') {
       console.warn('AppState: Invalid theme', theme);
       return;
@@ -163,19 +145,11 @@ class AppState {
     this.setState({ theme });
   }
 
-  /**
-   * Set the selected job ID
-   * @param {string|null} jobId - Job ID or null to clear selection
-   */
-  setSelectedJobId(jobId) {
+  setSelectedJobId(jobId: string | null): void {
     this.setState({ selectedJobId: jobId });
   }
 
-  /**
-   * Toggle job collapsed state
-   * @param {string} jobId - Job ID to toggle
-   */
-  toggleJobCollapse(jobId) {
+  toggleJobCollapse(jobId: string): void {
     const collapsedJobIds = new Set(this.state.collapsedJobIds);
     if (collapsedJobIds.has(jobId)) {
       collapsedJobIds.delete(jobId);
@@ -185,64 +159,38 @@ class AppState {
     this.setState({ collapsedJobIds });
   }
 
-  /**
-   * Delete a job (add to deleted list)
-   * @param {string} jobId - Job ID to delete
-   */
-  deleteJob(jobId) {
+  deleteJob(jobId: string): void {
     const deletedJobIds = new Set(this.state.deletedJobIds);
     deletedJobIds.add(jobId);
-
-    // Clear selection if deleting selected job
     const selectedJobId = this.state.selectedJobId === jobId ? null : this.state.selectedJobId;
-
     this.setState({ deletedJobIds, selectedJobId });
   }
 
-  /**
-   * Update monitor status
-   * @param {string} status - New status text
-   * @param {number|null} timestamp - Optional timestamp
-   */
-  updateMonitorStatus(status, timestamp = null) {
-    const updates = { monitorStatus: status };
+  updateMonitorStatus(status: string, timestamp: number | null = null): void {
+    const updates: Partial<State> = { monitorStatus: status };
     if (timestamp !== null) {
       updates.lastCheckTimestamp = timestamp;
     }
     this.setState(updates);
   }
 
-  /**
-   * Set jobs data
-   * @param {Array} jobs - Array of job objects
-   */
-  setJobs(jobs) {
+  setJobs(jobs: Job[]): void {
     this.setState({ jobs: [...jobs] });
   }
 
-  /**
-   * Set current user query
-   * @param {string} query - Search query string
-   */
-  setCurrentUserQuery(query) {
+  setCurrentUserQuery(query: string): void {
     this.setState({ currentUserQuery: query });
   }
 
   // === Job Details Cache Management ===
 
-  /**
-   * Get cached job details
-   * @param {string} ciphertext - Job ciphertext
-   * @returns {Object|null} Cached data or null if not found/expired
-   */
-  getCachedJobDetails(ciphertext) {
+  getCachedJobDetails(ciphertext: string): JobDetails | null {
     const cached = this.state.jobDetailsCache.get(ciphertext);
     if (!cached) {
       return null;
     }
 
     if (Date.now() - cached.timestamp >= this.state.cacheExpiryMs) {
-      // Remove expired cache
       const jobDetailsCache = new Map(this.state.jobDetailsCache);
       jobDetailsCache.delete(ciphertext);
       this.setState({ jobDetailsCache }, { skipPersistence: true });
@@ -252,49 +200,28 @@ class AppState {
     return cached.data;
   }
 
-  /**
-   * Cache job details
-   * @param {string} ciphertext - Job ciphertext
-   * @param {Object} data - Job details data
-   */
-  setCachedJobDetails(ciphertext, data) {
+  setCachedJobDetails(ciphertext: string, data: JobDetails): void {
     const jobDetailsCache = new Map(this.state.jobDetailsCache);
-    jobDetailsCache.set(ciphertext, {
-      data,
-      timestamp: Date.now(),
-    });
+    jobDetailsCache.set(ciphertext, { data, timestamp: Date.now() });
     this.setState({ jobDetailsCache }, { skipPersistence: true });
   }
 
   // === Component Management ===
 
-  /**
-   * Register a job component
-   * @param {string} jobId - Job ID
-   * @param {Object} component - Component instance
-   */
-  setJobComponent(jobId, component) {
+  setJobComponent(jobId: string, component: JobItem): void {
     const jobComponents = new Map(this.state.jobComponents);
     jobComponents.set(jobId, component);
     this.setState({ jobComponents }, { skipPersistence: true });
   }
 
-  /**
-   * Unregister a job component
-   * @param {string} jobId - Job ID
-   */
-  removeJobComponent(jobId) {
+  removeJobComponent(jobId: string): void {
     const jobComponents = new Map(this.state.jobComponents);
     jobComponents.delete(jobId);
     this.setState({ jobComponents }, { skipPersistence: true });
   }
 
-  /**
-   * Clear all job components, destroying them first.
-   * This is typically called by the view layer before a full re-render.
-   */
-  clearJobComponents() {
-    const currentComponents = this.getJobComponents(); // gets a copy
+  clearJobComponents(): void {
+    const currentComponents = this.getJobComponents();
     currentComponents.forEach((component) => {
       if (component && typeof component.destroy === 'function') {
         component.destroy();
@@ -305,11 +232,8 @@ class AppState {
 
   // === Persistence ===
 
-  /**
-   * Load state from storage
-   * @returns {Promise<void>}
-   */
-  async loadFromStorage() {
+  async loadFromStorage(): Promise<void> {
+    console.log('AppState: Attempting to load from storage.');
     try {
       const [
         theme,
@@ -331,7 +255,7 @@ class AppState {
 
       this.setState(
         {
-          theme,
+          theme: theme as 'light' | 'dark',
           collapsedJobIds: new Set(collapsedJobIds),
           deletedJobIds: new Set(deletedJobIds),
           monitorStatus,
@@ -342,7 +266,7 @@ class AppState {
         { skipPersistence: true }
       );
 
-      console.log('AppState: State loaded from storage');
+      console.log('AppState: State loaded from storage', this.state);
     } catch (error) {
       console.error('AppState: Error loading from storage:', error);
     }
@@ -350,30 +274,7 @@ class AppState {
 
   // === Private Methods ===
 
-  /**
-   * Process state updates to handle special types like Sets
-   * @private
-   */
-  _processStateUpdates(updates) {
-    const processed = {};
-    for (const [key, value] of Object.entries(updates)) {
-      if (value instanceof Set) {
-        processed[key] = new Set(value);
-      } else if (value instanceof Map) {
-        processed[key] = new Map(value);
-      } else {
-        processed[key] = value;
-      }
-    }
-    return processed;
-  }
-
-  /**
-   * Notify all listeners of state changes
-   * @private
-   */
-  _notifyListeners(newState, prevState) {
-    // Notify general listeners
+  private _notifyListeners(newState: State, prevState: State): void {
     this.listeners.forEach((listener) => {
       try {
         listener(newState, prevState);
@@ -382,12 +283,11 @@ class AppState {
       }
     });
 
-    // Notify selector-specific listeners
     this.selectorListeners.forEach((listeners, selector) => {
       const newValue = newState[selector];
       const prevValue = prevState[selector];
 
-      if (this._hasSelectorChanged(selector, newValue, prevValue)) {
+      if (this._hasSelectorChanged(newValue, prevValue)) {
         listeners.forEach((listener) => {
           try {
             listener(newValue, prevValue);
@@ -399,40 +299,20 @@ class AppState {
     });
   }
 
-  /**
-   * Determines if a selector's value has truly changed, handling Set and Map comparisons.
-   * @private
-   * @param {string} selector - The name of the state property.
-   * @param {*} newValue - The new value of the property.
-   * @param {*} prevValue - The previous value of the property.
-   * @returns {boolean} True if the value has changed, false otherwise.
-   */
-  _hasSelectorChanged(selector, newValue, prevValue) {
-    // Handle primitive types and object references (default behavior)
+  private _hasSelectorChanged(newValue: unknown, prevValue: unknown): boolean {
     if (newValue !== prevValue) {
-      // If they are not the same reference, but are both Sets or Maps,
-      // we need to do a deeper comparison.
       if (newValue instanceof Set && prevValue instanceof Set) {
         return !this._areSetsEqual(newValue, prevValue);
       }
       if (newValue instanceof Map && prevValue instanceof Map) {
         return !this._areMapsEqual(newValue, prevValue);
       }
-      // For other types (primitives, arrays, plain objects), reference inequality means a change.
       return true;
     }
-    // If references are strictly equal, no change.
     return false;
   }
 
-  /**
-   * Compares two Sets for equality of their elements.
-   * @private
-   * @param {Set} set1
-   * @param {Set} set2
-   * @returns {boolean} True if the sets contain the same elements, false otherwise.
-   */
-  _areSetsEqual(set1, set2) {
+  private _areSetsEqual(set1: Set<unknown>, set2: Set<unknown>): boolean {
     if (set1.size !== set2.size) {
       return false;
     }
@@ -444,14 +324,7 @@ class AppState {
     return true;
   }
 
-  /**
-   * Compares two Maps for equality of their key-value pairs.
-   * @private
-   * @param {Map} map1
-   * @param {Map} map2
-   * @returns {boolean} True if the maps contain the same key-value pairs, false otherwise.
-   */
-  _areMapsEqual(map1, map2) {
+  private _areMapsEqual(map1: Map<unknown, unknown>, map2: Map<unknown, unknown>): boolean {
     if (map1.size !== map2.size) {
       return false;
     }
@@ -463,11 +336,7 @@ class AppState {
     return true;
   }
 
-  /**
-   * Save state to storage (debounced)
-   * @private
-   */
-  async _saveToStorage() {
+  private async _saveToStorage(): Promise<void> {
     try {
       await Promise.all([
         StorageManager.setUiTheme(this.state.theme),
@@ -480,13 +349,9 @@ class AppState {
     }
   }
 
-  /**
-   * Debounce utility
-   * @private
-   */
-  _debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
+  private _debounce(func: (...args: unknown[]) => void, wait: number): () => void {
+    let timeout: ReturnType<typeof setTimeout>;
+    return function executedFunction(...args: unknown[]) {
       const later = () => {
         clearTimeout(timeout);
         func(...args);
@@ -495,11 +360,4 @@ class AppState {
       timeout = setTimeout(later, wait);
     };
   }
-}
-
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = AppState;
-} else {
-  window.AppState = AppState;
 }
