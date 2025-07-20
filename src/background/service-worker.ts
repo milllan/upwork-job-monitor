@@ -202,7 +202,7 @@ async function _handleApiTokenFailure(
 
   if (isAuthFailure) {
     await StorageManager.setMonitorStatus('Authentication failed. Please log in to Upwork.');
-    let recoveryUrl = config.UPWORK_DOMAIN;
+    let recoveryUrl: string = config.UPWORK_DOMAIN;
 
     // Build context-specific recovery URL
     switch (context) {

@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (popupTitleLinkEl) {
       const url = constructUpworkSearchURL(
         currentQuery,
-        config.DEFAULT_CONTRACTOR_TIERS_GQL as Tier[],
+        [...config.DEFAULT_CONTRACTOR_TIERS_GQL],
         config.DEFAULT_SORT_CRITERIA
       );
       popupTitleLinkEl.href = url;
