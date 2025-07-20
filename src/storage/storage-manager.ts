@@ -54,11 +54,33 @@ export const StorageManager = {
     }
   },
 
-  async getSeenJobIds(): Promise<Set<string>> {
-    const result = await this.getStorage(STORAGE_KEYS.SEEN_JOB_IDS);
-    const value = result[STORAGE_KEYS.SEEN_JOB_IDS];
+  /**
+   * Private helper to get a value from storage with a default.
+   * @param key The storage key.
+   * @param defaultValue The default value to return if the key is not found.
+   * @returns The stored value or the default.
+   */
+  async _get<T>(key: string, defaultValue: T): Promise<T> {
+    const result = await this.getStorage(key);
+    const value = result[key];
+    // Use a simple check for null/undefined.
+    return value !== undefined && value !== null ? (value as T) : defaultValue;
+  },
+
+  /**
+   * Private helper to get an array from storage and convert it to a Set.
+   * @param key The storage key.
+   * @returns A Set of strings.
+   */
+  async _getSet(key: string): Promise<Set<string>> {
+    const result = await this.getStorage(key);
+    const value = result[key];
     const ids = Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
     return new Set(ids);
+  },
+
+  async getSeenJobIds(): Promise<Set<string>> {
+    return this._getSet(STORAGE_KEYS.SEEN_JOB_IDS);
   },
 
   async addSeenJobIds(newJobIdsArray: string[]): Promise<void> {
@@ -69,10 +91,7 @@ export const StorageManager = {
   },
 
   async getDeletedJobIds(): Promise<Set<string>> {
-    const result = await this.getStorage(STORAGE_KEYS.DELETED_JOB_IDS);
-    const value = result[STORAGE_KEYS.DELETED_JOB_IDS];
-    const ids = Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
-    return new Set(ids);
+    return this._getSet(STORAGE_KEYS.DELETED_JOB_IDS);
   },
 
   async setDeletedJobIds(deletedIdsArray: string[]): Promise<void> {
@@ -89,8 +108,7 @@ export const StorageManager = {
   },
 
   async getMonitorStatus(): Promise<string> {
-    const result = await this.getStorage(STORAGE_KEYS.MONITOR_STATUS);
-    return (result[STORAGE_KEYS.MONITOR_STATUS] as string) || 'Unknown';
+    return this._get(STORAGE_KEYS.MONITOR_STATUS, 'Unknown');
   },
 
   async setMonitorStatus(status: string): Promise<void> {
@@ -98,8 +116,7 @@ export const StorageManager = {
   },
 
   async getLastCheckTimestamp(): Promise<number | null> {
-    const result = await this.getStorage(STORAGE_KEYS.LAST_CHECK_TIMESTAMP);
-    return (result[STORAGE_KEYS.LAST_CHECK_TIMESTAMP] as number) || null;
+    return this._get(STORAGE_KEYS.LAST_CHECK_TIMESTAMP, null);
   },
 
   async setLastCheckTimestamp(timestamp: number): Promise<void> {
@@ -107,8 +124,7 @@ export const StorageManager = {
   },
 
   async getNewJobsInLastRun(): Promise<number> {
-    const result = await this.getStorage(STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN);
-    return (result[STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN] as number) || 0;
+    return this._get(STORAGE_KEYS.NEW_JOBS_IN_LAST_RUN, 0);
   },
 
   async setNewJobsInLastRun(count: number): Promise<void> {
@@ -116,8 +132,7 @@ export const StorageManager = {
   },
 
   async getCurrentUserQuery(): Promise<string | null> {
-    const result = await this.getStorage(STORAGE_KEYS.CURRENT_USER_QUERY);
-    return (result[STORAGE_KEYS.CURRENT_USER_QUERY] as string) || null;
+    return this._get(STORAGE_KEYS.CURRENT_USER_QUERY, null);
   },
 
   async setCurrentUserQuery(query: string): Promise<void> {
@@ -125,10 +140,7 @@ export const StorageManager = {
   },
 
   async getRecentFoundJobs(): Promise<Job[]> {
-    const result = await this.getStorage(STORAGE_KEYS.RECENT_FOUND_JOBS);
-    const value = result[STORAGE_KEYS.RECENT_FOUND_JOBS];
-    // A more thorough type check for jobs could be added here if needed
-    return Array.isArray(value) ? (value as Job[]) : [];
+    return this._get(STORAGE_KEYS.RECENT_FOUND_JOBS, []);
   },
 
   async setRecentFoundJobs(jobs: Job[]): Promise<void> {
@@ -136,10 +148,7 @@ export const StorageManager = {
   },
 
   async getCollapsedJobIds(): Promise<Set<string>> {
-    const result = await this.getStorage(STORAGE_KEYS.COLLAPSED_JOB_IDS);
-    const value = result[STORAGE_KEYS.COLLAPSED_JOB_IDS];
-    const ids = Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
-    return new Set(ids);
+    return this._getSet(STORAGE_KEYS.COLLAPSED_JOB_IDS);
   },
 
   async setCollapsedJobIds(collapsedIdsArray: string[]): Promise<void> {
@@ -147,17 +156,12 @@ export const StorageManager = {
   },
 
   async getApiEndpointToken(apiIdentifier: string): Promise<string | null> {
-    const result = await this.getStorage(STORAGE_KEYS.API_ENDPOINT_TOKENS);
-    const tokens = result[STORAGE_KEYS.API_ENDPOINT_TOKENS];
-    if (tokens && typeof tokens === 'object' && !Array.isArray(tokens)) {
-      return (tokens as Record<string, string>)[apiIdentifier] || null;
-    }
-    return null;
+    const tokens = await this._get<Record<string, string>>(STORAGE_KEYS.API_ENDPOINT_TOKENS, {});
+    return tokens[apiIdentifier] || null;
   },
 
   async setApiEndpointToken(apiIdentifier: string, token: string | null): Promise<void> {
-    const result = await this.getStorage(STORAGE_KEYS.API_ENDPOINT_TOKENS);
-    const tokens = (result[STORAGE_KEYS.API_ENDPOINT_TOKENS] as Record<string, string>) || {};
+    const tokens = await this._get<Record<string, string>>(STORAGE_KEYS.API_ENDPOINT_TOKENS, {});
     if (token === null) {
       delete tokens[apiIdentifier];
     } else {
@@ -167,8 +171,7 @@ export const StorageManager = {
   },
 
   async getUiTheme(): Promise<string> {
-    const result = await this.getStorage(STORAGE_KEYS.UI_THEME);
-    return (result[STORAGE_KEYS.UI_THEME] as string) || 'light';
+    return this._get(STORAGE_KEYS.UI_THEME, 'light');
   },
 
   async setUiTheme(theme: string): Promise<void> {

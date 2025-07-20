@@ -1,7 +1,7 @@
 import { StatusHeader } from './StatusHeader';
 
 // Mock the timeAgo utility function
-jest.mock('@utils/utils', () => ({
+jest.mock('../../utils.js', () => ({
   timeAgo: jest.fn((date: Date) => {
     const now = new Date();
     const diffSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
@@ -12,7 +12,7 @@ jest.mock('@utils/utils', () => ({
 }));
 
 // Import the mocked function to assert its usage
-import { timeAgo } from '@utils/utils';
+import { timeAgo } from '../../utils.js';
 
 describe('StatusHeader', () => {
   let container: HTMLElement;
