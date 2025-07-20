@@ -465,7 +465,7 @@ browser.runtime.onMessage.addListener(async (request: any, _sender: Runtime.Mess
 // MODIFIED: This now contains the smart error handling logic
 async function _fetchAndProcessJobDetails(
   jobCiphertext: string
-): Promise<{ jobDetails: JobDetails | null } | GraphQLResponse<unknown>> {
+): Promise<GraphQLResponse<{ jobDetails: JobDetails | null }>> {
   const apiResult = await UpworkAPI.fetchJobDetails(jobCiphertext);
 
   if (isGraphQLResponse(apiResult)) {
@@ -484,7 +484,7 @@ async function _fetchAndProcessJobDetails(
     console.log(`MV2: Job details for ${jobCiphertext} not found (returned null).`);
   }
 
-  return apiResult;
+  return { data: apiResult };
 }
 
 // NEW: Processing function for talent profiles
