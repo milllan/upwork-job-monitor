@@ -103,7 +103,7 @@ function formatClientInfo(client: Job['client'] | undefined): DocumentFragment {
   const label = document.createTextNode(`Client: ${client?.country ?? 'N/A'}`);
   frag.appendChild(label);
 
-  if (client?.rating != null) {
+  if (client?.rating !== null && client?.rating !== undefined) {
     const separator = document.createTextNode(' | ');
     const span = document.createElement('span');
     const rating = client.rating;
