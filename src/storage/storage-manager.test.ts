@@ -1,15 +1,17 @@
 import 'jest-webextension-mock';
-import { StorageManager } from '@storage/storage-manager';
-import { config } from '@background/config'; // Import the actual config for its type and other properties
-import { Job } from '../types';
 
-// Mock the entire config module
+// Mock the entire config module BEFORE importing StorageManager
 jest.mock('@background/config', () => ({
   config: {
     ...jest.requireActual('@background/config').config, // Keep other original config properties
     MAX_SEEN_IDS: 3, // Mock MAX_SEEN_IDS to 3 for this test suite
   },
 }));
+
+import { StorageManager } from '@storage/storage-manager';
+import { config } from '@background/config'; // Import the actual config for its type and other properties
+import { Job } from '../types';
+
 
 const STORAGE_KEYS = config.STORAGE_KEYS;
 
@@ -129,9 +131,8 @@ describe('StorageManager', () => {
   });
 
   it('should add seen job IDs and prune old ones', async () => {
-    // Mock config.MAX_SEEN_IDS for this specific test to verify pruning
-    const originalMaxSeenIds = config.MAX_SEEN_IDS;
-    Object.defineProperty(config, 'MAX_SEEN_IDS', { value: 3, configurable: true });
+    // Mocking MAX_SEEN_IDS is now handled by jest.mock at the top of the file
+    // No need for Object.defineProperty here
 
     const initialIds = ['id1', 'id2']; // Start with 2 IDs
     await StorageManager.setStorage({ [STORAGE_KEYS.SEEN_JOB_IDS]: initialIds });
@@ -147,8 +148,7 @@ describe('StorageManager', () => {
     expect(seenIds.has('id4')).toBe(true);
     expect(seenIds.has('id5')).toBe(true);
 
-    // Restore original MAX_SEEN_IDS
-    Object.defineProperty(config, 'MAX_SEEN_IDS', { value: originalMaxSeenIds, configurable: true });
+    // No need to restore original MAX_SEEN_IDS as it's handled by jest.mock
   });
 
   it('should set and get monitor status', async () => {
