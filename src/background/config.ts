@@ -7,7 +7,11 @@ export const config = {
   UPWORK_DOMAIN: 'https://www.upwork.com',
   UPWORK_GRAPHQL_ENDPOINT_BASE: 'https://www.upwork.com/api/graphql/v1',
   TARGET_GRAPHQL_URL_PATTERN: '*://*.upwork.com/api/graphql/v1*', // For webRequest
-  //X_UPWORK_API_TENANT_ID: '424307183201796097', // This might need dynamic discovery or confirmation. Looks liek its not needed form GraphQL requests. Only the bearer token is required.
+  /**
+   * X-Upwork-API-Tenant-ID header value. Currently not required for GraphQL requests
+   * as only the bearer token is needed. Kept for reference in case API requirements change.
+   */
+  // X_UPWORK_API_TENANT_ID: '424307183201796097',
 
   // Default search parameters
   DEFAULT_USER_QUERY:
@@ -72,7 +76,6 @@ export const config = {
     SEEN_JOB_IDS: 'seenJobIds',
     DELETED_JOB_IDS: 'deletedJobIds',
     MONITOR_STATUS: 'monitorStatus',
-    //LAST_KNOWN_GOOD_TOKEN: 'lastKnownGoodToken',
     LAST_CHECK_TIMESTAMP: 'lastCheckTimestamp',
     NEW_JOBS_IN_LAST_RUN: 'newJobsInLastRun',
     CURRENT_USER_QUERY: 'currentUserQuery',
