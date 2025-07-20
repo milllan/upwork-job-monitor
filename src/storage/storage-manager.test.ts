@@ -1,7 +1,15 @@
 import 'jest-webextension-mock';
 import { StorageManager } from '@storage/storage-manager';
-import { config } from '@background/config';
+import { config } from '@background/config'; // Import the actual config for its type and other properties
 import { Job } from '../types';
+
+// Mock the entire config module
+jest.mock('@background/config', () => ({
+  config: {
+    ...jest.requireActual('@background/config').config, // Keep other original config properties
+    MAX_SEEN_IDS: 3, // Mock MAX_SEEN_IDS to 3 for this test suite
+  },
+}));
 
 const STORAGE_KEYS = config.STORAGE_KEYS;
 
@@ -121,18 +129,26 @@ describe('StorageManager', () => {
   });
 
   it('should add seen job IDs and prune old ones', async () => {
-    const initialIds = ['id1', 'id2'];
+    // Mock config.MAX_SEEN_IDS for this specific test to verify pruning
+    const originalMaxSeenIds = config.MAX_SEEN_IDS;
+    Object.defineProperty(config, 'MAX_SEEN_IDS', { value: 3, configurable: true });
+
+    const initialIds = ['id1', 'id2']; // Start with 2 IDs
     await StorageManager.setStorage({ [STORAGE_KEYS.SEEN_JOB_IDS]: initialIds });
 
-    await StorageManager.addSeenJobIds(['id3', 'id4']);
+    await StorageManager.addSeenJobIds(['id3', 'id4', 'id5']); // Add 3 more IDs
     const seenIds = await StorageManager.getSeenJobIds();
-    // Assuming MAX_SEEN_IDS is 50 for this test based on config.ts
-    // If it's different, this test might need adjustment or the value should be mocked
-    expect(seenIds.has('id1')).toBe(true);
-    expect(seenIds.has('id2')).toBe(true);
+
+    // After adding 3 more, total is 5. With MAX_SEEN_IDS = 3, it should prune to the last 3.
+    expect(seenIds.size).toBe(3);
+    expect(seenIds.has('id1')).toBe(false); // id1 should be pruned
+    expect(seenIds.has('id2')).toBe(false); // id2 should be pruned
     expect(seenIds.has('id3')).toBe(true);
     expect(seenIds.has('id4')).toBe(true);
-    expect(seenIds.size).toBe(4);
+    expect(seenIds.has('id5')).toBe(true);
+
+    // Restore original MAX_SEEN_IDS
+    Object.defineProperty(config, 'MAX_SEEN_IDS', { value: originalMaxSeenIds, configurable: true });
   });
 
   it('should set and get monitor status', async () => {
