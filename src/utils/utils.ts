@@ -1,6 +1,7 @@
+// This file was created to house the contents of the original `src/utils.ts`.
 /* exported constructUpworkSearchURL, timeAgo, formatClientInfo, formatSkills, formatBudget, initializeScrollHints */
 // utils.ts
-import { Job, Tier } from './types.js';
+import { Job, Tier } from '../types.js';
 
 /**
  * A robust querySelector utility that throws an error if the element is not found.
@@ -172,7 +173,13 @@ function formatBudget(budget: { type?: string; minAmount?: number | string; maxA
   const formatNumber = (num: number | string | undefined) => {
     if (num === undefined) { return null; }
     const n = typeof num === 'string' ? parseFloat(num) : num;
-    return isNaN(n) ? null : n.toLocaleString();
+    if (isNaN(n)) { return null; }
+    // Check if the number is an integer or if it has two decimal places
+    // Format with up to 2 decimal places, removing trailing zeros for cleaner display
+    return n.toLocaleString('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
   };
 
   if (type?.toLowerCase().includes('hourly')) {

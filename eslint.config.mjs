@@ -16,12 +16,13 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   eslintConfigPrettier, // Must be last to override other configs
 
-  // 3. Configuration for Node.js files (like this one and .prettierrc.js)
+  // 3. Configuration for Node.js files (like this one, .prettierrc.js, and jest.config.js)
   {
-    files: ['eslint.config.mjs', '.prettierrc.js'],
+    files: ['eslint.config.mjs', '.prettierrc.js', 'jest.config.js'],
     languageOptions: {
       globals: {
         ...globals.node,
+        module: 'readonly', // Add 'module' as a readonly global
       },
     },
   },

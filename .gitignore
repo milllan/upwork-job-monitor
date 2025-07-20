@@ -2,3 +2,4 @@ node_modules/*
 dist/
 *.map
 *.d.ts
+tsconfig.tsbuildinfo
