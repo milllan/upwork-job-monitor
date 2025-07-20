@@ -3,5 +3,3 @@
  * making it available in the global scope for all TypeScript files.
  */
 declare const browser: typeof import('webextension-polyfill');
-
-export {};

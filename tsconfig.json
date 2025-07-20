@@ -18,7 +18,8 @@
     "allowSyntheticDefaultImports": true
   },
   "include": [
-    "./src/**/*.ts"
+    "./src/**/*.ts",
+    "src/global.d.ts"
   ],
   "exclude": [
     "node_modules",
