@@ -13,7 +13,7 @@
   "scripts": {
     "lint": "eslint . --ext .js,.ts",
     "lint:fix": "eslint . --ext .js,.ts --fix",
-    "format": "prettier --write \"**/*.{js,json,html,css,md}\"",
+    "format": "prettier --write \"**/*.{js,ts,json,html,css,md}\"",
     "type-check": "tsc --noEmit",
     "test": "echo \"No tests specified yet\" && exit 0",
     "clean": "rimraf dist",
