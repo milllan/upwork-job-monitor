@@ -25,9 +25,14 @@ describe('utils.formatBudget', () => {
     expect(utils.formatBudget({})).toBe('N/A');
   });
 
-  it('should handle string amounts correctly', () => {
+  it('should handle string amounts correctly and not force trailing zeros', () => {
     const budget = { type: 'HOURLY', minAmount: '25.50', maxAmount: '50.75' };
-    expect(utils.formatBudget(budget)).toBe('$25.50 - $50.75/hr');
+    expect(utils.formatBudget(budget)).toBe('$25.5 - $50.75/hr');
+  });
+
+  it('should format single-decimal numbers without trailing zeros', () => {
+    const budget = { type: 'HOURLY', minAmount: 25.5, maxAmount: 50 };
+    expect(utils.formatBudget(budget)).toBe('$25.5 - $50/hr');
   });
 
   it('should handle large numbers with thousand separators', () => {
