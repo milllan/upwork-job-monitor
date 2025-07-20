@@ -174,12 +174,12 @@ function formatBudget(budget: { type?: string; minAmount?: number | string; maxA
     if (num === undefined) { return null; }
     const n = typeof num === 'string' ? parseFloat(num) : num;
     if (isNaN(n)) { return null; }
-    // Check if the number is an integer or if it has two decimal places
-    // Format with up to 2 decimal places, removing trailing zeros for cleaner display
-    return n.toLocaleString('en-US', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    });
+// Check if the number is an integer or if it has two decimal places
+// Format with up to 2 decimal places, removing trailing zeros for cleaner display
+return n.toLocaleString('en-US', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
   };
 
   if (type?.toLowerCase().includes('hourly')) {
