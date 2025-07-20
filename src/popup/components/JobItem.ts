@@ -31,8 +31,12 @@ interface JobItemViewModel {
 export class JobItem {
   private jobData: Job;
   private options: JobItemOptions;
-  public element: HTMLElement | null = null;
+  private _element: HTMLElement | null = null;
   private viewModel: JobItemViewModel | null = null;
+
+  get element(): HTMLElement | null {
+    return this._element;
+  }
 
   constructor(jobData: Job, options: Partial<JobItemOptions> = {}) {
     this.jobData = jobData;
@@ -47,25 +51,25 @@ export class JobItem {
 
   render(): HTMLElement {
     try {
-      if (!this.element) {
-        this.element = this._createElement();
+      if (!this._element) {
+        this._element = this._createElement();
         this._attachEventListeners();
       }
       this._updateElement();
     } catch (error) {
       console.error('JobItem render error:', error);
-      if (!this.element) {
-        this.element = this._createElement(); // Attempt to create a basic element for error display
+      if (!this._element) {
+        this._element = this._createElement(); // Attempt to create a basic element for error display
       }
-      this.element.innerHTML = '<div class="job-item__error">Error displaying job</div>';
+      this._element.innerHTML = '<div class="job-item__error">Error displaying job</div>';
     }
-    return this.element as HTMLElement;
+    return this._element as HTMLElement;
   }
 
   update(newJobData: Job, newOptions: Partial<JobItemOptions> = {}): void {
     this.jobData = newJobData;
     this.options = { ...this.options, ...newOptions };
-    if (this.element) {
+    if (this._element) {
       this._updateElement();
     }
   }
@@ -79,8 +83,8 @@ export class JobItem {
   }
 
   destroy(): void {
-    this.element?.remove();
-    this.element = null;
+    this._element?.remove();
+    this._element = null;
     this.viewModel = null;
   }
 
@@ -98,11 +102,11 @@ export class JobItem {
   }
 
   private _attachEventListeners(): void {
-    if (!this.element) {
+    if (!this._element) {
       return;
     }
 
-    const toggleButton = this.element.querySelector('.job-item__toggle');
+    const toggleButton = this._element.querySelector('.job-item__toggle');
     if (toggleButton) {
       toggleButton.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -111,7 +115,7 @@ export class JobItem {
       });
     }
 
-    const deleteButton = this.element.querySelector('.job-item__delete-btn');
+    const deleteButton = this._element.querySelector('.job-item__delete-btn');
     if (deleteButton) {
       deleteButton.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -119,13 +123,13 @@ export class JobItem {
       });
     }
 
-    this.element.addEventListener('mouseenter', () => {
+    this._element.addEventListener('mouseenter', () => {
       this.options.onSelect(this.getCiphertext());
     });
   }
 
   private _updateElement(): void {
-    if (!this.element) {
+    if (!this._element) {
       return;
     }
 
@@ -188,13 +192,13 @@ export class JobItem {
   }
 
   private _populateFromViewModel(): void {
-    if (!this.element || !this.viewModel) {
+    if (!this._element || !this.viewModel) {
       return;
     }
 
     const vm = this.viewModel;
 
-    const budgetField = this.element.querySelector('[data-field="budget"]');
+    const budgetField = this._element.querySelector('[data-field="budget"]');
     if (budgetField) {
       const budgetMeta = budgetField.closest('.job-item__meta');
       if (vm.budget && vm.budget !== 'N/A') {
@@ -210,54 +214,54 @@ export class JobItem {
       }
     }
 
-    const clientInfoEl = this.element.querySelector('[data-field="client-info"]');
+    const clientInfoEl = this._element.querySelector('[data-field="client-info"]');
     if (clientInfoEl) {
       clientInfoEl.textContent = ''; // Clear existing content
       clientInfoEl.appendChild(formatClientInfo(this.jobData.client));
     }
 
-    const skillsEl = this.element.querySelector('[data-field="skills"]');
+    const skillsEl = this._element.querySelector('[data-field="skills"]');
     if (skillsEl) {
       skillsEl.textContent = vm.skills;
     }
 
-    const priorityTagEl = this.element.querySelector('[data-field="priority-tag-text"]');
+    const priorityTagEl = this._element.querySelector('[data-field="priority-tag-text"]');
     if (priorityTagEl) {
       priorityTagEl.textContent = vm.priorityTagText;
     }
 
-    const postedOnEl = this.element.querySelector('[data-field="posted-on"]');
+    const postedOnEl = this._element.querySelector('[data-field="posted-on"]');
     if (postedOnEl) {
       postedOnEl.textContent = vm.postedOn;
     }
 
-    const timeAgoEl = this.element.querySelector('[data-field="time-ago"]');
+    const timeAgoEl = this._element.querySelector('[data-field="time-ago"]');
     if (timeAgoEl) {
       timeAgoEl.textContent = vm.timeAgo;
     }
 
-    const titleLink = this.element.querySelector('.job-item__title') as HTMLAnchorElement;
+    const titleLink = this._element.querySelector('.job-item__title') as HTMLAnchorElement;
     if (titleLink) {
       titleLink.href = vm.jobUrl;
-      this.element.dataset.ciphertextForTooltip = vm.ciphertext;
+      this._element.dataset.ciphertextForTooltip = vm.ciphertext;
       titleLink.textContent = vm.title;
     }
   }
 
   private _updateClasses(): void {
-    if (!this.element || !this.viewModel) {
+    if (!this._element || !this.viewModel) {
       return;
     }
 
     const vm = this.viewModel;
 
-    this.element.classList.toggle('job-item--collapsed', this.options.isCollapsed);
-    this.element.classList.toggle('job-item--low-priority', vm.isLowPriority);
-    this.element.classList.toggle('job-item--excluded', vm.isExcludedByTitleFilter);
-    this.element.classList.toggle('job-item--applied', vm.isApplied);
-    this.element.classList.toggle('job-item--has-skills', vm.hasSkills);
-    this.element.classList.toggle('job-item--has-priority-tag', vm.hasPriorityTag);
-    this.element.classList.toggle('job-item--high-rating', vm.isHighRating);
-    this.element.classList.toggle('job-item--high-spent', vm.isHighSpent);
+    this._element.classList.toggle('job-item--collapsed', this.options.isCollapsed);
+    this._element.classList.toggle('job-item--low-priority', vm.isLowPriority);
+    this._element.classList.toggle('job-item--excluded', vm.isExcludedByTitleFilter);
+    this._element.classList.toggle('job-item--applied', vm.isApplied);
+    this._element.classList.toggle('job-item--has-skills', vm.hasSkills);
+    this._element.classList.toggle('job-item--has-priority-tag', vm.hasPriorityTag);
+    this._element.classList.toggle('job-item--high-rating', vm.isHighRating);
+    this._element.classList.toggle('job-item--high-spent', vm.isHighSpent);
   }
 }
