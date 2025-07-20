@@ -95,4 +95,4 @@ export const config = {
   FETCH_INTERVAL_MINUTES: 4, // How often to check for new jobs
   API_FETCH_COUNT: 12, // Number of jobs to fetch per API request, upwork.com website defaults to 10
   JOB_DETAILS_CACHE_EXPIRY_MS: 15 * 60 * 1000, // 15 minutes for popup job details cache
-};
+} as const;

@@ -50,7 +50,7 @@ export class SearchForm {
 
   private _handleSearch = (): void => {
     const query = this.getQuery();
-    if (query && typeof this.onSearch === 'function') {
+    if (query) {
       this.onSearch(query);
     } else if (!query) {
       alert('Please enter a search query.');

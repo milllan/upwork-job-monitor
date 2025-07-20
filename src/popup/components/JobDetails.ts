@@ -201,7 +201,7 @@ export class JobDetails {
     const maxBid = bidStats.maxRateBid?.amount;
     if (avgBid || minBid || maxBid) {
       vm.bidAvg = `Avg: $${(avgBid || 0).toFixed(1)}`;
-      vm.bidRange = `Range: ${minBid || 0} - $${maxBid || 0}`;
+      vm.bidRange = `Range: $${minBid || 0} - $${maxBid || 0}`;
     }
 
     const workHistory = details?.buyer?.workHistory || [];

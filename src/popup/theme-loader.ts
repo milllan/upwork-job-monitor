@@ -10,7 +10,7 @@
       if (theme === 'dark') {
         const themeStylesheet = document.getElementById('theme-stylesheet') as HTMLLinkElement;
         if (themeStylesheet) {
-          themeStylesheet.href = 'popup-dark.css';
+          themeStylesheet.href = '/popup/popup-dark.css';
         }
       }
     })

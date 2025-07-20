@@ -129,7 +129,12 @@ export function isGraphQLResponse<T>(response: unknown): response is GraphQLResp
     );
 }
 
-export interface BackgroundMessage {
-    action: 'updatePopupDisplay';
-    [key: string]: unknown;
-}
+/**
+ * A discriminated union for all messages sent between the popup and background script.
+ * This provides full type safety for `browser.runtime.sendMessage` and `onMessage` listeners.
+ */
+export type BackgroundMessage =
+  | { action: 'updatePopupDisplay' }
+  | { action: 'manualCheck'; userQuery?: string }
+  | { action: 'getJobDetails'; jobCiphertext?: string }
+  | { action: 'getTalentProfile'; profileCiphertext?: string };
