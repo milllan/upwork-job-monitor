@@ -32,7 +32,7 @@ describe('StatusHeader', () => {
   it('should update status text correctly', () => {
     const statusHeader = new StatusHeader(container);
     statusHeader.update({ statusText: 'Monitoring' });
-    expect(container.innerHTML).toContain('Current monitor status">Monitoring</span>');
+    expect(container.querySelector('[title="Current monitor status"]')?.textContent).toBe('Monitoring');
   });
 
   it('should display last check timestamp correctly when provided', () => {
