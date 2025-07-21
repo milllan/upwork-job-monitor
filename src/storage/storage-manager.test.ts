@@ -32,26 +32,45 @@ function createMockJob(id: string): Job {
 const STORAGE_KEYS = config.STORAGE_KEYS;
 
 describe('StorageManager', () => {
-  let localStorage: { [key: string]: unknown } = {};
+  let localStorage: { [key: string]: unknown } = Object.create(null);
 
   beforeEach(() => {
     // Reset the in-memory store and mocks before each test
-    localStorage = {};
+    localStorage = Object.create(null);
     (browser.storage.local.get as jest.Mock).mockImplementation((keys: string | string[] | null) => {
-      const result: { [key: string]: unknown } = {};
+      const result: Record<string, unknown> = Object.create(null); // Ensure result also has null prototype
       if (keys === null) {
-        return Promise.resolve(localStorage);
+        // Safely copy properties from localStorage to result
+        for (const key in localStorage) {
+          if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
+            result[key] = (localStorage as Record<string, unknown>)[key];
+          }
+        }
+        return Promise.resolve(result);
       }
       const keyList = Array.isArray(keys) ? keys : [keys];
       for (const key of keyList) {
         if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
-          result[key] = localStorage[key];
+          const value = (localStorage as Record<string, unknown>)[key];
+          if (key === 'config_v1' && typeof value === 'string') {
+            const parsedValue = JSON.parse(value) as { lastTokenRotationTime: string };
+            parsedValue.lastTokenRotationTime = new Date(
+              parsedValue.lastTokenRotationTime
+            ) as unknown as string;
+            result[key] = parsedValue;
+          } else {
+            result[key] = value;
+          }
         }
       }
       return Promise.resolve(result);
     });
     (browser.storage.local.set as jest.Mock).mockImplementation((items: Record<string, unknown>) => {
-      Object.assign(localStorage, items);
+      for (const key in items) {
+        if (Object.prototype.hasOwnProperty.call(items, key)) {
+          (localStorage as Record<string, unknown>)[key] = items[key];
+        }
+      }
       return Promise.resolve();
     });
     (browser.storage.local.clear as jest.Mock).mockImplementation(() => {
