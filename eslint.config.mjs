@@ -37,10 +37,16 @@ export default tseslint.config(
   },
 
   // 4. Configuration for your Web Extension source code
+  // 4. Configuration for your Web Extension source code
   {
     files: ['src/**/*.ts'],
+    extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       sourceType: 'module',
+      parserOptions: {
+        project: 'tsconfig.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
       globals: {
         ...globals.browser,
         ...globals.webextensions,
@@ -58,13 +64,46 @@ export default tseslint.config(
           caughtErrorsIgnorePattern: '^_',
         },
       ],
-      'no-redeclare': 'off', // Required for function overloads
+      'no-redeclare': 'off',
       'no-var': 'warn',
       'prefer-const': ['warn', { destructuring: 'all' }],
       eqeqeq: ['warn', 'always'],
       curly: ['warn', 'all'],
       'no-prototype-builtins': 'warn',
       'no-console': ['warn', { allow: ['warn', 'error', 'info', 'debug', 'log'] }],
+      '@typescript-eslint/no-floating-promises': 'warn',
+      '@typescript-eslint/no-unnecessary-condition': 'warn',
+      '@typescript-eslint/no-unsafe-assignment': 'warn',
+      '@typescript-eslint/no-unsafe-member-access': 'warn',
+      '@typescript-eslint/no-unsafe-return': 'warn',
+      '@typescript-eslint/restrict-template-expressions': 'warn',
+      '@typescript-eslint/no-misused-promises': 'warn',
+      '@typescript-eslint/await-thenable': 'warn',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'warn',
     },
+  },
+  // 5. Configuration for test files
+  {
+    files: ['src/**/*.test.ts'],
+    extends: [...tseslint.configs.recommendedTypeChecked],
+    languageOptions: {
+      sourceType: 'module',
+      parserOptions: {
+        project: 'tsconfig.test.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
+      globals: {
+        ...globals.jest,
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'warn',
+      '@typescript-eslint/no-unsafe-member-access': 'warn',
+    },
+  },
+  // 6. Disable type-aware linting for JS files
+  {
+    files: ['**/*.{js,mjs,cjs}'],
+    extends: [tseslint.configs.disableTypeChecked],
   }
 );
