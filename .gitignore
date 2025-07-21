@@ -3,3 +3,4 @@ dist/
 *.map
 *.d.ts
 tsconfig.tsbuildinfo
+.eslintcache

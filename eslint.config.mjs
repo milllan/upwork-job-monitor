@@ -8,7 +8,16 @@ import tseslint from 'typescript-eslint';
 export default tseslint.config(
   // 1. Global ignore patterns
   {
-    ignores: ['node_modules/', 'lib/', 'llm_context/', 'dist/', 'api/'],
+    ignores: [
+      'node_modules/',
+      'dist/',
+      'docs/',
+      '.github/',
+      '.claude/',
+      'llm_context/',
+      'lib/',
+      'api/', // This likely has no effect but is kept for safety
+    ],
   },
 
   // 2. Base configurations (apply to all linted files)
