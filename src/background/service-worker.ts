@@ -131,7 +131,7 @@ async function _processAndNotifyNewJobs(
   });
   await StorageManager.addSeenJobIds(newJobIdsToMarkSeen);
   if (notifiableNewJobs.length > 0) {
-    notifiableNewJobs.forEach((job) => sendNotification(job));
+    await Promise.all(notifiableNewJobs.map((job) => sendNotification(job)));
   }
   return {
     allNewOrUpdatedJobsCount: allNewOrUpdatedJobs.length,
@@ -346,7 +346,7 @@ async function setupAlarms() {
   try {
     const alarm = await browser.alarms.get(config.FETCH_ALARM_NAME); // Use config.FETCH_ALARM_NAME
     if (!alarm) {
-      await browser.alarms.create(config.FETCH_ALARM_NAME, {
+      void browser.alarms.create(config.FETCH_ALARM_NAME, {
         delayInMinutes: 0.2,
         periodInMinutes: config.FETCH_INTERVAL_MINUTES,
       }); // Use config for interval too
@@ -355,12 +355,7 @@ async function setupAlarms() {
     console.error('MV2: Error setting up alarm:', e);
   }
 }
-browser.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === config.FETCH_ALARM_NAME) {
-    // Use config.FETCH_ALARM_NAME
-    await runJobCheck();
-  }
-});
+
 
 async function sendNotification(job: Job) {
   // Made async
@@ -385,11 +380,11 @@ async function sendNotification(job: Job) {
   }
 }
 
-browser.notifications.onClicked.addListener(async (notificationId: string) => {
+browser.notifications.onClicked.addListener((notificationId: string) => {
   // Made async
   try {
-    await browser.tabs.create({ url: notificationId });
-    await browser.notifications.clear(notificationId);
+    void browser.tabs.create({ url: notificationId });
+    void browser.notifications.clear(notificationId);
   } catch (e) {
     console.error('MV2: Error handling notification click:', e);
   }
