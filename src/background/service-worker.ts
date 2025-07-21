@@ -131,7 +131,9 @@ async function _processAndNotifyNewJobs(
   });
   await StorageManager.addSeenJobIds(newJobIdsToMarkSeen);
   if (notifiableNewJobs.length > 0) {
-    notifiableNewJobs.forEach((job) => sendNotification(job));
+    notifiableNewJobs.forEach((job) => {
+      void sendNotification(job);
+    });
   }
   return {
     allNewOrUpdatedJobsCount: allNewOrUpdatedJobs.length,
@@ -346,7 +348,7 @@ async function setupAlarms() {
   try {
     const alarm = await browser.alarms.get(config.FETCH_ALARM_NAME); // Use config.FETCH_ALARM_NAME
     if (!alarm) {
-      await browser.alarms.create(config.FETCH_ALARM_NAME, {
+      void browser.alarms.create(config.FETCH_ALARM_NAME, {
         delayInMinutes: 0.2,
         periodInMinutes: config.FETCH_INTERVAL_MINUTES,
       }); // Use config for interval too

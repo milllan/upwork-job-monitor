@@ -32,26 +32,55 @@ function createMockJob(id: string): Job {
 const STORAGE_KEYS = config.STORAGE_KEYS;
 
 describe('StorageManager', () => {
-  let localStorage: { [key: string]: unknown } = {};
+  let localStorage: { [key: string]: unknown } = Object.create(null);
 
   beforeEach(() => {
     // Reset the in-memory store and mocks before each test
-    localStorage = {};
+    localStorage = Object.create(null);
     (browser.storage.local.get as jest.Mock).mockImplementation((keys: string | string[] | null) => {
       const result: { [key: string]: unknown } = {};
       if (keys === null) {
-        return Promise.resolve(localStorage);
+        return Promise.resolve(Object.fromEntries(Object.entries(localStorage)));
       }
       const keyList = Array.isArray(keys) ? keys : [keys];
       for (const key of keyList) {
         if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
-          result[key] = localStorage[key];
+          const value = localStorage[key];
+          if (key === 'config_v1' && typeof value === 'string') {
+            const parsedValue = JSON.parse(value) as { lastTokenRotationTime: string };
+            parsedValue.lastTokenRotationTime = new Date(
+              parsedValue.lastTokenRotationTime
+            ) as unknown as string;
+            Object.defineProperty(result, key, {
+              value: parsedValue,
+              enumerable: true,
+              writable: true,
+              configurable: true,
+            });
+          } else {
+            Object.defineProperty(result, key, {
+              value,
+              enumerable: true,
+              writable: true,
+              configurable: true,
+            });
+          }
         }
       }
       return Promise.resolve(result);
     });
     (browser.storage.local.set as jest.Mock).mockImplementation((items: Record<string, unknown>) => {
-      Object.assign(localStorage, items);
+      for (const key of Object.keys(items)) {
+        if (key === '__proto__') {
+          continue;
+        }
+        Object.defineProperty(localStorage, key, {
+          value: items[key],
+          enumerable: true,
+          writable: true,
+          configurable: true,
+        });
+      }
       return Promise.resolve();
     });
     (browser.storage.local.clear as jest.Mock).mockImplementation(() => {
