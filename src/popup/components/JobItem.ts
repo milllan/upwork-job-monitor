@@ -89,12 +89,24 @@ export class JobItem {
   }
 
   private _createElement(): HTMLElement {
-    const template = document.getElementById('job-item-template') as HTMLTemplateElement;
-    if (!template) {
+    // 1. Get the element. TypeScript correctly infers its type as `HTMLElement | null`.
+    const templateEl = document.getElementById('job-item-template');
+
+    // 2. Perform the runtime null check (the bot's suggestion).
+    if (!templateEl) {
       throw new Error('JobItem: job-item-template not found');
     }
-    const clone = template.content.cloneNode(true) as DocumentFragment;
-    const element = clone.querySelector('.job-item') as HTMLElement;
+
+    // 3. Check if it's the correct type of element.
+    if (!(templateEl instanceof HTMLTemplateElement)) {
+        throw new Error('JobItem: Element with id "job-item-template" is not a template element.');
+    }
+    
+    // 4. Now, TypeScript knows `templateEl` is an `HTMLTemplateElement` and not null.
+    // No type assertion is needed.
+    const clone = templateEl.content.cloneNode(true) as DocumentFragment;
+    const element = clone.querySelector<HTMLElement>('.job-item');
+
     if (!element) {
       throw new Error('JobItem: .job-item not found in template');
     }
@@ -200,7 +212,7 @@ export class JobItem {
 
     const budgetField = this._element.querySelector('[data-field="budget"]');
     if (budgetField) {
-      const budgetMeta = budgetField.closest('.job-item__meta');
+      const budgetMeta = budgetField.closest('.job-item__meta'); // This can return null, so optional chaining is appropriate.
       if (vm.budget && vm.budget !== 'N/A') {
         budgetField.textContent = vm.budget;
         if (budgetMeta) {
