@@ -349,12 +349,13 @@ export class AppState {
     }
   }
 
-  private _debounce(func: (...args: unknown[]) => void, wait: number): () => void {
+  // THE FIX: Use generics to make this debounce function fully type-safe.
+  private _debounce<T extends (...args: unknown[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {
     let timeout: ReturnType<typeof setTimeout>;
-    return function executedFunction(...args: unknown[]) {
-      const later = () => {
+    return function executedFunction(this: ThisParameterType<T>, ...args: Parameters<T>) {
+      const later = (): void => {
         clearTimeout(timeout);
-        func(...args);
+        Reflect.apply(func, this, args);
       };
       clearTimeout(timeout);
       timeout = setTimeout(later, wait);

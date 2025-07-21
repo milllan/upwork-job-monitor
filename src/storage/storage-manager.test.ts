@@ -28,34 +28,40 @@ function createMockJob(id: string): Job {
   };
 }
 
-
 const STORAGE_KEYS = config.STORAGE_KEYS;
 
 describe('StorageManager', () => {
-  let localStorage: { [key: string]: unknown } = {};
+  let localStorage: { [key: string]: unknown } = Object.create(null);
 
   beforeEach(() => {
-    // Reset the in-memory store and mocks before each test
-    localStorage = {};
+    // Reset the in-memory store before each test
+    localStorage = Object.create(null);
+
+    // Mock for browser.storage.local.set
+    (browser.storage.local.set as jest.Mock).mockImplementation((items: Record<string, unknown>) => {
+      // Use Object.assign for a cleaner and more robust way to merge the new items
+      Object.assign(localStorage, items);
+      return Promise.resolve();
+    });
+
+    // Mock for browser.storage.local.get
     (browser.storage.local.get as jest.Mock).mockImplementation((keys: string | string[] | null) => {
-      const result: { [key: string]: unknown } = {};
+      const result: Record<string, unknown> = Object.create(null);
       if (keys === null) {
         return Promise.resolve(localStorage);
       }
       const keyList = Array.isArray(keys) ? keys : [keys];
       for (const key of keyList) {
         if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
-          result[key] = localStorage[key];
+          result[key] = (localStorage as Record<string, unknown>)[key];
         }
       }
       return Promise.resolve(result);
     });
-    (browser.storage.local.set as jest.Mock).mockImplementation((items: Record<string, unknown>) => {
-      Object.assign(localStorage, items);
-      return Promise.resolve();
-    });
+    
+    // Mock for browser.storage.local.clear
     (browser.storage.local.clear as jest.Mock).mockImplementation(() => {
-      localStorage = {};
+      localStorage = Object.create(null);
       return Promise.resolve();
     });
 
@@ -163,7 +169,7 @@ describe('StorageManager', () => {
     expect(seenIds.has('id3')).toBe(true);
     expect(seenIds.has('id4')).toBe(true);
     expect(seenIds.has('id5')).toBe(true);
-
+    
     // No need to restore original MAX_SEEN_IDS as it's handled by jest.mock
   });
 
@@ -250,7 +256,7 @@ describe('StorageManager', () => {
     await StorageManager.setUiTheme('invalid' as unknown as 'light' | 'dark'); // Type assertion to bypass TS check
     const currentTheme = await StorageManager.getUiTheme();
     // Should remain 'light' as 'invalid' was not set
-    expect(currentTheme).toEqual('light'); 
+    expect(currentTheme).toEqual('light');
     expect(console.warn).toHaveBeenCalledWith(
       'StorageManager: Invalid theme "invalid" provided. Not setting.'
     );
