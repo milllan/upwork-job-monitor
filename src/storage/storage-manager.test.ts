@@ -28,63 +28,38 @@ function createMockJob(id: string): Job {
   };
 }
 
-// Self-documenting interface for the specific mock data shape
-interface MockConfigV1 {
-  lastTokenRotationTime: Date;
-}
-
 const STORAGE_KEYS = config.STORAGE_KEYS;
 
 describe('StorageManager', () => {
   let localStorage: { [key: string]: unknown } = Object.create(null);
 
   beforeEach(() => {
-    // Reset the in-memory store and mocks before each test
+    // Reset the in-memory store before each test
     localStorage = Object.create(null);
+
+    // Mock for browser.storage.local.set
+    (browser.storage.local.set as jest.Mock).mockImplementation((items: Record<string, unknown>) => {
+      // Use Object.assign for a cleaner and more robust way to merge the new items
+      Object.assign(localStorage, items);
+      return Promise.resolve();
+    });
+
+    // Mock for browser.storage.local.get
     (browser.storage.local.get as jest.Mock).mockImplementation((keys: string | string[] | null) => {
-      const result: Record<string, unknown> = Object.create(null); // Ensure result also has null prototype
+      const result: Record<string, unknown> = Object.create(null);
       if (keys === null) {
-        // Safely copy properties from localStorage to result
-        for (const key in localStorage) {
-          if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
-            result[key] = (localStorage as Record<string, unknown>)[key];
-          }
-        }
-        return Promise.resolve(result);
+        return Promise.resolve(localStorage);
       }
       const keyList = Array.isArray(keys) ? keys : [keys];
       for (const key of keyList) {
         if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
-          const value = (localStorage as Record<string, unknown>)[key];
-
-          // --- THIS IS THE CORRECTED, TYPE-SAFE BLOCK ---
-          if (key === 'config_v1' && typeof value === 'string') {
-            // 1. Parse the string and honestly assert its *actual* shape.
-            const parsedFromString = JSON.parse(value) as { lastTokenRotationTime: string };
-
-            // 2. Create a new, perfectly typed object from the parsed data.
-            const correctlyTypedResult: MockConfigV1 = {
-              lastTokenRotationTime: new Date(parsedFromString.lastTokenRotationTime),
-            };
-
-            // 3. Assign the new, correct object to the result.
-            result[key] = correctlyTypedResult;
-          } else {
-            result[key] = value;
-          }
-          // --- END OF CORRECTION ---
+          result[key] = (localStorage as Record<string, unknown>)[key];
         }
       }
       return Promise.resolve(result);
     });
-    (browser.storage.local.set as jest.Mock).mockImplementation((items: Record<string, unknown>) => {
-      for (const key in items) {
-        if (Object.prototype.hasOwnProperty.call(items, key)) {
-          (localStorage as Record<string, unknown>)[key] = items[key];
-        }
-      }
-      return Promise.resolve();
-    });
+    
+    // Mock for browser.storage.local.clear
     (browser.storage.local.clear as jest.Mock).mockImplementation(() => {
       localStorage = {};
       return Promise.resolve();

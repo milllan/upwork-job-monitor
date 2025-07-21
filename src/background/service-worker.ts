@@ -131,9 +131,7 @@ async function _processAndNotifyNewJobs(
   });
   await StorageManager.addSeenJobIds(newJobIdsToMarkSeen);
   if (notifiableNewJobs.length > 0) {
-    notifiableNewJobs.forEach((job) => {
-      void sendNotification(job);
-    });
+    await Promise.all(notifiableNewJobs.map((job) => sendNotification(job)));
   }
   return {
     allNewOrUpdatedJobsCount: allNewOrUpdatedJobs.length,
@@ -344,25 +342,34 @@ browser.runtime.onInstalled.addListener(async (details) => {
 });
 
 async function setupAlarms() {
-  // Made async
   try {
-    const alarm = await browser.alarms.get(config.FETCH_ALARM_NAME); // Use config.FETCH_ALARM_NAME
+    const alarm = await browser.alarms.get(config.FETCH_ALARM_NAME);
     if (!alarm) {
-      void browser.alarms.create(config.FETCH_ALARM_NAME, {
+      // Restore the await here. This is the correct implementation.
+      await browser.alarms.create(config.FETCH_ALARM_NAME, {
         delayInMinutes: 0.2,
         periodInMinutes: config.FETCH_INTERVAL_MINUTES,
-      }); // Use config for interval too
+      });
+      console.log('MV2: Main fetch alarm created successfully.');
     }
   } catch (e) {
-    console.error('MV2: Error setting up alarm:', e);
+    // Now, if creating the alarm fails, you'll know exactly why.
+    console.error('MV2: Critical error setting up alarm:', e);
   }
 }
-browser.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === config.FETCH_ALARM_NAME) {
-    // Use config.FETCH_ALARM_NAME
-    await runJobCheck();
-  }
+
+// The onInstalled listener correctly awaits setupAlarms.
+browser.runtime.onInstalled.addListener(async (details) => {
+  console.log('MV2: Extension installed or updated:', details.reason);
+  await StorageManager.initializeStorage(config.DEFAULT_USER_QUERY);
+  await setupAlarms(); // This await is also correct.
 });
+
+
+
+// The initial call should also be awaited, or handled.
+// Since it's top-level, a .catch is appropriate.
+setupAlarms().catch(e => console.error("Error on initial alarm setup:", e));
 
 async function sendNotification(job: Job) {
   // Made async
