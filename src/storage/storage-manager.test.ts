@@ -28,30 +28,61 @@ function createMockJob(id: string): Job {
   };
 }
 
+// Self-documenting interface for the specific mock data shape
+interface MockConfigV1 {
+  lastTokenRotationTime: Date;
+}
 
 const STORAGE_KEYS = config.STORAGE_KEYS;
 
 describe('StorageManager', () => {
-  let localStorage: { [key: string]: unknown } = {};
+  let localStorage: { [key: string]: unknown } = Object.create(null);
 
   beforeEach(() => {
     // Reset the in-memory store and mocks before each test
-    localStorage = {};
+    localStorage = Object.create(null);
     (browser.storage.local.get as jest.Mock).mockImplementation((keys: string | string[] | null) => {
-      const result: { [key: string]: unknown } = {};
+      const result: Record<string, unknown> = Object.create(null); // Ensure result also has null prototype
       if (keys === null) {
-        return Promise.resolve(localStorage);
+        // Safely copy properties from localStorage to result
+        for (const key in localStorage) {
+          if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
+            result[key] = (localStorage as Record<string, unknown>)[key];
+          }
+        }
+        return Promise.resolve(result);
       }
       const keyList = Array.isArray(keys) ? keys : [keys];
       for (const key of keyList) {
         if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
-          result[key] = localStorage[key];
+          const value = (localStorage as Record<string, unknown>)[key];
+
+          // --- THIS IS THE CORRECTED, TYPE-SAFE BLOCK ---
+          if (key === 'config_v1' && typeof value === 'string') {
+            // 1. Parse the string and honestly assert its *actual* shape.
+            const parsedFromString = JSON.parse(value) as { lastTokenRotationTime: string };
+
+            // 2. Create a new, perfectly typed object from the parsed data.
+            const correctlyTypedResult: MockConfigV1 = {
+              lastTokenRotationTime: new Date(parsedFromString.lastTokenRotationTime),
+            };
+
+            // 3. Assign the new, correct object to the result.
+            result[key] = correctlyTypedResult;
+          } else {
+            result[key] = value;
+          }
+          // --- END OF CORRECTION ---
         }
       }
       return Promise.resolve(result);
     });
     (browser.storage.local.set as jest.Mock).mockImplementation((items: Record<string, unknown>) => {
-      Object.assign(localStorage, items);
+      for (const key in items) {
+        if (Object.prototype.hasOwnProperty.call(items, key)) {
+          (localStorage as Record<string, unknown>)[key] = items[key];
+        }
+      }
       return Promise.resolve();
     });
     (browser.storage.local.clear as jest.Mock).mockImplementation(() => {
@@ -163,7 +194,7 @@ describe('StorageManager', () => {
     expect(seenIds.has('id3')).toBe(true);
     expect(seenIds.has('id4')).toBe(true);
     expect(seenIds.has('id5')).toBe(true);
-
+    
     // No need to restore original MAX_SEEN_IDS as it's handled by jest.mock
   });
 
@@ -250,7 +281,7 @@ describe('StorageManager', () => {
     await StorageManager.setUiTheme('invalid' as unknown as 'light' | 'dark'); // Type assertion to bypass TS check
     const currentTheme = await StorageManager.getUiTheme();
     // Should remain 'light' as 'invalid' was not set
-    expect(currentTheme).toEqual('light'); 
+    expect(currentTheme).toEqual('light');
     expect(console.warn).toHaveBeenCalledWith(
       'StorageManager: Invalid theme "invalid" provided. Not setting.'
     );
