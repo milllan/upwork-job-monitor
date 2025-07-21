@@ -11,8 +11,8 @@
     "lib": "lib"
   },
   "scripts": {
-    "lint": "eslint . --ext .js,.ts",
-    "lint:fix": "eslint . --ext .js,.ts --fix",
+    "lint": "eslint . --ext .js,.ts --cache",
+    "lint:fix": "eslint . --ext .js,.ts --fix --cache",
     "format": "prettier --write \"**/*.{js,ts,json,html,css,md}\"",
     "type-check": "tsc --noEmit",
     "test": "jest",
