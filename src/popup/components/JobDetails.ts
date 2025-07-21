@@ -195,6 +195,7 @@ export class JobDetails {
       vm.activityLastActiveHTML
     );
 
+    // Bid statistics are not always present, so we check for their existence.
     const bidStats = details?.applicantsBidsStats || {};
     const avgBid = bidStats.avgRateBid?.amount;
     const minBid = bidStats.minRateBid?.amount;

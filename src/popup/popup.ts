@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function handleJobSelect(jobCiphertext: string): void {
     if (jobCiphertext !== appState.getSelectedJobId()) {
-      updateDetailsPanel(jobCiphertext);
+      void updateDetailsPanel(jobCiphertext);
     }
   }
 
@@ -201,14 +201,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'An unknown error occurred';
       console.error('Popup: Error sending manual check message:', message);
-      appState.loadFromStorage();
+      void appState.loadFromStorage();
     }
   }
 
   manualCheckButton.addEventListener('click', () => {
     const queryToUse = searchFormComponent.getQuery() || config.DEFAULT_USER_QUERY;
     updatePopupTitleLink(queryToUse);
-    handleSearchSubmit(queryToUse);
+    void handleSearchSubmit(queryToUse);
   });
 
   themeToggleButton.addEventListener('click', () => {
@@ -266,7 +266,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, observerOptions);
 
     elementsToObserve.forEach((item) => {
-      if (item?.dataset.ciphertextForTooltip) {
+      if (item.dataset.ciphertextForTooltip) {
         jobItemObserver?.observe(item);
       }
     });
@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     statusHeaderComponent.update({ deletedJobsCount: appState.getDeletedJobIds().size });
     displayRecentJobs();
   });
-  appState.subscribeToSelector('jobs', () => displayRecentJobs());
+  appState.subscribeToSelector('jobs', () => { displayRecentJobs(); });
   appState.subscribeToSelector('monitorStatus', (newStatus: string) => {
     statusHeaderComponent.update({ statusText: newStatus });
   });

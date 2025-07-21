@@ -34,7 +34,7 @@ class ApiService {
         jobCiphertext: jobCiphertext,
       })) as { jobDetails: JobDetails | null };
 
-      if (response?.jobDetails && typeof response.jobDetails !== 'undefined') {
+      if (response.jobDetails && typeof response.jobDetails !== 'undefined') {
         if (response.jobDetails) {
           this.appState.setCachedJobDetails(jobCiphertext, response.jobDetails);
         }

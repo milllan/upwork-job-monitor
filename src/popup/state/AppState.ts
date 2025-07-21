@@ -76,7 +76,7 @@ export class AppState {
     if (!this.selectorListeners.has(selector)) {
       this.selectorListeners.set(selector, new Set());
     }
-    this.selectorListeners.get(selector)!.add(listener as SelectorListener<unknown>);
+    this.selectorListeners.get(selector)?.add(listener as SelectorListener<unknown>);
 
     return () => {
       const listeners = this.selectorListeners.get(selector);

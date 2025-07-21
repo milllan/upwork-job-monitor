@@ -147,7 +147,7 @@ export class JobItem {
     if (job.isExcludedByTitleFilter) {
       return 'Filtered';
     }
-    if (job.isLowPriorityByClientCountry && job.client?.country) {
+    if (job.isLowPriorityByClientCountry && job.client.country) {
       // Capitalize the country name for display
       return job.client.country.charAt(0).toUpperCase() + job.client.country.slice(1).toLowerCase();
     }
@@ -186,8 +186,8 @@ export class JobItem {
       isLowPriority: !!isLowPriority,
       isExcludedByTitleFilter: !!job.isExcludedByTitleFilter,
       isApplied: !!job.applied,
-      isHighRating: !!(job.client?.rating && job.client.rating >= 4.9),
-      isHighSpent: !!(job.client?.totalSpent && job.client.totalSpent > 10000),
+      isHighRating: !!(job.client.rating && job.client.rating >= 4.9),
+      isHighSpent: !!(job.client.totalSpent && job.client.totalSpent > 10000),
     };
   }
 

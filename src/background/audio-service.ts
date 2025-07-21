@@ -12,14 +12,14 @@ export const AudioService = (() => {
 
     audioPlayerPromise = new Promise((resolve, reject) => {
       if (typeof document === 'undefined') {
-        return reject(new Error('AudioService: Cannot initialize, document is not available.'));
+        reject(new Error('AudioService: Cannot initialize, document is not available.')); return;
       }
 
       const createPlayer = () => {
         const existingPlayer = document.getElementById('notification-sound-player');
         if (existingPlayer) {
           if (existingPlayer instanceof HTMLAudioElement) {
-            return resolve(existingPlayer);
+            resolve(existingPlayer); return;
           } else {
             // Element exists but is the wrong type, so remove it and proceed to create a new one.
             existingPlayer.remove();
@@ -62,8 +62,10 @@ export const AudioService = (() => {
     // MV2 implementation
     try {
       const audioPlayer = await audioPlayerPromise;
-      audioPlayer!.currentTime = 0;
-      await audioPlayer!.play();
+      if (audioPlayer) {
+        audioPlayer.currentTime = 0;
+        await audioPlayer.play();
+      }
     } catch (error) {
       console.warn('AudioService: Error playing notification sound:', error);
     }

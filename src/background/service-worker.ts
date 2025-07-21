@@ -55,7 +55,7 @@ function _applyClientSideFilters(jobs: Job[]): {
     ) {
       for (const skill of job.skills) {
         if (
-          skill?.name &&
+          skill.name &&
           config.SKILL_LOW_PRIORITY_TERMS.includes(skill.name.toLowerCase())
         ) {
           newJobData.isLowPriorityBySkill = true;
@@ -103,7 +103,7 @@ async function _processAndNotifyNewJobs(
 }> {
   // Filter out jobs that are already seen OR have been explicitly deleted by the user from the *fetched* list
   const allNewOrUpdatedJobs = fetchedJobs.filter(
-    (job) => job?.id && !historicalSeenJobIds.has(job.id) && !deletedJobIds.has(job.id)
+    (job) => job.id && !historicalSeenJobIds.has(job.id) && !deletedJobIds.has(job.id)
   );
   // From these, determine which are truly new AND notifiable (not excluded by title filter)
   const notifiableNewJobs = allNewOrUpdatedJobs.filter(
@@ -379,7 +379,7 @@ async function sendNotification(job: Job) {
     await browser.notifications.create(jobUrl, notificationOptions);
     // Play notification sound using the persistent audio element
     // The call is now cleaner and abstracted
-    AudioService.playSound();
+    void AudioService.playSound();
   } catch (e) {
     console.error('MV2: Error creating notification:', e);
   }
@@ -517,7 +517,7 @@ async function _fetchAndProcessTalentProfile(
   return apiResult;
 }
 
-setupAlarms();
+void setupAlarms();
 // Defer the initial run to ensure all modules are loaded and initialized,
 // preventing a race condition where UpworkAPI might not be defined yet.
 setTimeout(() => runJobCheck(), 0);

@@ -237,7 +237,7 @@ async function _fetchUpworkJobs(
     return responseData;
   }
 
-  const results = responseData.data?.search?.universalSearchNuxt?.userJobSearchV1?.results;
+  const results = responseData.data?.search.universalSearchNuxt?.userJobSearchV1?.results;
   if (!results) {
     return [];
   }
