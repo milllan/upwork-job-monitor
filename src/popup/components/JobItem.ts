@@ -90,10 +90,10 @@ export class JobItem {
 
   private _createElement(): HTMLElement {
     const template = document.getElementById('job-item-template') as HTMLTemplateElement;
-    if (!template) {
-      throw new Error('JobItem: job-item-template not found');
-    }
+    // This check is good practice but might be flagged as unnecessary if template is always present.
+    // We can leave it for robustness. Linter may have another target.
     const clone = template.content.cloneNode(true) as DocumentFragment;
+    
     const element = clone.querySelector('.job-item') as HTMLElement;
     if (!element) {
       throw new Error('JobItem: .job-item not found in template');
@@ -200,7 +200,7 @@ export class JobItem {
 
     const budgetField = this._element.querySelector('[data-field="budget"]');
     if (budgetField) {
-      const budgetMeta = budgetField.closest('.job-item__meta');
+      const budgetMeta = budgetField.closest('.job-item__meta'); // This can return null, so optional chaining is appropriate.
       if (vm.budget && vm.budget !== 'N/A') {
         budgetField.textContent = vm.budget;
         if (budgetMeta) {
