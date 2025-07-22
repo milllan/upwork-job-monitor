@@ -359,7 +359,7 @@ async function setupAlarms() {
       console.log('MV2: Main fetch alarm created successfully.');
     }
   } catch (e) {
-    console.error('MV2: Critical error setting up alarm:', e);
+    console.error('MV2: Critical error setting up alarm:', e instanceof Error ? e.message : e);
   }
 }
 
