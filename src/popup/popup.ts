@@ -290,4 +290,8 @@ document.addEventListener('DOMContentLoaded', () => {
   appState.subscribeToSelector('lastCheckTimestamp', (newTimestamp: number | null) => {
     statusHeaderComponent.update({ lastCheckTimestamp: newTimestamp });
   });
+  appState.subscribeToSelector('currentUserQuery', (newQuery: string) => {
+    searchFormComponent.setQuery(newQuery);
+    updatePopupTitleLink(newQuery);
+  });
 });
