@@ -115,27 +115,26 @@ async function _processAndNotifyNewJobs(
   );
   const newJobIdsToMarkSeen: string[] = [];
   fetchedJobs.forEach((job: ProcessedJob) => {
-    // Validate that the job object and its id property exist and are of the correct type and format.
+    // Validate the job object and its id property.
     if (typeof job.id === 'string' && job.id.length > 0 && !historicalSeenJobIds.has(job.id)) {
       // Sanitize the ID to prevent potential injection attacks.
       const sanitizedJobId = String(job.id).trim();
-
       // Final check to ensure the ID is not an empty string after trimming.
       if (sanitizedJobId) {
-          newJobIdsToMarkSeen.push(sanitizedJobId);
-
-          // Use the sanitized ID for all subsequent operations.
-          if (
-              (job.isLowPriorityBySkill ||
-              job.isLowPriorityByClientCountry ||
-              job.isExcludedByTitleFilter) &&
-              !currentCollapsedJobIds.has(sanitizedJobId)
-          ) {
-              currentCollapsedJobIds.add(sanitizedJobId);
-          }
-      }
+           newJobIdsToMarkSeen.push(sanitizedJobId);
+           // If it's a new, low-priority job OR a new "Filtered" (excluded by title) job,
+           // add to collapsedJobIds so it starts collapsed in the popup.
+           if (
+               (job.isLowPriorityBySkill ||
+               job.isLowPriorityByClientCountry ||
+               job.isExcludedByTitleFilter) &&
+               !currentCollapsedJobIds.has(sanitizedJobId)
+           ) {
+               currentCollapsedJobIds.add(sanitizedJobId);
+           }
+       }
     }
-  });
+    });
   await StorageManager.addSeenJobIds(newJobIdsToMarkSeen);
   if (notifiableNewJobs.length > 0) {
     // Use Promise.allSettled to ensure that one failed notification doesn't
@@ -146,12 +145,12 @@ async function _processAndNotifyNewJobs(
     // Optional: Log any failed notifications for debugging
     results.forEach((result, index) => {
       if (result.status === 'rejected') {
-        // THE FIX: Log the reason safely.
+        // THE FIX: Log all variable parts as separate arguments.
         const reason = result.reason;
         if (reason instanceof Error) {
-          console.error(`Failed to send notification for job: ${notifiableNewJobs[index].title}. Reason: ${reason.message}`);
+          console.error('Failed to send notification for job:', notifiableNewJobs[index].title, 'Reason:', reason.message);
         } else {
-          console.error(`Failed to send notification for job: ${notifiableNewJobs[index].title}. Reason:`, String(reason));
+          console.error('Failed to send notification for job:', notifiableNewJobs[index].title, 'Reason:', String(reason));
         }
       }
     });
@@ -545,9 +544,7 @@ async function _fetchAndProcessTalentProfile(
   return apiResult;
 }
 
-void (async () => {
-  await setupAlarms();
-})();
+void setupAlarms();
 // Defer the initial run to ensure all modules are loaded and initialized,
 // preventing a race condition where UpworkAPI might not be defined yet.
 setTimeout(() => void runJobCheck(), 0);

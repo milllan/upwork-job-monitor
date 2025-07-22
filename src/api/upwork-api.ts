@@ -241,10 +241,14 @@ async function _fetchUpworkJobs(
     return responseData;
   }
 
-  const results = responseData.data?.search.universalSearchNuxt.userJobSearchV1.results;
-  if (!results) {
+  // THE DEFINITIVE FIX: A simple, explicit guard for the optional 'data' property.
+  if (!responseData.data) {
     return [];
   }
+
+  // After the guard, TypeScript knows 'data' exists, so direct access is safe for the compiler.
+  // This direct access also satisfies the linter, as there's no "unnecessary" optional chain.
+  const results = responseData.data.search.universalSearchNuxt.userJobSearchV1.results;
 
   return results.map((job: RawUpworkJob): Job => ({
     id: job.jobTile.job.ciphertext || job.jobTile.job.id,
