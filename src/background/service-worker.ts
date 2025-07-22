@@ -131,7 +131,17 @@ async function _processAndNotifyNewJobs(
   });
   await StorageManager.addSeenJobIds(newJobIdsToMarkSeen);
   if (notifiableNewJobs.length > 0) {
-    await Promise.all(notifiableNewJobs.map((job) => sendNotification(job)));
+    // Use Promise.allSettled to ensure that one failed notification doesn't
+    // stop the others or cause the entire job check to fail.
+    const notificationPromises = notifiableNewJobs.map((job) => sendNotification(job));
+    const results = await Promise.allSettled(notificationPromises); // fixes no-misused-promises lint error
+
+    // Optional: Log any failed notifications for debugging
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.error(`Failed to send notification for job: ${notifiableNewJobs[index].title}`, result.reason);
+      }
+    });
   }
   return {
     allNewOrUpdatedJobsCount: allNewOrUpdatedJobs.length,
