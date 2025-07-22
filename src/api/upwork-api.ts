@@ -241,10 +241,13 @@ async function _fetchUpworkJobs(
     return responseData;
   }
 
-  const results = responseData.data?.search.universalSearchNuxt.userJobSearchV1.results;
-  if (!results) {
+  // THE FIX: Use an explicit guard. This proves to the compiler that `data` exists.
+  // Inside the block, direct access is now safe, which satisfies the linter.
+  if (!responseData.data?.search?.universalSearchNuxt?.userJobSearchV1?.results) {
     return [];
   }
+
+  const results = responseData.data.search.universalSearchNuxt.userJobSearchV1.results;
 
   return results.map((job: RawUpworkJob): Job => ({
     id: job.jobTile.job.ciphertext || job.jobTile.job.id,

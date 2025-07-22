@@ -268,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, observerOptions);
 
     elementsToObserve.forEach((item) => {
-      if (item?.dataset.ciphertextForTooltip) { // item can be null here if not filtered
+      if (item.dataset.ciphertextForTooltip) {
         jobItemObserver?.observe(item);
       }
     });
