@@ -349,12 +349,12 @@ export class AppState {
     }
   }
 
-  private _debounce(func: (...args: unknown[]) => void, wait: number): () => void {
+  private _debounce(func: (...args: any[]) => Promise<void>, wait: number): () => void {
     let timeout: ReturnType<typeof setTimeout>;
-    return function executedFunction(...args: unknown[]) {
+    return function executedFunction(this: AppState, ...args: any[]) {
       const later = () => {
         clearTimeout(timeout);
-        func(...args);
+        void func.apply(this, args);
       };
       clearTimeout(timeout);
       timeout = setTimeout(later, wait);

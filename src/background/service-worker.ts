@@ -115,17 +115,24 @@ async function _processAndNotifyNewJobs(
   );
   const newJobIdsToMarkSeen: string[] = [];
   fetchedJobs.forEach((job: ProcessedJob) => {
-    if (job && job.id && !historicalSeenJobIds.has(job.id)) {
-      newJobIdsToMarkSeen.push(job.id);
-      // If it's a new, low-priority job OR a new "Filtered" (excluded by title) job,
-      // add to collapsedJobIds so it starts collapsed in the popup.
-      if (
-        (job.isLowPriorityBySkill ||
-          job.isLowPriorityByClientCountry ||
-          job.isExcludedByTitleFilter) &&
-        !currentCollapsedJobIds.has(job.id)
-      ) {
-        currentCollapsedJobIds.add(job.id);
+    // Validate that the job object and its id property exist and are of the correct type and format.
+    if (typeof job.id === 'string' && job.id.length > 0 && !historicalSeenJobIds.has(job.id)) {
+      // Sanitize the ID to prevent potential injection attacks.
+      const sanitizedJobId = String(job.id).trim();
+
+      // Final check to ensure the ID is not an empty string after trimming.
+      if (sanitizedJobId) {
+          newJobIdsToMarkSeen.push(sanitizedJobId);
+
+          // Use the sanitized ID for all subsequent operations.
+          if (
+              (job.isLowPriorityBySkill ||
+              job.isLowPriorityByClientCountry ||
+              job.isExcludedByTitleFilter) &&
+              !currentCollapsedJobIds.has(sanitizedJobId)
+          ) {
+              currentCollapsedJobIds.add(sanitizedJobId);
+          }
       }
     }
   });
@@ -139,7 +146,8 @@ async function _processAndNotifyNewJobs(
     // Optional: Log any failed notifications for debugging
     results.forEach((result, index) => {
       if (result.status === 'rejected') {
-        console.error(`Failed to send notification for job: ${notifiableNewJobs[index].title}`, result.reason);
+        const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
+        console.error(`Failed to send notification for job: ${notifiableNewJobs[index].title}`, reason);
       }
     });
   }
@@ -344,32 +352,36 @@ async function runJobCheck(triggeredByUserQuery?: string) {
 // --- Initial Setup and Alarm Creation ---
 // Initialize storage and set up alarms on install/update
 
-browser.runtime.onInstalled.addListener(async (details) => {
+browser.runtime.onInstalled.addListener((details) => {
+  void (async () => {
   console.log('MV2: Extension installed or updated:', details.reason);
   await StorageManager.initializeStorage(config.DEFAULT_USER_QUERY);
   await setupAlarms();
+  })();
 });
 
 // ADDED: This listener handles the alarm firing.
-browser.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === config.FETCH_ALARM_NAME) {
-    console.log(`MV2: Alarm '${alarm.name}' fired, running scheduled job check.`);
-    await runJobCheck();
-  }
+browser.alarms.onAlarm.addListener((alarm) => {
+  void (async () => {
+    if (alarm.name === config.FETCH_ALARM_NAME) {
+      console.log(`MV2: Alarm '${alarm.name}' fired, running scheduled job check.`);
+      await runJobCheck();
+    }
+  })();
 });
 
-async function setupAlarms() {
+async function setupAlarms(): Promise<void> {
   try {
     const alarm = await browser.alarms.get(config.FETCH_ALARM_NAME);
     if (!alarm) {
-      await browser.alarms.create(config.FETCH_ALARM_NAME, {
+      browser.alarms.create(config.FETCH_ALARM_NAME, {
         delayInMinutes: 0.2,
         periodInMinutes: config.FETCH_INTERVAL_MINUTES,
       });
       console.log('MV2: Main fetch alarm created successfully.');
     }
   } catch (e) {
-    console.error('MV2: Critical error setting up alarm:', e);
+    console.error('MV2: Critical error setting up alarm:', e instanceof Error ? e.message : e);
   }
 }
 
@@ -397,14 +409,15 @@ async function sendNotification(job: Job) {
   }
 }
 
-browser.notifications.onClicked.addListener(async (notificationId: string) => {
-  // Made async
-  try {
-    await browser.tabs.create({ url: notificationId });
-    await browser.notifications.clear(notificationId);
-  } catch (e) {
-    console.error('MV2: Error handling notification click:', e);
-  }
+browser.notifications.onClicked.addListener((notificationId: string) => {
+  void (async () => {
+    try {
+      await browser.tabs.create({ url: notificationId });
+      await browser.notifications.clear(notificationId);
+    } catch (e) {
+      console.error('MV2: Error handling notification click:', e);
+    }
+  })();
 });
 
 // --- MODIFIED Message Handlers ---
@@ -446,35 +459,33 @@ async function _handleGetTalentProfile(request: GetTalentProfileRequest) {
 
 type MessageRequest = ManualCheckRequest | GetJobDetailsRequest | GetTalentProfileRequest;
 
-browser.runtime.onMessage.addListener(async (request: unknown, _sender: Runtime.MessageSender) => {
+browser.runtime.onMessage.addListener((request: unknown, _sender: Runtime.MessageSender) => {
   if (!request || typeof request !== 'object' || !('action' in request)) {
     console.warn('Invalid message format received');
-    return;
+    // Return undefined or void promise for non-matching messages
+    return Promise.resolve(undefined);
   }
+
   const message = request as MessageRequest;
   try {
     switch (message.action) {
       case 'manualCheck':
-        return await _handleManualCheck(message);
-
+        return _handleManualCheck(message); // Return the promise
       case 'getJobDetails':
-        return await _handleGetJobDetails(message);
-
+        return _handleGetJobDetails(message); // Return the promise
       case 'getTalentProfile':
-        return await _handleGetTalentProfile(message);
-
+        return _handleGetTalentProfile(message); // Return the promise
       default: {
-        // This will cause a TypeScript error if any action is not handled, ensuring exhaustiveness.
         const _exhaustiveCheck: never = message;
         console.warn(`MV2: No message handler found for action:`, _exhaustiveCheck);
-        return;
+        return Promise.resolve(undefined);
       }
     }
   } catch (error: unknown) {
     const err = error as Error;
     const action = (message as { action?: string }).action || 'unknown';
     console.error(`Background: Error handling action "${action}":`, err.message, err.stack);
-    return { error: true, message: `Error during ${action}: ${err.message}` };
+    return Promise.resolve({ error: true, message: `Error during ${action}: ${err.message}` });
   }
 });
 
@@ -488,7 +499,7 @@ async function _fetchAndProcessJobDetails(
     console.error('MV2: Failed to fetch job details.', apiResult);
     // Handle the specific 403 case for token failures
     if (apiResult.type === 'http' && apiResult.details && apiResult.details.status === 403) {
-      await _handleApiTokenFailure(apiResult, 'jobDetails', { ciphertext: jobCiphertext });
+      void _handleApiTokenFailure(apiResult, 'jobDetails', { ciphertext: jobCiphertext });
     }
     // Throw an error to be caught by the popup's logic and displayed in the UI.
     throw new Error(
@@ -514,7 +525,7 @@ async function _fetchAndProcessTalentProfile(
   if (isGraphQLResponse(apiResult)) {
     console.error('MV2: Failed to fetch talent profile.', apiResult);
     if (apiResult.type === 'http' && apiResult.details && apiResult.details.status === 403) {
-      await _handleApiTokenFailure(apiResult, 'talentProfile', { ciphertext: profileCiphertext });
+      void _handleApiTokenFailure(apiResult, 'talentProfile', { ciphertext: profileCiphertext });
     }
     throw new Error(
       (apiResult.details?.message as string) || `API Error: ${apiResult.type}`
@@ -529,9 +540,11 @@ async function _fetchAndProcessTalentProfile(
   return apiResult;
 }
 
-void setupAlarms();
+void (async () => {
+  await setupAlarms();
+})();
 // Defer the initial run to ensure all modules are loaded and initialized,
 // preventing a race condition where UpworkAPI might not be defined yet.
-setTimeout(() => runJobCheck(), 0);
+setTimeout(() => void runJobCheck(), 0);
 
 export { runJobCheck };
