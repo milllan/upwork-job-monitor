@@ -131,7 +131,7 @@ async function _processAndNotifyNewJobs(
   });
   await StorageManager.addSeenJobIds(newJobIdsToMarkSeen);
   if (notifiableNewJobs.length > 0) {
-    notifiableNewJobs.forEach((job) => sendNotification(job));
+    await Promise.all(notifiableNewJobs.map((job) => sendNotification(job)));
   }
   return {
     allNewOrUpdatedJobsCount: allNewOrUpdatedJobs.length,
@@ -335,32 +335,34 @@ async function runJobCheck(triggeredByUserQuery?: string) {
 // Initialize storage and set up alarms on install/update
 
 browser.runtime.onInstalled.addListener(async (details) => {
-  // Made async
   console.log('MV2: Extension installed or updated:', details.reason);
   await StorageManager.initializeStorage(config.DEFAULT_USER_QUERY);
-  await setupAlarms(); // Always set up alarms on install/update
+  await setupAlarms();
+});
+
+// ADDED: This listener handles the alarm firing.
+browser.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === config.FETCH_ALARM_NAME) {
+    console.log(`MV2: Alarm '${alarm.name}' fired, running scheduled job check.`);
+    await runJobCheck();
+  }
 });
 
 async function setupAlarms() {
-  // Made async
   try {
-    const alarm = await browser.alarms.get(config.FETCH_ALARM_NAME); // Use config.FETCH_ALARM_NAME
+    const alarm = await browser.alarms.get(config.FETCH_ALARM_NAME);
     if (!alarm) {
       await browser.alarms.create(config.FETCH_ALARM_NAME, {
         delayInMinutes: 0.2,
         periodInMinutes: config.FETCH_INTERVAL_MINUTES,
-      }); // Use config for interval too
+      });
+      console.log('MV2: Main fetch alarm created successfully.');
     }
   } catch (e) {
-    console.error('MV2: Error setting up alarm:', e);
+    console.error('MV2: Critical error setting up alarm:', e);
   }
 }
-browser.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === config.FETCH_ALARM_NAME) {
-    // Use config.FETCH_ALARM_NAME
-    await runJobCheck();
-  }
-});
+
 
 async function sendNotification(job: Job) {
   // Made async
