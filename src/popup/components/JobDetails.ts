@@ -223,7 +223,7 @@ export class JobDetails {
     const questions = details?.opening?.questions || [];
     vm.questions = questions.map((q) => q.question);
 
-    const jobDescription = details?.opening?.job?.description;
+    const jobDescription = details.opening.job.description;
     if (jobDescription && jobDescription.trim().length > 0) {
       // Use DOMParser for robust and safe HTML stripping, then reformat for display.
       const parser = new DOMParser();

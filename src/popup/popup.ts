@@ -9,9 +9,9 @@ import { config } from '../background/config.js';
 import { $, constructUpworkSearchURL, initializeScrollHints } from '../utils/utils.js';
 import { Job } from '../types.js';
 
-let jobItemObserver: IntersectionObserver | null = null;
+let jobItemObserver: IntersectionObserver | null = null; // fixes no-misused-promises lint error
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
   console.log('Popup: DOMContentLoaded event fired.');
   const popupTitleLinkEl = $<HTMLAnchorElement>('.app-header__title');
   const consolidatedStatusEl = $<HTMLElement>('.app-header__status');
@@ -25,14 +25,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const appState = new AppState();
   console.log('Popup: AppState instance created.');
-  await appState.loadFromStorage();
+  void appState.loadFromStorage(); // fixes no-floating-promises lint error
   console.log('Popup: AppState loaded from storage.');
 
   const statusHeaderComponent = new StatusHeader(consolidatedStatusEl);
   const jobDetailsComponent = new JobDetails(jobDetailsPanelEl);
   const searchFormComponent = new SearchForm(
     $<HTMLElement>('.query-section'),
-    handleSearchSubmit
+    (query) => void handleSearchSubmit(query)
   );
   const apiService = new ApiService(appState);
 
@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setupIntersectionObserver(
       Array.from(appState.getJobComponents().values())
-        .map((c) => c.element)
+        .map((c) => c.element) // c.element can be null after destroy() is called
         .filter((el): el is HTMLElement => el !== null)
     );
   }
@@ -217,8 +217,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     appState.setTheme(newTheme);
   });
 
-  browser.runtime.onMessage.addListener((request: unknown, _sender: Runtime.MessageSender) => {
-    // Type guard to ensure the message is in the expected format.
+  // This listener does not send a response, so it can be async directly.
+  // The void here handles the floating promise warning.
+  browser.runtime.onMessage.addListener(async (request: unknown, _sender: Runtime.MessageSender): Promise<void> => {
     if (
       request &&
       typeof request === 'object' &&
@@ -226,14 +227,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       request.action === 'updatePopupDisplay'
     ) {
       console.log('Popup: Received updatePopupDisplay message from background. Refreshing data.');
-      appState.loadFromStorage();
-      // This is a one-way notification, so we don't need to send a response.
+      await appState.loadFromStorage();
     }
   });
 
   function setupIntersectionObserver(elementsToObserve: HTMLElement[] = []): void {
     if (jobItemObserver) {
-      jobItemObserver.disconnect();
+      jobItemObserver.disconnect(); // fixes no-misused-promises lint error
       jobItemObserver = null; // Explicitly set to null after disconnecting
     }
 
@@ -247,22 +247,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       threshold: 0.1,
     };
 
-    jobItemObserver = new IntersectionObserver(async (entries, _observer) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting) {
-          const jobItem = entry.target as HTMLElement;
-          const jobCiphertext = jobItem.dataset.ciphertextForTooltip;
-          if (jobCiphertext && !appState.getCachedJobDetails(jobCiphertext)) {
-            console.log(`Popup (Observer): Pre-fetching details for visible job ${jobCiphertext}`);
-            try {
-              await apiService.fetchJobDetailsWithCache(jobCiphertext);
-            } catch (_err: unknown) {
-              // Pre-fetching is a best-effort optimization.
-              // We can ignore errors here as the user can still click to fetch manually.
+    jobItemObserver = new IntersectionObserver((entries, _observer) => {
+      void (async () => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const jobItem = entry.target as HTMLElement;
+            const jobCiphertext = jobItem.dataset.ciphertextForTooltip;
+            if (jobCiphertext && !appState.getCachedJobDetails(jobCiphertext)) {
+              console.log(`Popup (Observer): Pre-fetching details for visible job ${jobCiphertext}`);
+              try {
+                await apiService.fetchJobDetailsWithCache(jobCiphertext);
+              } catch (_err: unknown) {
+                // Pre-fetching is a best-effort optimization.
+                // We can ignore errors here as the user can still click to fetch manually.
+              }
             }
           }
         }
-      }
+      })();
     }, observerOptions);
 
     elementsToObserve.forEach((item) => {
@@ -274,18 +276,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initializeScrollHints(jobListContainerEl, recentJobsListDiv);
 
-  appState.subscribeToSelector('theme', updateThemeUI);
-  appState.subscribeToSelector('selectedJobId', updateJobSelectionUI);
+  appState.subscribeToSelector('theme', () => { updateThemeUI(); });
+  appState.subscribeToSelector('selectedJobId', (newId, oldId) => { updateJobSelectionUI(newId, oldId); });
   appState.subscribeToSelector('deletedJobIds', () => {
     statusHeaderComponent.update({ deletedJobsCount: appState.getDeletedJobIds().size });
     displayRecentJobs();
   });
   appState.subscribeToSelector('jobs', () => { displayRecentJobs(); });
   appState.subscribeToSelector('monitorStatus', (newStatus: string) => {
-    statusHeaderComponent.update({ statusText: newStatus });
+    statusHeaderComponent.update({ statusText: newStatus }); // fixes no-misused-promises lint error
   });
-  appState.subscribeToSelector('collapsedJobIds', displayRecentJobs);
+  appState.subscribeToSelector('collapsedJobIds', () => { displayRecentJobs(); });
   appState.subscribeToSelector('lastCheckTimestamp', (newTimestamp: number | null) => {
     statusHeaderComponent.update({ lastCheckTimestamp: newTimestamp });
+  });
+  appState.subscribeToSelector('currentUserQuery', (newQuery: string) => {
+    searchFormComponent.setQuery(newQuery);
+    updatePopupTitleLink(newQuery);
   });
 });

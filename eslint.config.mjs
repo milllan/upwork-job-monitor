@@ -37,7 +37,6 @@ export default tseslint.config(
   },
 
   // 4. Configuration for your Web Extension source code
-  // 4. Configuration for your Web Extension source code
   {
     files: ['src/**/*.ts'],
     extends: [...tseslint.configs.recommendedTypeChecked],

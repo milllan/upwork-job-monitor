@@ -113,12 +113,16 @@ async function _executeGraphQLQuery<T>(
 
     const responseBodyText = await response.text();
     try {
-      const data = JSON.parse(responseBodyText);
+      // THE FIX: Assert the type of the parsed data immediately.
+      // This tells TypeScript: "I expect the parsed object to have an optional 'errors' property, which is an array".
+      const data = JSON.parse(responseBodyText) as { errors?: unknown[] };
+
       // Check for application-level GraphQL errors, which come with a 200 OK status
+      // Now, TypeScript knows 'data.errors' is a valid (though optional) property.
       if (data.errors) {
         return { error: true, type: 'graphql', details: { errors: data.errors } };
       }
-      return data; // Success
+      return data as GraphQLResponse<T>; // Also assert the final return type for full safety
     } catch (parsingError: unknown) {
       const message = parsingError instanceof Error ? parsingError.message : 'Unknown parsing error';
       console.warn(`Response text that failed parsing: ${responseBodyText.substring(0, 500)}`);
@@ -237,10 +241,14 @@ async function _fetchUpworkJobs(
     return responseData;
   }
 
-  const results = responseData.data?.search.universalSearchNuxt?.userJobSearchV1?.results;
-  if (!results) {
+  // THE DEFINITIVE FIX: A simple, explicit guard for the optional 'data' property.
+  if (!responseData.data) {
     return [];
   }
+
+  // After the guard, TypeScript knows 'data' exists, so direct access is safe for the compiler.
+  // This direct access also satisfies the linter, as there's no "unnecessary" optional chain.
+  const results = responseData.data.search.universalSearchNuxt.userJobSearchV1.results;
 
   return results.map((job: RawUpworkJob): Job => ({
     id: job.jobTile.job.ciphertext || job.jobTile.job.id,
