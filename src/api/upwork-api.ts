@@ -59,6 +59,7 @@ async function getAllPotentialApiTokens(): Promise<string[]> {
     );
     otherPotentials.forEach((t) => candidateTokens.push(t.value));
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (config.DEBUG_MODE) {
       console.log('API_DEBUG: Found candidate tokens:', candidateTokens);
     }

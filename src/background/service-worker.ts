@@ -286,7 +286,7 @@ async function _performJobCheckLogic(triggeredByUserQuery?: string) {
   let processedJobs: ProcessedJob[] = [];
 
   // Apply client-side title exclusion and skill-based low-priority marking
-  if (initialJobs && initialJobs.length > 0) {
+  if (initialJobs.length > 0) {
     const originalJobCount = initialJobs.length;
     const processedJobsResult = _applyClientSideFilters(initialJobs);
     processedJobs = processedJobsResult.processedJobs;

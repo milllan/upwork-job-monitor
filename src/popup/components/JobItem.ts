@@ -63,6 +63,7 @@ export class JobItem {
       }
       this._element.innerHTML = '<div class="job-item__error">Error displaying job</div>';
     }
+    // _element is ensured non-null by the try/catch paths above
     return this._element as HTMLElement;
   }
 

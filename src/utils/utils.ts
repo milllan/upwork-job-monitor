@@ -163,7 +163,7 @@ function formatSkills(skills: { name: string }[]): string {
  * @param {number|string} [budget.maxAmount] The maximum budget amount.
  * @returns {string} The formatted budget string (e.g., "$20 - $40/hr", "$500").
  */
-function formatBudget(budget: { type?: string; minAmount?: number | string; maxAmount?: number | string }): string {
+function formatBudget(budget?: { type?: string; minAmount?: number | string; maxAmount?: number | string }): string {
   if (!budget) {
     return 'N/A';
   }
@@ -216,10 +216,7 @@ return n.toLocaleString('en-US', {
  * @param {HTMLElement} listEl The scrollable list element inside the container.
  */
 function initializeScrollHints(containerEl: HTMLElement, listEl: HTMLElement) {
-  if (!containerEl || !listEl) {
-    console.warn('Scroll hints not initialized: container or list element not found.');
-    return;
-  }
+  // Parameters are strictly typed; remove redundant runtime nullish guard.
 
   const updateHints = () => {
     // Top shadow: visible only if scrolled down from the top

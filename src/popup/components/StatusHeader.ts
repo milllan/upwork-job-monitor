@@ -33,7 +33,7 @@ export class StatusHeader {
     const { statusText, lastCheckTimestamp, deletedJobsCount } = this.state;
 
     const statusDisplay = statusText || 'Idle';
-    const deletedCount = deletedJobsCount ?? 0;
+    const deletedCount = deletedJobsCount;
     let lastCheckDisplay = 'N/A';
 
     if (lastCheckTimestamp) {
@@ -48,14 +48,14 @@ export class StatusHeader {
     // Read extension version from manifest at runtime
     const version =
       typeof browser !== 'undefined'
-        ? browser.runtime?.getManifest?.().version ?? ''
+        ? browser.runtime.getManifest().version
         : '';
 
     // If popup has a title link container, append version there; otherwise prepend a small version badge.
-    const titleLink = document.querySelector('.app-header__title a, .app-header__title-link') as HTMLElement | null;
+    const titleLink = document.querySelector('.app-header__title a, .app-header__title-link');
     if (titleLink) {
       // Ensure we don't duplicate the version element on re-render
-      let existing = titleLink.parentElement?.querySelector('.app-header__version') as HTMLSpanElement | null | undefined;
+      let existing = titleLink.parentElement?.querySelector('.app-header__version');
       if (!existing) {
         const span = document.createElement('span');
         span.className = 'app-header__version';

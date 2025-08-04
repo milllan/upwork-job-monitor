@@ -29,19 +29,15 @@ class ApiService {
 
     console.log(`ApiService: Fetching fresh job details for ${jobCiphertext}`);
     try {
-      const response = await browser.runtime.sendMessage({
+      const response: { jobDetails: JobDetails | null } = await browser.runtime.sendMessage({
         action: 'getJobDetails',
         jobCiphertext: jobCiphertext,
-      }) as { jobDetails: JobDetails | null };
+      });
 
-      if (response.jobDetails !== undefined) {
-        if (response.jobDetails) {
-          this.appState.setCachedJobDetails(jobCiphertext, response.jobDetails);
-        }
-        return response.jobDetails;
+      if (response.jobDetails) {
+        this.appState.setCachedJobDetails(jobCiphertext, response.jobDetails);
       }
-      // This case should ideally not be reached if the background script always returns a value or throws.
-      throw new Error('Invalid response from background script.');
+      return response.jobDetails;
     } catch (error) {
       console.error('ApiService: Failed to get job details from background:', error);
       throw error; // Re-throw the error to be handled by the UI
