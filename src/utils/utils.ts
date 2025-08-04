@@ -201,11 +201,11 @@ return n.toLocaleString('en-US', {
     const max = formatNumber(maxAmount);
     if (min && max && min !== max) {
       return `$${min} - $${max}`;
-    } else if (min) {
-      return `$${min}`;
-    } else {
-      return 'N/A';
     }
+    if (min) {
+      return `$${min}`;
+    }
+    return 'N/A';
   }
 }
 
@@ -216,8 +216,6 @@ return n.toLocaleString('en-US', {
  * @param {HTMLElement} listEl The scrollable list element inside the container.
  */
 function initializeScrollHints(containerEl: HTMLElement, listEl: HTMLElement) {
-  // Parameters are strictly typed; remove redundant runtime nullish guard.
-
   const updateHints = () => {
     // Top shadow: visible only if scrolled down from the top
     const isScrolledFromTop = listEl.scrollTop > 10;

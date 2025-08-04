@@ -138,7 +138,6 @@ export class AppState {
   // === State Actions ===
 
   setTheme(theme: 'light' | 'dark'): void {
-    // Theme is strictly typed; retain console warning for future-proofing but remove redundant condition.
     this.setState({ theme });
   }
 

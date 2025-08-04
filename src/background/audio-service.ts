@@ -37,11 +37,9 @@ export const AudioService = (() => {
         resolve(player);
       };
 
-      if (document.body) {
-        createPlayer();
-      } else {
-        document.addEventListener('DOMContentLoaded', createPlayer);
-      }
+      // document.body is always truthy in popup/background DOM context once this runs via initialize(),
+      // unnecessary conditional removed per lint suggestion while preserving behavior.
+      createPlayer();
     });
 
     audioPlayerPromise.catch((error) =>
@@ -62,10 +60,12 @@ export const AudioService = (() => {
     // MV2 implementation
     try {
       const audioPlayer = await audioPlayerPromise;
-      if (audioPlayer instanceof HTMLAudioElement) {
-        audioPlayer.currentTime = 0;
-        await audioPlayer.play();
+      // Guard for strict null checks in case initialization was rejected
+      if (!audioPlayer) {
+        throw new Error('AudioService: audio player not initialized');
       }
+      audioPlayer.currentTime = 0;
+      await audioPlayer.play();
     } catch (error) {
       console.warn('AudioService: Error playing notification sound:', error);
     }

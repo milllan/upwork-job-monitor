@@ -186,23 +186,22 @@ export class JobDetails {
     vm.activityInterviews = clientActivity.totalInvitedToInterview
       ? `Interviews: ${clientActivity.totalInvitedToInterview}`
       : null;
-    vm.activityHired = `Hired: ${clientActivity.totalHired || 0}/${clientActivity.numberOfPositionsToHire || 1}`;
+    vm.activityHired = `Hired: ${clientActivity.totalHired ?? 0}/${clientActivity.numberOfPositionsToHire ?? 1}`;
 
-    vm.showJobActivity = !!(
-      vm.activityApplicants ||
-      vm.activityInterviews ||
-      vm.activityHired ||
-      vm.activityLastActiveHTML
-    );
+    vm.showJobActivity =
+      !!vm.activityApplicants ||
+      !!vm.activityInterviews ||
+      !!vm.activityHired ||
+      !!vm.activityLastActiveHTML;
 
     // Bid statistics are not always present, so we check for their existence.
     const bidStats = details.applicantsBidsStats || {};
     const avgBid = bidStats.avgRateBid?.amount;
     const minBid = bidStats.minRateBid?.amount;
     const maxBid = bidStats.maxRateBid?.amount;
-    if (avgBid || minBid || maxBid) {
-      vm.bidAvg = `Avg: $${(avgBid || 0).toFixed(1)}`;
-      vm.bidRange = `Range: $${minBid || 0} - $${maxBid || 0}`;
+    if (avgBid !== undefined || minBid !== undefined || maxBid !== undefined) {
+      vm.bidAvg = `Avg: $${(avgBid ?? 0).toFixed(1)}`;
+      vm.bidRange = `Range: $${minBid ?? 0} - $${maxBid ?? 0}`;
     }
 
     const workHistory = details.buyer?.workHistory || [];
@@ -224,11 +223,11 @@ export class JobDetails {
     vm.questions = questions.map((q) => q.question);
 
     const jobDescription = details.opening?.job?.description;
-    if (jobDescription?.trim().length > 0) {
+    if ((jobDescription?.trim().length ?? 0) > 0) {
       // Use DOMParser for robust and safe HTML stripping, then reformat for display.
       const parser = new DOMParser();
       const doc = parser.parseFromString(jobDescription, 'text/html');
-      vm.descriptionHTML = doc.body.textContent?.trim().replace(/\n/g, '<br>') || null;
+      vm.descriptionHTML = doc.body.textContent?.trim().replace(/\n/g, '<br>') ?? null;
     }
 
     return vm;

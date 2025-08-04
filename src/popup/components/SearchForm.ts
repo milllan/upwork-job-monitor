@@ -53,7 +53,7 @@ export class SearchForm {
     const query = this.getQuery();
     if (query) {
       this.onSearch(query);
-    } else if (!query) {
+    } else {
       alert('Please enter a search query.');
     }
   }

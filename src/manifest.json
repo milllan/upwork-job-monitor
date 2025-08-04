@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Upwork Job Monitor (MV2 - Direct BG Attempt)",
-  "version": "2025.08.04.12.46",
+  "version": "2025.08.04.12.58",
   "description": "Monitors Upwork for new jobs and sends notifications.",
   "browser_action": {
     "default_popup": "popup/popup.html",
