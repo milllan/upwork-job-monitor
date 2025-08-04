@@ -64,12 +64,17 @@ export class JobItem {
       this._element.innerHTML = '<div class="job-item__error">Error displaying job</div>';
     }
     // _element is ensured non-null by the try/catch paths above
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- return type is HTMLElement; control flow ensures non-null
     return this._element as HTMLElement;
   }
 
   update(newJobData: Job, newOptions: Partial<JobItemOptions> = {}): void {
     this.jobData = newJobData;
     this.options = { ...this.options, ...newOptions };
+    // this._element exists once rendered; keep guard for robustness during early render error fallback
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    // this._element exists once rendered; keep guard for robustness during early render error fallback
+    // this._element exists once rendered; keep guard for robustness during early render error fallback
     if (this._element) {
       this._updateElement();
     }

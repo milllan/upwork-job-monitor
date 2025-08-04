@@ -12,6 +12,7 @@ export class StatusHeader {
 
   constructor(containerElement: HTMLElement) {
     // containerElement is expected to be a valid HTMLElement; keep guard for robustness without changing logic.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- DOM can supply undefined during early initialization
     if (!containerElement) {
       throw new Error('StatusHeader component requires a container element.');
     }
@@ -46,7 +47,7 @@ export class StatusHeader {
     }
 
     // Read extension version from manifest at runtime; guard for robustness in popup lifecycle
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Guarding browser object presence in popup/runtime
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- `browser` may be undefined in some browsers/early lifecycle
     const version = typeof browser !== 'undefined' && browser?.runtime?.getManifest
       ? browser.runtime.getManifest().version
       : '';
@@ -56,9 +57,9 @@ export class StatusHeader {
     // Guard DOM presence in popup lifecycle (runtime variability during fast open/close)
     if (titleLink) {
       // Ensure we don't duplicate the version element on re-render
-      const parent = (titleLink as HTMLElement).parentElement;
+      const parentEl = (titleLink as HTMLElement).parentElement;
       // DOM parent may be absent depending on markup; TS can't narrow through DOM ops reliably
-      let existing = parent?.querySelector('.app-header__version') as HTMLElement | null | undefined;
+      let existing = parentEl?.querySelector('.app-header__version');
       if (!existing) {
         const span = document.createElement('span');
         span.className = 'app-header__version';
@@ -69,6 +70,7 @@ export class StatusHeader {
         (titleLink as HTMLElement).insertAdjacentElement('afterend', span);
         existing = span;
       }
+      // existing may be null when DOM changes between renders
       if (existing) {
         existing.textContent = `v${version}`;
       }

@@ -5,7 +5,8 @@ export class SearchForm {
   private buttonEl: HTMLButtonElement;
 
   constructor(containerElement: HTMLElement, onSearch: (query: string) => void) {
-    // containerElement is typed as HTMLElement by the caller contract; runtime guard retained for robustness.
+    // containerElement is typed as HTMLElement by the caller contract; guard retained for runtime robustness in DOM usage.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive: extensions may call with undefined during early init
     if (!containerElement) {
       throw new Error('SearchForm component requires a container element.');
     }
@@ -26,8 +27,8 @@ export class SearchForm {
   }
 
   setQuery(query: string): void {
-    // Normalize falsy values to empty string; keeps UI stable
-    this.inputEl.value = (query ?? '').toString();
+    // query is a string by signature; normalize via trim pipeline upstream
+    this.inputEl.value = query.toString();
   }
 
   getQuery(): string {

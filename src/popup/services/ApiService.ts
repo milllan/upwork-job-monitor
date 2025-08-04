@@ -9,9 +9,7 @@ class ApiService {
   private appState: AppState;
 
   constructor(appState: AppState) {
-    if (!appState) {
-      throw new Error('ApiService requires an AppState instance.');
-    }
+    // appState is a required dependency; rely on typing and caller contract
     this.appState = appState;
   }
 

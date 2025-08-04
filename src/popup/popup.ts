@@ -40,6 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('Popup: initializeUIFromState called.');
 
   function updatePopupTitleLink(currentQuery: string): void {
+    // Element is present from static DOM; guard remains for robustness across theme/loading
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (popupTitleLinkEl) {
       const url = constructUpworkSearchURL(
         currentQuery,
@@ -52,6 +54,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateThemeUI(): void {
     const theme = appState.getTheme();
+    // Both elements are expected, but retain guard to avoid runtime errors if DOM changes
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- DOM can vary across browser/theme load timing
     if (!themeStylesheet || !themeToggleButton) {
       return;
     }
@@ -92,6 +96,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function updateDetailsPanel(jobCiphertext: string): Promise<void> {
+    // Component is created during init; retain guard to avoid runtime errors if construction failed
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!jobDetailsComponent) {
       return;
     }

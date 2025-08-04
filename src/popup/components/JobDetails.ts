@@ -202,16 +202,25 @@ export class JobDetails {
     // Bid statistics are not always present, so we check for their existence.
     // applicantsBidsStats may be absent; access via optional chaining without defaulting to {}
     const bidStats = details.applicantsBidsStats;
+    // applicantsBidsStats fields are optional per API; optional chaining is intentional for robustness
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API schema variability (avgRateBid) not provable to TS
     const avgBid: number | undefined = bidStats?.avgRateBid?.amount;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API schema variability (minRateBid) not provable to TS
     const minBid: number | undefined = bidStats?.minRateBid?.amount;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API schema variability (maxRateBid) not provable to TS
     const maxBid: number | undefined = bidStats?.maxRateBid?.amount;
     // Numeric fields are optional in API; normalize only when at least one present
     if (avgBid !== undefined || minBid !== undefined || maxBid !== undefined) {
-      vm.bidAvg = `Avg: $${(avgBid ?? 0).toFixed(1)}`;
-      vm.bidRange = `Range: $${minBid ?? 0} - $${maxBid ?? 0}`;
+      // Avoid nullish-coalescing directly in templates for lint compatibility; preserve behavior
+      const safeAvg: number = avgBid === undefined ? 0 : avgBid;
+      const safeMin: number = minBid === undefined ? 0 : minBid;
+      const safeMax: number = maxBid === undefined ? 0 : maxBid;
+      vm.bidAvg = `Avg: $${safeAvg.toFixed(1)}`;
+      vm.bidRange = `Range: $${safeMin} - $${safeMax}`;
     }
 
     // workHistory is optional in the API; default to empty list for safe iteration
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API schema variability (buyer) not provable to TS
     const workHistory = details.buyer?.workHistory || [];
     if (workHistory.length > 0) {
       const contractors = new Map<string, string>();
@@ -227,13 +236,15 @@ export class JobDetails {
       }));
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- opening/questions may be omitted
+    // opening or questions may be omitted by API; optional access and fallback preserve robustness
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API schema variability (opening/questions) not provable to TS
     const questions = details.opening?.questions || [];
     vm.questions = questions.map((q) => q.question);
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- description may be missing/null
+    // description may be missing/null in API; optional access is intentional
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API schema variability (opening/job) not provable to TS
     const jobDescription = details.opening?.job?.description;
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- description and trim length checks handle absent/empty safely
+    // Guard for absent/empty safely; lint expects explicit nullish handling to be necessary
     if ((jobDescription?.trim().length ?? 0) > 0) {
       // Use DOMParser for robust and safe HTML stripping, then reformat for display.
       const parser = new DOMParser();

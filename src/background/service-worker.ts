@@ -74,6 +74,8 @@ function _applyClientSideFilters(jobs: Job[]): {
 
     // 3. Apply CLIENT COUNTRY based low-priority marking
     // job.client may be missing from API; guard before access to satisfy lint while preserving runtime robustness
+    // job.client may be missing from API; preserve guard for runtime robustness
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     const clientCountry = job.client ? job.client.country : undefined;
     const country = normalizeCountry(clientCountry);
 
