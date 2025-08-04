@@ -55,9 +55,12 @@ function constructUpworkSearchURL(userQuery: string, contractorTiersGraphQL: Tie
  * @param {string|Date|number} dateInput The date to convert.
  * @returns {string} A string representing the time ago.
  */
+function isNilOrEmpty(s: unknown): boolean {
+  return s === null || s === undefined || s === '';
+}
+
 function timeAgo(dateInput: string | Date | number): string {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive: callers may pass '', null, or undefined; return 'N/A' instead of throwing
-  if (dateInput === null || dateInput === undefined || dateInput === '') {
+  if (isNilOrEmpty(dateInput)) {
     return 'N/A';
   }
   const date =

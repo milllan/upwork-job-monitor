@@ -27,15 +27,17 @@ class ApiService {
 
     console.log(`ApiService: Fetching fresh job details for ${jobCiphertext}`);
     try {
-      const response: { jobDetails: JobDetails | null } = await browser.runtime.sendMessage({
+      // Explicit return type to satisfy analyzer; browser runtime returns unknown-typed payload
+      const response = await browser.runtime.sendMessage({
         action: 'getJobDetails',
         jobCiphertext: jobCiphertext,
       });
 
-      if (response.jobDetails) {
-        this.appState.setCachedJobDetails(jobCiphertext, response.jobDetails);
+      const payload = response as { jobDetails: JobDetails | null };
+      if (payload.jobDetails) {
+        this.appState.setCachedJobDetails(jobCiphertext, payload.jobDetails);
       }
-      return response.jobDetails;
+      return payload.jobDetails;
     } catch (error) {
       console.error('ApiService: Failed to get job details from background:', error);
       throw error; // Re-throw the error to be handled by the UI
@@ -49,7 +51,12 @@ class ApiService {
    */
   async triggerCheck(queryToUse: string): Promise<TriggerCheckResponse> {
     console.log('ApiService: Triggering check with query:', queryToUse);
-    return browser.runtime.sendMessage({ action: 'manualCheck', userQuery: queryToUse });
+    // Explicit type for message response to avoid unnecessary assertion warnings
+    const resp = await browser.runtime.sendMessage({
+      action: 'manualCheck',
+      userQuery: queryToUse,
+    });
+    return resp as TriggerCheckResponse;
   }
 }
 

@@ -51,7 +51,7 @@ export class JobItem {
 
   render(): HTMLElement {
     try {
-      if (!this._element) {
+      if (this._element === null) {
         this._element = this._createElement();
         this._attachEventListeners();
       }
@@ -64,18 +64,25 @@ export class JobItem {
       this._element.innerHTML = '<div class="job-item__error">Error displaying job</div>';
     }
     // _element is ensured non-null by the try/catch paths above
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- return type is HTMLElement; control flow ensures non-null
-    return this._element as HTMLElement;
+    // Return with a precise type without assertion by narrowing via a local.
+    const el = this._element;
+    if (el === null) {
+      // Fallback defensive path; should not happen due to control flow above.
+      throw new Error('JobItem: element not initialized');
+    }
+    return el;
   }
 
   update(newJobData: Job, newOptions: Partial<JobItemOptions> = {}): void {
     this.jobData = newJobData;
     this.options = { ...this.options, ...newOptions };
-    // this._element exists once rendered; keep guard for robustness during early render error fallback
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    // this._element exists once rendered; keep guard for robustness during early render error fallback
-    // this._element exists once rendered; keep guard for robustness during early render error fallback
-    if (this._element) {
+    // _element exists once rendered; use explicit non-null check (analyzer friendly)
+    if (this._element !== null) {
+      this._updateElement();
+    } else {
+      // Element isn't created yet; create and update now to satisfy invariant path
+      this._element = this._createElement();
+      this._attachEventListeners();
       this._updateElement();
     }
   }
@@ -89,7 +96,10 @@ export class JobItem {
   }
 
   destroy(): void {
-    this._element?.remove();
+    const el = this._element;
+    if (el !== null) {
+      el.remove();
+    }
     this._element = null;
     this.viewModel = null;
   }
@@ -181,7 +191,7 @@ export class JobItem {
     const priorityTagText = this._getPriorityTagText(job);
 
     const postedOnDate = job.postedOn ? new Date(job.postedOn) : null;
-    const hasSkills = job.skills.length > 0;
+    const hasSkills = Array.isArray(job.skills) && job.skills.length > 0;
 
     return {
       id: job.id,
@@ -210,7 +220,7 @@ export class JobItem {
   }
 
   private _populateFromViewModel(): void {
-    if (!this._element || !this.viewModel) {
+    if (this._element === null || this.viewModel === null) {
       return;
     }
 

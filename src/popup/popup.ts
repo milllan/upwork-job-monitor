@@ -13,15 +13,15 @@ let jobItemObserver: IntersectionObserver | null = null; // fixes no-misused-pro
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Popup: DOMContentLoaded event fired.');
-  const popupTitleLinkEl = $<HTMLAnchorElement>('.app-header__title');
+  const popupTitleLinkEl = document.getElementById('app-header-title') as HTMLAnchorElement | null ?? $<HTMLAnchorElement>('.app-header__title');
   const consolidatedStatusEl = $<HTMLElement>('.app-header__status');
   const manualCheckButton = $<HTMLButtonElement>('.app-header__button');
-  const themeToggleButton = document.getElementById('theme-toggle-button') as HTMLButtonElement;
+  const themeToggleButton = document.getElementById('theme-toggle-button') as HTMLButtonElement | null;
   const mainContentArea = $<HTMLElement>('.main-content');
   const jobListContainerEl = $<HTMLElement>('.job-list-container');
   const recentJobsListDiv = $<HTMLElement>('.job-list');
   const jobDetailsPanelEl = $<HTMLElement>('.details-panel');
-  const themeStylesheet = document.getElementById('theme-stylesheet') as HTMLLinkElement;
+  const themeStylesheet = document.getElementById('theme-stylesheet') as HTMLLinkElement | null;
 
   const appState = new AppState();
   console.log('Popup: AppState instance created.');
@@ -40,34 +40,34 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('Popup: initializeUIFromState called.');
 
   function updatePopupTitleLink(currentQuery: string): void {
-    // Element is present from static DOM; guard remains for robustness across theme/loading
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (popupTitleLinkEl) {
-      const url = constructUpworkSearchURL(
-        currentQuery,
-        [...config.DEFAULT_CONTRACTOR_TIERS_GQL],
-        config.DEFAULT_SORT_CRITERIA
-      );
-      popupTitleLinkEl.href = url;
+    const el = popupTitleLinkEl;
+    if (el === null) {
+      return;
     }
+    const url = constructUpworkSearchURL(
+      currentQuery,
+      [...config.DEFAULT_CONTRACTOR_TIERS_GQL],
+      config.DEFAULT_SORT_CRITERIA
+    );
+    el.href = url;
   }
 
   function updateThemeUI(): void {
     const theme = appState.getTheme();
-    // Both elements are expected, but retain guard to avoid runtime errors if DOM changes
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- DOM can vary across browser/theme load timing
-    if (!themeStylesheet || !themeToggleButton) {
+    const sheet = themeStylesheet;
+    const toggleBtn = themeToggleButton;
+    if (sheet === null || toggleBtn === null) {
       return;
     }
 
     if (theme === 'dark') {
-      themeStylesheet.href = 'popup-dark.css';
-      themeToggleButton.textContent = '☀️';
-      themeToggleButton.title = 'Switch to Light Mode';
+      sheet.href = 'popup-dark.css';
+      toggleBtn.textContent = '☀️';
+      toggleBtn.title = 'Switch to Light Mode';
     } else {
-      themeStylesheet.href = 'popup.css';
-      themeToggleButton.textContent = '🌙';
-      themeToggleButton.title = 'Switch to Dark Mode';
+      sheet.href = 'popup.css';
+      toggleBtn.textContent = '🌙';
+      toggleBtn.title = 'Switch to Dark Mode';
     }
   }
 
@@ -96,9 +96,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function updateDetailsPanel(jobCiphertext: string): Promise<void> {
-    // Component is created during init; retain guard to avoid runtime errors if construction failed
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (!jobDetailsComponent) {
+    // Component is created during init; jobDetailsComponent is defined if constructor succeeded
+    // Keep a precise early return guard to satisfy analyzer.
+    if (!(jobDetailsComponent instanceof JobDetails)) {
       return;
     }
     jobDetailsComponent.showLoading();

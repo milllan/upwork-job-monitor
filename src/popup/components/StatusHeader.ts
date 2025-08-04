@@ -11,9 +11,8 @@ export class StatusHeader {
   private state: StatusHeaderState;
 
   constructor(containerElement: HTMLElement) {
-    // containerElement is expected to be a valid HTMLElement; keep guard for robustness without changing logic.
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- DOM can supply undefined during early initialization
-    if (!containerElement) {
+    const validContainer = containerElement instanceof HTMLElement;
+    if (!validContainer) {
       throw new Error('StatusHeader component requires a container element.');
     }
     this.container = containerElement;
@@ -55,12 +54,12 @@ export class StatusHeader {
     // If popup has a title link container, append version there; otherwise prepend a small version badge.
     const titleLink = document.querySelector('.app-header__title a, .app-header__title-link');
     // Guard DOM presence in popup lifecycle (runtime variability during fast open/close)
-    if (titleLink) {
+    if (titleLink !== null) {
       // Ensure we don't duplicate the version element on re-render
       const parentEl = (titleLink as HTMLElement).parentElement;
       // DOM parent may be absent depending on markup; TS can't narrow through DOM ops reliably
-      let existing = parentEl?.querySelector('.app-header__version');
-      if (!existing) {
+      const existing = parentEl?.querySelector('.app-header__version');
+      if (existing === null || existing === undefined) {
         const span = document.createElement('span');
         span.className = 'app-header__version';
         span.setAttribute('title', 'Extension version');
@@ -68,10 +67,10 @@ export class StatusHeader {
         span.style.opacity = '0.8';
         span.style.fontSize = '0.85em';
         (titleLink as HTMLElement).insertAdjacentElement('afterend', span);
-        existing = span;
-      }
-      // existing may be null when DOM changes between renders
-      if (existing) {
+        if (version) {
+          span.textContent = `v${version}`;
+        }
+      } else {
         existing.textContent = `v${version}`;
       }
     } else {
