@@ -11,6 +11,7 @@ export class StatusHeader {
   private state: StatusHeaderState;
 
   constructor(containerElement: HTMLElement) {
+    // containerElement is expected to be a valid HTMLElement; keep guard for robustness without changing logic.
     if (!containerElement) {
       throw new Error('StatusHeader component requires a container element.');
     }
@@ -44,6 +45,41 @@ export class StatusHeader {
       lastCheckDisplay = `${timeString} (${timeAgo(lastCheckDate)})`;
     }
 
+    // Read extension version from manifest at runtime
+    const version = (typeof browser !== 'undefined' && browser.runtime && browser.runtime.getManifest)
+      ? browser.runtime.getManifest().version
+      : '';
+
+    // If popup has a title link container, append version there; otherwise prepend a small version badge.
+    const titleLink = document.querySelector('.app-header__title a, .app-header__title-link') as HTMLElement | null;
+    if (titleLink) {
+      // Ensure we don't duplicate the version element on re-render
+      let existing = titleLink.parentElement?.querySelector('.app-header__version') as HTMLSpanElement | null | undefined;
+      if (!existing) {
+        const span = document.createElement('span');
+        span.className = 'app-header__version';
+        span.setAttribute('title', 'Extension version');
+        (span as HTMLSpanElement).style.marginLeft = '8px';
+        (span as HTMLSpanElement).style.opacity = '0.8';
+        (span as HTMLSpanElement).style.fontSize = '0.85em';
+        titleLink.insertAdjacentElement('afterend', span);
+        existing = span as HTMLSpanElement;
+      }
+      if (existing) {
+        (existing as HTMLSpanElement).textContent = version ? `v${version}` : '';
+      }
+    } else {
+      // Fallback: render a small version badge at the beginning of the container
+      const versionBadge = version ? `<span class="app-header__version" title="Extension version" style="margin-right:8px;opacity:0.8;font-size:0.85em;">v${version}</span>` : '';
+      this.container.innerHTML =
+        versionBadge +
+        `<span class="app-header__status-tag" title="Current monitor status">${statusDisplay}</span>` +
+        `<span class="app-header__status-tag" title="Last successful check time">Last: ${lastCheckDisplay}</span>` +
+        `<span class="app-header__status-tag" title="Jobs you've deleted from the list">Del: ${deletedCount}</span>`;
+      return;
+    }
+
+    // Default render when title exists separately; keep existing status tags rendering
     this.container.innerHTML =
       `<span class="app-header__status-tag" title="Current monitor status">${statusDisplay}</span>` +
       `<span class="app-header__status-tag" title="Last successful check time">Last: ${lastCheckDisplay}</span>` +

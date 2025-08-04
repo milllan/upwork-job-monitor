@@ -22,7 +22,7 @@ const API_IDENTIFIERS = {
 async function getAllPotentialApiTokens(): Promise<string[]> {
   try {
     const cookies = await browser.cookies.getAll({ domain: 'upwork.com' });
-    if (!cookies || cookies.length === 0) {
+    if (cookies.length === 0) {
       console.warn('API: No cookies found for upwork.com domain.');
       return [];
     }
@@ -241,13 +241,11 @@ async function _fetchUpworkJobs(
     return responseData;
   }
 
-  // THE DEFINITIVE FIX: A simple, explicit guard for the optional 'data' property.
+  // Guard for the optional 'data' property.
   if (!responseData.data) {
     return [];
   }
 
-  // After the guard, TypeScript knows 'data' exists, so direct access is safe for the compiler.
-  // This direct access also satisfies the linter, as there's no "unnecessary" optional chain.
   const results = responseData.data.search.universalSearchNuxt.userJobSearchV1.results;
 
   return results.map((job: RawUpworkJob): Job => ({
@@ -398,7 +396,7 @@ async function _executeApiCallWithTokenRotation<T>(
 
   if (lastKnownGoodToken) {
     const result = await apiCallFunction(lastKnownGoodToken, ...params);
-    if (result && !isGraphQLResponse(result)) {
+    if (!isGraphQLResponse(result)) {
       return { result, token: lastKnownGoodToken }; // Return consistent object
     }
     // If the sticky token failed, clear it and proceed to full rotation.
@@ -406,19 +404,17 @@ async function _executeApiCallWithTokenRotation<T>(
   }
 
   const candidateTokens = await getAllPotentialApiTokens();
-  if (!candidateTokens || candidateTokens.length === 0) {
+  if (candidateTokens.length === 0) {
     return { error: true, type: 'auth', details: { message: 'No candidate API tokens found.' } };
   }
 
   let lastError: GraphQLResponse<unknown> | null = null; // <<<< IMPORTANT: Keep track of the last error
   for (const token of candidateTokens) {
     const result = await apiCallFunction(token, ...params);
-    if (result && !isGraphQLResponse(result)) {
+    if (!isGraphQLResponse(result)) {
       await StorageManager.setApiEndpointToken(apiIdentifier, token);
       return { result, token }; // Return consistent object
-    }
-
-    else if (isGraphQLResponse(result)) {
+    } else {
       lastError = result; // Keep track of the specific error from the failed attempt
       const tokenSnippet = `token ${token.substring(0, 15)}`;
       const { type, details = {} } = lastError;
@@ -432,19 +428,19 @@ async function _executeApiCallWithTokenRotation<T>(
           break;
         case 'http':
           console.warn(
-            `API: HTTP error ${details.status} with ${tokenSnippet} for ${operationName}`
+            `API: HTTP error ${String(details.status)} with ${tokenSnippet} for ${operationName}`
           );
           break;
         case 'network':
           console.warn(
-            `API: Network error with ${tokenSnippet} for ${operationName}: ${details.message}`
+            `API: Network error with ${tokenSnippet} for ${operationName}: ${String(details.message)}`
           );
           break;
         case 'parsing':
           console.warn(
-            `API: JSON parsing error with ${tokenSnippet} for ${operationName}: ${
+            `API: JSON parsing error with ${tokenSnippet} for ${operationName}: ${String(
               details.message
-            }`
+            )}`
           );
           break;
         default:

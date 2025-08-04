@@ -175,7 +175,7 @@ export class JobItem {
     const priorityTagText = this._getPriorityTagText(job);
 
     const postedOnDate = job.postedOn ? new Date(job.postedOn) : null;
-    const hasSkills = job.skills && job.skills.length > 0;
+    const hasSkills = job.skills.length > 0;
 
     return {
       id: job.id,
@@ -192,8 +192,8 @@ export class JobItem {
           })}, ${postedOnDate.toLocaleDateString()}`
         : 'N/A',
       timeAgo: postedOnDate ? timeAgo(postedOnDate) : 'N/A',
-      hasSkills: hasSkills,
-      priorityTagText: priorityTagText,
+      hasSkills,
+      priorityTagText,
       hasPriorityTag: !!priorityTagText,
       isLowPriority: !!isLowPriority,
       isExcludedByTitleFilter: !!job.isExcludedByTitleFilter,

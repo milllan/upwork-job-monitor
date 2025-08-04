@@ -1,15 +1,15 @@
 import 'jest-webextension-mock';
 
 // Mock the entire config module BEFORE importing StorageManager
-jest.mock('@background/config', () => ({
+jest.mock('../background/config.js', () => ({
   config: {
-    ...jest.requireActual('@background/config').config, // Keep other original config properties
+    ...jest.requireActual('../background/config.js').config, // Keep other original config properties
     MAX_SEEN_IDS: 3, // Mock MAX_SEEN_IDS to 3 for this test suite
   },
 }));
 
-import { StorageManager } from '@storage/storage-manager';
-import { config } from '@background/config'; // Import the actual config for its type and other properties
+import { StorageManager } from './storage-manager.js';
+import { config } from '../background/config.js'; // Import the actual config for its type and other properties
 import { Job } from '../types';
 
 // Helper function to create mock job objects
@@ -46,18 +46,18 @@ describe('StorageManager', () => {
 
     // Mock for browser.storage.local.get
     (browser.storage.local.get as jest.Mock).mockImplementation((keys: string | string[] | null) => {
-      const result: Record<string, unknown> = Object.create(null);
-      if (keys === null) {
-        return Promise.resolve(localStorage);
+    const result: Record<string, unknown> = Object.create(null);
+    if (keys === null) {
+      return Promise.resolve(localStorage);
+    }
+    const keyList = Array.isArray(keys) ? keys : [keys];
+    for (const key of keyList) {
+      if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
+        result[key] = (localStorage as Record<string, unknown>)[key];
       }
-      const keyList = Array.isArray(keys) ? keys : [keys];
-      for (const key of keyList) {
-        if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
-          result[key] = (localStorage as Record<string, unknown>)[key];
-        }
-      }
-      return Promise.resolve(result);
-    });
+    }
+    return Promise.resolve(result);
+  });
     
     // Mock for browser.storage.local.clear
     (browser.storage.local.clear as jest.Mock).mockImplementation(() => {

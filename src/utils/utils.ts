@@ -140,7 +140,7 @@ function formatClientInfo(client: Job['client'] | undefined): DocumentFragment {
  * @returns {string} The formatted skills string (e.g., "Skills: Skill1, Skill2, Skill3...").
  */
 function formatSkills(skills: { name: string }[]): string {
-  if (!skills || skills.length === 0) {
+  if (skills.length === 0) {
     return '';
   }
   const skillNames = skills.map((s) => s.name);
@@ -182,7 +182,7 @@ return n.toLocaleString('en-US', {
 });
   };
 
-  if (type?.toLowerCase().includes('hourly')) {
+  if (type && type.toLowerCase().includes('hourly')) {
     // Always both min and max present for hourly jobs, but check for missing/invalid
     const min = formatNumber(minAmount);
     const max = formatNumber(maxAmount);

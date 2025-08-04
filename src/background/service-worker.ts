@@ -66,7 +66,7 @@ function _applyClientSideFilters(jobs: Job[]): {
     }
 
     // 3. Apply CLIENT COUNTRY based low-priority marking
-    if (job.client && job.client.country && config.CLIENT_COUNTRY_LOW_PRIORITY.length > 0) {
+    if (job.client?.country && config.CLIENT_COUNTRY_LOW_PRIORITY.length > 0) {
       if (config.CLIENT_COUNTRY_LOW_PRIORITY.includes(job.client.country.toLowerCase())) {
         newJobData.isLowPriorityByClientCountry = true;
         clientCountryLowPriorityCount++;
@@ -146,7 +146,7 @@ async function _processAndNotifyNewJobs(
     results.forEach((result, index) => {
       if (result.status === 'rejected') {
         // THE FIX: Log all variable parts as separate arguments.
-        const reason = result.reason;
+        const reason: unknown = result.reason;
         if (reason instanceof Error) {
           console.error('Failed to send notification for job:', notifiableNewJobs[index].title, 'Reason:', reason.message);
         } else {
@@ -163,11 +163,12 @@ async function _processAndNotifyNewJobs(
 }
 
 // Helper to send message to popup if open
-async function _sendPopupUpdateMessage() {
+function _sendPopupUpdateMessage() {
   try {
     const popupViews = browser.extension.getViews({ type: 'popup' });
-    if (popupViews && popupViews.length > 0) {
-      await browser.runtime.sendMessage({ action: 'updatePopupDisplay' });
+    if (popupViews.length > 0) {
+      // sendMessage returns a Promise; we don't need to await it here for fire-and-forget update
+      void browser.runtime.sendMessage({ action: 'updatePopupDisplay' });
     } else {
       console.log('MV2: Popup not open, skipping updatePopupDisplay message.');
     }
@@ -194,9 +195,7 @@ async function _updateStorageAfterCheck(
   await StorageManager.setNewJobsInLastRun(notifiableNewJobsCount);
   await StorageManager.setLastCheckTimestamp(Date.now());
   // Filter out deleted jobs before storing recent jobs
-  const jobsToStore = fetchedJobs
-    ? fetchedJobs.filter((job) => !deletedJobIds.has(job.id))
-    : [];
+  const jobsToStore = fetchedJobs.filter((job) => !deletedJobIds.has(job.id));
   await StorageManager.setRecentFoundJobs(jobsToStore);
   await StorageManager.setCollapsedJobIds(Array.from(updatedCollapsedJobIds)); // Save updated collapsed IDs
 }
@@ -256,7 +255,7 @@ async function _handleApiTokenFailure(
   }
 
   // Notify the popup that the state has changed
-  await _sendPopupUpdateMessage();
+  void _sendPopupUpdateMessage();
 }
 
 /**
@@ -320,7 +319,7 @@ async function _performJobCheckLogic(triggeredByUserQuery?: string) {
   );
 
   // Send message to popup
-  await _sendPopupUpdateMessage();
+  void _sendPopupUpdateMessage();
 }
 
 /**
@@ -346,7 +345,7 @@ async function runJobCheck(triggeredByUserQuery?: string) {
       error instanceof Error ? error.message : error
     );
     await StorageManager.setMonitorStatus('Error. Check console.');
-    await _sendPopupUpdateMessage(); // Notify popup of the error status
+    void _sendPopupUpdateMessage(); // Notify popup of the error status
   } finally {
     isJobCheckRunning = false;
     console.log('MV2: runJobCheck finished. isJobCheckRunning set to false.');
@@ -360,6 +359,7 @@ browser.runtime.onInstalled.addListener((details) => {
   void (async () => {
   console.log('MV2: Extension installed or updated:', details.reason);
   await StorageManager.initializeStorage(config.DEFAULT_USER_QUERY);
+  // setupAlarms returns Promise<void>; awaiting is fine here but rule flagged other locations expecting non-thenable
   await setupAlarms();
   })();
 });
@@ -378,7 +378,8 @@ async function setupAlarms(): Promise<void> {
   try {
     const alarm = await browser.alarms.get(config.FETCH_ALARM_NAME);
     if (!alarm) {
-      await browser.alarms.create(config.FETCH_ALARM_NAME, {
+      // browser.alarms.create returns void (non-Promise); ensure no await usage
+      browser.alarms.create(config.FETCH_ALARM_NAME, {
         delayInMinutes: 0.2,
         periodInMinutes: config.FETCH_INTERVAL_MINUTES,
       });

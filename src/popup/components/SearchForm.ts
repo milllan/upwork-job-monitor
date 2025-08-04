@@ -5,6 +5,7 @@ export class SearchForm {
   private buttonEl: HTMLButtonElement;
 
   constructor(containerElement: HTMLElement, onSearch: (query: string) => void) {
+    // containerElement is typed as HTMLElement by the caller contract; runtime guard retained for robustness.
     if (!containerElement) {
       throw new Error('SearchForm component requires a container element.');
     }

@@ -158,7 +158,7 @@ export class JobDetails {
       showJobActivity: false,
     };
 
-    const clientStats = details?.buyer?.info?.stats || {};
+    const clientStats = details.buyer?.info?.stats || {};
     vm.clientJobsPosted = clientStats.totalAssignments
       ? `Jobs: ${clientStats.totalAssignments}`
       : null;
@@ -169,7 +169,7 @@ export class JobDetails {
     vm.clientFeedbackCount =
       clientStats.feedbackCount > 0 ? `Feedback: ${clientStats.feedbackCount}` : null;
 
-    const clientActivity = details?.opening?.job?.clientActivity || {};
+    const clientActivity = details.opening?.job?.clientActivity || {};
     if (clientActivity.lastBuyerActivity) {
       const lastActivityDate = new Date(clientActivity.lastBuyerActivity);
       const fullTimestamp = `${lastActivityDate.toLocaleDateString()} ${lastActivityDate.toLocaleTimeString([], {
@@ -196,7 +196,7 @@ export class JobDetails {
     );
 
     // Bid statistics are not always present, so we check for their existence.
-    const bidStats = details?.applicantsBidsStats || {};
+    const bidStats = details.applicantsBidsStats || {};
     const avgBid = bidStats.avgRateBid?.amount;
     const minBid = bidStats.minRateBid?.amount;
     const maxBid = bidStats.maxRateBid?.amount;
@@ -205,7 +205,7 @@ export class JobDetails {
       vm.bidRange = `Range: $${minBid || 0} - $${maxBid || 0}`;
     }
 
-    const workHistory = details?.buyer?.workHistory || [];
+    const workHistory = details.buyer?.workHistory || [];
     if (workHistory.length > 0) {
       const contractors = new Map<string, string>();
       workHistory.forEach((h) => {
@@ -220,10 +220,10 @@ export class JobDetails {
       }));
     }
 
-    const questions = details?.opening?.questions || [];
+    const questions = details.opening?.questions || [];
     vm.questions = questions.map((q) => q.question);
 
-    const jobDescription = details.opening.job.description;
+    const jobDescription = details.opening?.job?.description;
     if (jobDescription && jobDescription.trim().length > 0) {
       // Use DOMParser for robust and safe HTML stripping, then reformat for display.
       const parser = new DOMParser();
