@@ -66,8 +66,9 @@ function _applyClientSideFilters(jobs: Job[]): {
     }
 
     // 3. Apply CLIENT COUNTRY based low-priority marking
-    if (job.client?.country && config.CLIENT_COUNTRY_LOW_PRIORITY.length > 0) {
-      if (config.CLIENT_COUNTRY_LOW_PRIORITY.includes(job.client.country.toLowerCase())) {
+    const country = job.client?.country?.toLowerCase();
+    if (country && config.CLIENT_COUNTRY_LOW_PRIORITY.length > 0) {
+      if (config.CLIENT_COUNTRY_LOW_PRIORITY.includes(country)) {
         newJobData.isLowPriorityByClientCountry = true;
         clientCountryLowPriorityCount++;
       }

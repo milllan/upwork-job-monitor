@@ -62,7 +62,7 @@ export const AudioService = (() => {
     // MV2 implementation
     try {
       const audioPlayer = await audioPlayerPromise;
-      if (audioPlayer) {
+      if (audioPlayer instanceof HTMLAudioElement) {
         audioPlayer.currentTime = 0;
         await audioPlayer.play();
       }

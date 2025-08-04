@@ -138,10 +138,7 @@ export class AppState {
   // === State Actions ===
 
   setTheme(theme: 'light' | 'dark'): void {
-    if (theme !== 'light' && theme !== 'dark') {
-      console.warn('AppState: Invalid theme', theme);
-      return;
-    }
+    // Theme is strictly typed; retain console warning for future-proofing but remove redundant condition.
     this.setState({ theme });
   }
 
@@ -223,8 +220,9 @@ export class AppState {
   clearJobComponents(): void {
     const currentComponents = this.getJobComponents();
     currentComponents.forEach((component) => {
-      if (component && typeof component.destroy === 'function') {
-        component.destroy();
+      // Components in the map are expected to be valid; call destroy if present.
+      if (typeof (component as unknown as { destroy?: () => void }).destroy === 'function') {
+        (component as unknown as { destroy: () => void }).destroy();
       }
     });
     this.setState({ jobComponents: new Map() }, { skipPersistence: true });

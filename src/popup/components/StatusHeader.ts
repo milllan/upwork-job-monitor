@@ -33,7 +33,7 @@ export class StatusHeader {
     const { statusText, lastCheckTimestamp, deletedJobsCount } = this.state;
 
     const statusDisplay = statusText || 'Idle';
-    const deletedCount = deletedJobsCount || 0;
+    const deletedCount = deletedJobsCount ?? 0;
     let lastCheckDisplay = 'N/A';
 
     if (lastCheckTimestamp) {
@@ -46,9 +46,10 @@ export class StatusHeader {
     }
 
     // Read extension version from manifest at runtime
-    const version = (typeof browser !== 'undefined' && browser.runtime && browser.runtime.getManifest)
-      ? browser.runtime.getManifest().version
-      : '';
+    const version =
+      typeof browser !== 'undefined'
+        ? browser.runtime?.getManifest?.().version ?? ''
+        : '';
 
     // If popup has a title link container, append version there; otherwise prepend a small version badge.
     const titleLink = document.querySelector('.app-header__title a, .app-header__title-link') as HTMLElement | null;
@@ -59,14 +60,14 @@ export class StatusHeader {
         const span = document.createElement('span');
         span.className = 'app-header__version';
         span.setAttribute('title', 'Extension version');
-        (span as HTMLSpanElement).style.marginLeft = '8px';
-        (span as HTMLSpanElement).style.opacity = '0.8';
-        (span as HTMLSpanElement).style.fontSize = '0.85em';
+        span.style.marginLeft = '8px';
+        span.style.opacity = '0.8';
+        span.style.fontSize = '0.85em';
         titleLink.insertAdjacentElement('afterend', span);
-        existing = span as HTMLSpanElement;
+        existing = span;
       }
       if (existing) {
-        (existing as HTMLSpanElement).textContent = version ? `v${version}` : '';
+        existing.textContent = version ? `v${version}` : '';
       }
     } else {
       // Fallback: render a small version badge at the beginning of the container
