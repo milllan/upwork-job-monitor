@@ -36,7 +36,7 @@ export class StatusHeader {
     const deletedCount = deletedJobsCount;
     let lastCheckDisplay = 'N/A';
 
-    if (lastCheckTimestamp) {
+    if (typeof lastCheckTimestamp === 'number' && Number.isFinite(lastCheckTimestamp)) {
       const lastCheckDate = new Date(lastCheckTimestamp);
       const timeString = lastCheckDate.toLocaleTimeString([], {
         hour: '2-digit',
@@ -45,14 +45,20 @@ export class StatusHeader {
       lastCheckDisplay = `${timeString} (${timeAgo(lastCheckDate)})`;
     }
 
-    // Read extension version from manifest at runtime
-    const version = browser.runtime.getManifest().version;
+    // Read extension version from manifest at runtime; guard for robustness in popup lifecycle
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Guarding browser object presence in popup/runtime
+    const version = typeof browser !== 'undefined' && browser?.runtime?.getManifest
+      ? browser.runtime.getManifest().version
+      : '';
 
     // If popup has a title link container, append version there; otherwise prepend a small version badge.
     const titleLink = document.querySelector('.app-header__title a, .app-header__title-link');
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Guarding DOM presence in popup lifecycle
     if (titleLink) {
       // Ensure we don't duplicate the version element on re-render
-      let existing = titleLink.parentElement?.querySelector('.app-header__version');
+      const parent = (titleLink as HTMLElement).parentElement;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- DOM parent may be absent depending on markup
+      let existing = parent?.querySelector('.app-header__version') as HTMLElement | null | undefined;
       if (!existing) {
         const span = document.createElement('span');
         span.className = 'app-header__version';
@@ -60,9 +66,10 @@ export class StatusHeader {
         span.style.marginLeft = '8px';
         span.style.opacity = '0.8';
         span.style.fontSize = '0.85em';
-        titleLink.insertAdjacentElement('afterend', span);
+        (titleLink as HTMLElement).insertAdjacentElement('afterend', span);
         existing = span;
       }
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- existing is guarded above but TS can't narrow through DOM ops
       if (existing) {
         existing.textContent = `v${version}`;
       }

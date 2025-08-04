@@ -76,17 +76,14 @@ function _applyClientSideFilters(jobs: Job[]): {
     const country = normalizeCountry(job.client?.country);
 
     // Explicitly document/guard array shape to satisfy lint without risking runtime errors.
-    const hasLowPriorityCountries =
-      Array.isArray(config.CLIENT_COUNTRY_LOW_PRIORITY) &&
-      config.CLIENT_COUNTRY_LOW_PRIORITY.length > 0;
+    const lowPriorityList = Array.isArray(config.CLIENT_COUNTRY_LOW_PRIORITY)
+      ? config.CLIENT_COUNTRY_LOW_PRIORITY
+      : [];
+    const hasLowPriorityCountries = lowPriorityList.length > 0;
 
-    if (country && hasLowPriorityCountries) {
-      // At this point, country is a non-empty string; normalize includes check via a local variable to satisfy TS
-      const list = config.CLIENT_COUNTRY_LOW_PRIORITY as readonly string[];
-      if (list.includes(country)) {
-        newJobData.isLowPriorityByClientCountry = true;
-        clientCountryLowPriorityCount++;
-      }
+    if (country && hasLowPriorityCountries && lowPriorityList.includes(country)) {
+      newJobData.isLowPriorityByClientCountry = true;
+      clientCountryLowPriorityCount++;
     }
     return newJobData;
   });
@@ -122,13 +119,14 @@ async function _processAndNotifyNewJobs(
     (job) => !historicalSeenJobIds.has(job.id) && !deletedJobIds.has(job.id)
   );
   // From these, determine which are truly new AND notifiable (not excluded by title filter)
-  const notifiableNewJobs = allNewOrUpdatedJobs.filter(
-    (job: ProcessedJob) =>
-      !job.isExcludedByTitleFilter &&
-      !job.isLowPriorityBySkill &&
-      !job.isLowPriorityByClientCountry &&
-      job.applied !== true
-  );
+  // Establish explicit boolean invariants to avoid chained/truthy checks
+  const notifiableNewJobs = allNewOrUpdatedJobs.filter((job: ProcessedJob) => {
+    const isExcludedByTitle = job.isExcludedByTitleFilter === true;
+    const isLowPriorityBySkill = job.isLowPriorityBySkill === true;
+    const isLowPriorityByClientCountry = job.isLowPriorityByClientCountry === true;
+    const isApplied = job.applied === true;
+    return !isExcludedByTitle && !isLowPriorityBySkill && !isLowPriorityByClientCountry && !isApplied;
+  });
   const newJobIdsToMarkSeen: string[] = [];
   fetchedJobs.forEach((job: ProcessedJob) => {
     // Validate the job object and its id property.
