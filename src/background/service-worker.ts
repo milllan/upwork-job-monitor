@@ -73,15 +73,15 @@ function _applyClientSideFilters(jobs: Job[]): {
     }
 
     // 3. Apply CLIENT COUNTRY based low-priority marking
-    const country = normalizeCountry(job.client?.country);
+    // job.client may be missing from API; guard before access to satisfy lint while preserving runtime robustness
+    const clientCountry = job.client ? job.client.country : undefined;
+    const country = normalizeCountry(clientCountry);
 
     // Explicitly document/guard array shape to satisfy lint without risking runtime errors.
     const lowPriorityList = Array.isArray(config.CLIENT_COUNTRY_LOW_PRIORITY)
       ? config.CLIENT_COUNTRY_LOW_PRIORITY
       : [];
-    const hasLowPriorityCountries = lowPriorityList.length > 0;
-
-    if (country && hasLowPriorityCountries && lowPriorityList.includes(country)) {
+    if (country && lowPriorityList.length > 0 && lowPriorityList.includes(country)) {
       newJobData.isLowPriorityByClientCountry = true;
       clientCountryLowPriorityCount++;
     }

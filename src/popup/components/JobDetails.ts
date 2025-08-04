@@ -102,8 +102,7 @@ export class JobDetails {
 
     const questionsList = clone.querySelector('[data-field="questions-list"]');
     const questionsSection = clone.querySelector('[data-section="questions"]');
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Guard DOM nodes during fragment operations
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Guard DOM nodes during fragment operations
+    // Guard DOM nodes during fragment operations (runtime variability in templates)
     if (questionsList && questionsSection) {
       if (vm.questions.length > 0) {
         vm.questions.forEach((qText) => {
@@ -119,8 +118,7 @@ export class JobDetails {
 
     const contractorList = clone.querySelector('[data-field="contractor-history-list"]');
     const contractorSection = clone.querySelector('[data-section="contractor-history"]');
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Guard DOM nodes during fragment operations
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Guard DOM nodes during fragment operations
+    // Guard DOM nodes during fragment operations (runtime variability in templates)
     if (contractorList && contractorSection) {
       if (vm.contractorHistory.length > 0) {
         vm.contractorHistory.forEach((contractor) => {
@@ -202,28 +200,24 @@ export class JobDetails {
       !!vm.activityLastActiveHTML;
 
     // Bid statistics are not always present, so we check for their existence.
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- applicantsBidsStats may be absent in responses
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- applicantsBidsStats may be absent in responses
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- applicantsBidsStats may be absent in responses
-    const bidStats = details.applicantsBidsStats || {};
-    const avgBid = bidStats.avgRateBid?.amount;
-    const minBid = bidStats.minRateBid?.amount;
-    const maxBid = bidStats.maxRateBid?.amount;
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Numeric fields are optional; defaults preserve UI
+    // applicantsBidsStats may be absent; access via optional chaining without defaulting to {}
+    const bidStats = details.applicantsBidsStats;
+    const avgBid: number | undefined = bidStats?.avgRateBid?.amount;
+    const minBid: number | undefined = bidStats?.minRateBid?.amount;
+    const maxBid: number | undefined = bidStats?.maxRateBid?.amount;
+    // Numeric fields are optional in API; normalize only when at least one present
     if (avgBid !== undefined || minBid !== undefined || maxBid !== undefined) {
       vm.bidAvg = `Avg: $${(avgBid ?? 0).toFixed(1)}`;
       vm.bidRange = `Range: $${minBid ?? 0} - $${maxBid ?? 0}`;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- workHistory is optional in the API
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- workHistory is optional in the API
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- workHistory is optional in the API
+    // workHistory is optional in the API; default to empty list for safe iteration
     const workHistory = details.buyer?.workHistory || [];
     if (workHistory.length > 0) {
       const contractors = new Map<string, string>();
       workHistory.forEach((h) => {
         const info = h.contractorInfo;
-        if (info && info.contractorName && info.ciphertext && !contractors.has(info.ciphertext)) {
+        if (info?.contractorName && info?.ciphertext && !contractors.has(info.ciphertext)) {
           contractors.set(info.ciphertext, info.contractorName);
         }
       });

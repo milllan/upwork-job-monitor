@@ -26,7 +26,8 @@ export class SearchForm {
   }
 
   setQuery(query: string): void {
-    this.inputEl.value = query || '';
+    // Normalize falsy values to empty string; keeps UI stable
+    this.inputEl.value = (query ?? '').toString();
   }
 
   getQuery(): string {

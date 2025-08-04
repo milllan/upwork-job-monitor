@@ -53,11 +53,11 @@ export class StatusHeader {
 
     // If popup has a title link container, append version there; otherwise prepend a small version badge.
     const titleLink = document.querySelector('.app-header__title a, .app-header__title-link');
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Guarding DOM presence in popup lifecycle
+    // Guard DOM presence in popup lifecycle (runtime variability during fast open/close)
     if (titleLink) {
       // Ensure we don't duplicate the version element on re-render
       const parent = (titleLink as HTMLElement).parentElement;
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- DOM parent may be absent depending on markup
+      // DOM parent may be absent depending on markup; TS can't narrow through DOM ops reliably
       let existing = parent?.querySelector('.app-header__version') as HTMLElement | null | undefined;
       if (!existing) {
         const span = document.createElement('span');
@@ -69,7 +69,6 @@ export class StatusHeader {
         (titleLink as HTMLElement).insertAdjacentElement('afterend', span);
         existing = span;
       }
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- existing is guarded above but TS can't narrow through DOM ops
       if (existing) {
         existing.textContent = `v${version}`;
       }

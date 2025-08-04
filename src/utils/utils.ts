@@ -57,7 +57,9 @@ function constructUpworkSearchURL(userQuery: string, contractorTiersGraphQL: Tie
  */
 function timeAgo(dateInput: string | Date | number): string {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive handling for callers passing '', null, or undefined
-  if ((dateInput as unknown) == null || dateInput === '') {
+  // Defensive handling for callers passing '', null, or undefined (runtime robustness across call sites)
+  // Defensive handling for callers passing '', null, or undefined (runtime robustness across call sites)
+  if (dateInput === null || dateInput === undefined || dateInput === '') {
     return 'N/A';
   }
   const date =
