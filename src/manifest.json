@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Upwork Job Monitor (MV2 - Direct BG Attempt)",
-  "version": "2025.8.4.1304",
+  "version": "2025.8.4.1307",
   "description": "Monitors Upwork for new jobs and sends notifications.",
   "browser_action": {
     "default_popup": "popup/popup.html",
@@ -35,5 +35,8 @@
       "id": "your-addon-id@wpspeedopt.net"
     }
   },
-  "web_accessible_resources": ["audio/notification.mp3", "icons/icon48.png"]
+  "web_accessible_resources": [
+    "audio/notification.mp3",
+    "icons/icon48.png"
+  ]
 }

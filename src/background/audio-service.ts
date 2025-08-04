@@ -26,6 +26,12 @@ export const AudioService = (() => {
           }
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- document.body can be null in some offscreen/early-init cases
+        if (!document.body) {
+          reject(new Error('AudioService: Cannot initialize, document.body is not available.'));
+          return;
+        }
+
         const player = document.createElement('audio');
         player.id = 'notification-sound-player';
         player.src = browser.runtime.getURL('audio/notification.mp3');
@@ -37,8 +43,6 @@ export const AudioService = (() => {
         resolve(player);
       };
 
-      // document.body is always truthy in popup/background DOM context once this runs via initialize(),
-      // unnecessary conditional removed per lint suggestion while preserving behavior.
       createPlayer();
     });
 
@@ -52,6 +56,7 @@ export const AudioService = (() => {
    */
   async function playSound() {
     // MV3 implementation (for the future)
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- chrome.offscreen may be undefined; runtime check is intentional
     if (chrome.offscreen) {
       console.warn('AudioService: MV3 playSound() not yet implemented.');
       return;

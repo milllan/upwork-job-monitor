@@ -102,6 +102,8 @@ export class JobDetails {
 
     const questionsList = clone.querySelector('[data-field="questions-list"]');
     const questionsSection = clone.querySelector('[data-section="questions"]');
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Guard DOM nodes during fragment operations
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Guard DOM nodes during fragment operations
     if (questionsList && questionsSection) {
       if (vm.questions.length > 0) {
         vm.questions.forEach((qText) => {
@@ -117,6 +119,8 @@ export class JobDetails {
 
     const contractorList = clone.querySelector('[data-field="contractor-history-list"]');
     const contractorSection = clone.querySelector('[data-section="contractor-history"]');
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Guard DOM nodes during fragment operations
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Guard DOM nodes during fragment operations
     if (contractorList && contractorSection) {
       if (vm.contractorHistory.length > 0) {
         vm.contractorHistory.forEach((contractor) => {
@@ -158,6 +162,7 @@ export class JobDetails {
       showJobActivity: false,
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Upwork schema may omit buyers/info/stats fields
     const clientStats = details.buyer?.info?.stats || {};
     vm.clientJobsPosted = clientStats.totalAssignments
       ? `Jobs: ${clientStats.totalAssignments}`
@@ -169,6 +174,7 @@ export class JobDetails {
     vm.clientFeedbackCount =
       clientStats.feedbackCount > 0 ? `Feedback: ${clientStats.feedbackCount}` : null;
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Upwork schema may omit opening/job/clientActivity fields
     const clientActivity = details.opening?.job?.clientActivity || {};
     if (clientActivity.lastBuyerActivity) {
       const lastActivityDate = new Date(clientActivity.lastBuyerActivity);
@@ -186,6 +192,7 @@ export class JobDetails {
     vm.activityInterviews = clientActivity.totalInvitedToInterview
       ? `Interviews: ${clientActivity.totalInvitedToInterview}`
       : null;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Upwork schema may omit fields; defaults preserve display
     vm.activityHired = `Hired: ${clientActivity.totalHired ?? 0}/${clientActivity.numberOfPositionsToHire ?? 1}`;
 
     vm.showJobActivity =
@@ -195,15 +202,22 @@ export class JobDetails {
       !!vm.activityLastActiveHTML;
 
     // Bid statistics are not always present, so we check for their existence.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- applicantsBidsStats may be absent in responses
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- applicantsBidsStats may be absent in responses
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- applicantsBidsStats may be absent in responses
     const bidStats = details.applicantsBidsStats || {};
     const avgBid = bidStats.avgRateBid?.amount;
     const minBid = bidStats.minRateBid?.amount;
     const maxBid = bidStats.maxRateBid?.amount;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Numeric fields are optional; defaults preserve UI
     if (avgBid !== undefined || minBid !== undefined || maxBid !== undefined) {
       vm.bidAvg = `Avg: $${(avgBid ?? 0).toFixed(1)}`;
       vm.bidRange = `Range: $${minBid ?? 0} - $${maxBid ?? 0}`;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- workHistory is optional in the API
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- workHistory is optional in the API
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- workHistory is optional in the API
     const workHistory = details.buyer?.workHistory || [];
     if (workHistory.length > 0) {
       const contractors = new Map<string, string>();
@@ -219,10 +233,13 @@ export class JobDetails {
       }));
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- opening/questions may be omitted
     const questions = details.opening?.questions || [];
     vm.questions = questions.map((q) => q.question);
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- description may be missing/null
     const jobDescription = details.opening?.job?.description;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- description and trim length checks handle absent/empty safely
     if ((jobDescription?.trim().length ?? 0) > 0) {
       // Use DOMParser for robust and safe HTML stripping, then reformat for display.
       const parser = new DOMParser();

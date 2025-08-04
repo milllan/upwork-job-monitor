@@ -56,7 +56,8 @@ function constructUpworkSearchURL(userQuery: string, contractorTiersGraphQL: Tie
  * @returns {string} A string representing the time ago.
  */
 function timeAgo(dateInput: string | Date | number): string {
-  if (!dateInput) {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive handling for callers passing '', null, or undefined
+  if ((dateInput as unknown) == null || dateInput === '') {
     return 'N/A';
   }
   const date =

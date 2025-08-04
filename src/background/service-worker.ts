@@ -11,6 +11,13 @@ import { formatBudget } from '../utils/utils.js';
 
 let isJobCheckRunning = false; // Flag to prevent concurrent runs
 
+// Country normalization helper centralizing invariant:
+// - Accept unknown input
+// - Return lowercased trimmed string or null
+function normalizeCountry(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null;
+}
+
 /**
  * Applies client-side filtering rules (title exclusion, skill/country low-priority)
  * to a list of jobs.
@@ -66,9 +73,17 @@ function _applyClientSideFilters(jobs: Job[]): {
     }
 
     // 3. Apply CLIENT COUNTRY based low-priority marking
-    const country = job.client?.country?.toLowerCase();
-    if (country && config.CLIENT_COUNTRY_LOW_PRIORITY.length > 0) {
-      if (config.CLIENT_COUNTRY_LOW_PRIORITY.includes(country)) {
+    const country = normalizeCountry(job.client?.country);
+
+    // Explicitly document/guard array shape to satisfy lint without risking runtime errors.
+    const hasLowPriorityCountries =
+      Array.isArray(config.CLIENT_COUNTRY_LOW_PRIORITY) &&
+      config.CLIENT_COUNTRY_LOW_PRIORITY.length > 0;
+
+    if (country && hasLowPriorityCountries) {
+      // At this point, country is a non-empty string; normalize includes check via a local variable to satisfy TS
+      const list = config.CLIENT_COUNTRY_LOW_PRIORITY as readonly string[];
+      if (list.includes(country)) {
         newJobData.isLowPriorityByClientCountry = true;
         clientCountryLowPriorityCount++;
       }

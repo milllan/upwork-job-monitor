@@ -46,10 +46,7 @@ export class StatusHeader {
     }
 
     // Read extension version from manifest at runtime
-    const version =
-      typeof browser !== 'undefined'
-        ? browser.runtime.getManifest().version
-        : '';
+    const version = browser.runtime.getManifest().version;
 
     // If popup has a title link container, append version there; otherwise prepend a small version badge.
     const titleLink = document.querySelector('.app-header__title a, .app-header__title-link');
@@ -67,7 +64,7 @@ export class StatusHeader {
         existing = span;
       }
       if (existing) {
-        existing.textContent = version ? `v${version}` : '';
+        existing.textContent = `v${version}`;
       }
     } else {
       // Fallback: render a small version badge at the beginning of the container
