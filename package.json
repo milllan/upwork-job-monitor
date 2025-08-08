@@ -3,7 +3,7 @@
     "webextension-polyfill": "^0.12.0"
   },
   "name": "upwork-job-monitor",
-  "version": "1.0.0",
+  "version": "2025.08.08.1406",
   "description": "Upwork Job Monitor Browser Extension",
   "main": "manifest.json",
   "directories": {

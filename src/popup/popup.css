@@ -95,6 +95,14 @@ body {
   margin: 0 0 0 10px;
 }
 
+.app-header__version {
+  font-size: 0.75em;
+  color: var(--up-gray-50);
+  margin-left: 8px;
+  font-weight: var(--up-font-weight-normal);
+  opacity: 0.8;
+}
+
 p {
   margin: 4px 0;
 }
@@ -213,6 +221,7 @@ hr {
   font-size: 16px;
   font-weight: bold;
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
   text-align: center;
   line-height: 1;

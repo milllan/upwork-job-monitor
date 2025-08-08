@@ -3,6 +3,7 @@
   <head>
     <title>Upwork Monitor</title>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link id="theme-stylesheet" rel="stylesheet" href="/popup/popup.css" />
     <!-- Default to light theme -->
     <!-- Pre-emptive theme loader to prevent FOUC -->
@@ -12,9 +13,10 @@
   </head>
   <body>
     <header class="app-header">
-      <a class="app-header__title" href="#" target="_blank">Upwork Job Monitor</a>
+      <span class="app-header__title">Upwork Job Monitor <span class="app-header__version" id="version-display" title="Extension version">v2025.08.08.1406</span></span>
       <div class="app-header__meta">
         <p class="app-header__status">Initializing status...</p>
+
         <button
           id="theme-toggle-button"
           class="btn btn--icon btn--muted"
