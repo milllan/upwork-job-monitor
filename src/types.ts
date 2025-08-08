@@ -30,7 +30,7 @@ export type GraphQLResponse<T> =
 export function isGraphQLResponse<T>(
   response: GraphQLResponse<T> | T
 ): response is GraphQLResponse<never> {
-  return (response as GraphQLResponse<T>)?.error === true;
+  return (response as GraphQLResponse<T>).error === true;
 }
 
 /**

@@ -247,6 +247,17 @@ export function safeParseTalentProfileResponse(data: unknown) {
 }
 
 // Transforming schemas for internal application use
+const getBudgetAmount = (
+  t: z.infer<typeof JobSearchResultSchema>,
+  isMin: boolean,
+): number => {
+  const { jobType, hourlyBudgetMin, hourlyBudgetMax, fixedPriceAmount } = t.jobTile.job;
+  if (jobType === 'Hourly') {
+    return isMin ? hourlyBudgetMin || 0 : hourlyBudgetMax || 0;
+  }
+  return fixedPriceAmount?.amount || 0;
+};
+
 export const CleanJobSchema = JobSearchResultSchema.transform((job) => {
   return {
     id: job.jobTile.job.ciphertext || job.jobTile.job.id,
@@ -268,16 +279,12 @@ export const CleanJobSchema = JobSearchResultSchema.transform((job) => {
       rating: job.upworkHistoryData?.client?.totalFeedback || null,
     },
     skills:
-      job.ontologySkills?.map((skill: any) => ({ name: skill.prettyName || skill.prefLabel || '' })) || [],
+      job.ontologySkills?.map((skill) => ({ name: skill.prettyName ?? skill.prefLabel ?? '' })) ?? [],
     _fullJobData: job as unknown as Record<string, unknown>,
   };
 });
 
-export const CleanJobDetailsSchema = JobDetailsSchema.transform((details) => {
-  return {
-    ...details,
-  };
-});
+export const CleanJobDetailsSchema = JobDetailsSchema;
 
 export const CleanTalentProfileSchema = TalentProfileSchema.transform((profile) => {
   return {

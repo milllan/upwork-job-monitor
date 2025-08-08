@@ -2,8 +2,6 @@ import {
   Job,
   JobDetails,
   TalentProfile,
-  GraphQLResponse,
-  isGraphQLResponse,
   safeParseJobSearchResponse,
   safeParseJobDetailsResponse,
   safeParseTalentProfileResponse,
@@ -14,6 +12,7 @@ import {
   CleanJobDetailsSchema,
   CleanTalentProfileSchema,
 } from '../schemas.js';
+import { GraphQLResponse, isGraphQLResponse } from '../types.js';
 import { z } from 'zod';
 
 import { config } from '../background/config.js';
@@ -405,10 +404,10 @@ async function _fetchTalentProfile(
 type ApiResult<T> = { result: T; token: string };
 type ApiError = GraphQLResponse<never>;
 
-async function _executeApiCallWithTokenRotation<T>(
+async function _executeApiCallWithTokenRotation<T, Params extends unknown[]>(
   apiIdentifier: string,
-  apiCallFunction: (bearerToken: string, ...args: any[]) => Promise<GraphQLResponse<T>>,
-  ...params: unknown[]
+  apiCallFunction: (bearerToken: string, ...args: Params) => Promise<GraphQLResponse<T>>,
+  ...params: Params
 ): Promise<ApiResult<T> | ApiError> {
   const operationName = apiCallFunction.name;
   const lastKnownGoodToken = await StorageManager.getApiEndpointToken(apiIdentifier);
