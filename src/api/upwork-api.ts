@@ -211,7 +211,11 @@ async function _fetchUpworkJobs(
     const cleanedJobs = CleanJobSchema.array().parse(results);
     return { data: cleanedJobs };
   } catch (error) {
-    console.error('API: Zod parsing failed after validation for Job Search:', error);
+    if (error instanceof z.ZodError) {
+      console.error('API: Zod parsing failed after validation for Job Search:', error.issues);
+    } else {
+      console.error('API: An unknown error occurred during job search parsing:', error);
+    }
     return {
       error: true,
       type: 'validation',
@@ -316,7 +320,11 @@ async function _fetchJobDetails(
     const cleanedDetails = CleanJobDetailsSchema.parse(details);
     return { data: cleanedDetails };
   } catch (error) {
-    console.error('API: Zod parsing failed after validation for Job Details:', error);
+    if (error instanceof z.ZodError) {
+      console.error('API: Zod parsing failed after validation for Job Details:', error.issues);
+    } else {
+      console.error('API: An unknown error occurred during job details parsing:', error);
+    }
     return {
       error: true,
       type: 'validation',
@@ -378,7 +386,11 @@ async function _fetchTalentProfile(
     const cleanedProfile = CleanTalentProfileSchema.parse(profile);
     return { data: cleanedProfile };
   } catch (error) {
-    console.error('API: Zod parsing failed after validation for Talent Profile:', error);
+    if (error instanceof z.ZodError) {
+      console.error('API: Zod parsing failed after validation for Talent Profile:', error.issues);
+    } else {
+      console.error('API: An unknown error occurred during talent profile parsing:', error);
+    }
     return {
       error: true,
       type: 'validation',

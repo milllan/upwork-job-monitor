@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getBudgetAmount } from "../utils/utils.js";
 
 // Base schemas for common types
 export const CurrencyAmountSchema = z.object({
@@ -247,14 +248,6 @@ export function safeParseTalentProfileResponse(data: unknown) {
 
 // Transforming schemas for internal application use
 export const CleanJobSchema = JobSearchResultSchema.transform((job) => {
-  const getBudgetAmount = (job: any, isMin: boolean): number => {
-    const { jobType, hourlyBudgetMin, hourlyBudgetMax, fixedPriceAmount } = job.jobTile.job;
-    if (jobType === 'Hourly') {
-      return isMin ? hourlyBudgetMin || 0 : hourlyBudgetMax || 0;
-    }
-    return fixedPriceAmount?.amount || 0;
-  };
-
   return {
     id: job.jobTile.job.ciphertext || job.jobTile.job.id,
     ciphertext: job.jobTile.job.ciphertext,

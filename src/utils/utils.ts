@@ -235,4 +235,18 @@ function initializeScrollHints(containerEl: HTMLElement, listEl: HTMLElement) {
   updateHints(); // Initial check
 }
 
+/**
+ * Helper to determine the budget amount from a raw job object.
+ * @param job The raw job data from the API.
+ * @param isMin True to get the minimum amount, false for the maximum.
+ * @returns The budget amount.
+ */
+export function getBudgetAmount(job: any, isMin: boolean): number {
+  const { jobType, hourlyBudgetMin, hourlyBudgetMax, fixedPriceAmount } = job.jobTile.job;
+  if (jobType === 'Hourly') {
+    return isMin ? hourlyBudgetMin || 0 : hourlyBudgetMax || 0;
+  }
+  return fixedPriceAmount?.amount || 0;
+}
+
 export { constructUpworkSearchURL, timeAgo, formatClientInfo, formatSkills, formatBudget, initializeScrollHints };
