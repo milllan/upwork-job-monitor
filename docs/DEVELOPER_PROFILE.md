@@ -56,6 +56,12 @@ npm run lint; npm run build
 
 Use the `&&` operator to chain commands, where the next command only runs if the previous one succeeds. This is ideal for CI/CD or pre-commit hooks.
 
+**Note**: The `&&` and `||` operators are natively supported in PowerShell 7 and later. To use them on Windows, you may need to upgrade from the default Windows PowerShell 5.1. You can do so with the following command in an elevated terminal:
+
+```powershell
+winget install --id Microsoft.PowerShell --source winget
+```
+
 ```powershell
 npm run lint && npm run build && npm run test
 ```
