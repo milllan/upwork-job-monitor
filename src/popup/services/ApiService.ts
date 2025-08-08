@@ -9,9 +9,7 @@ class ApiService {
   private appState: AppState;
 
   constructor(appState: AppState) {
-    if (!appState) {
-      throw new Error('ApiService requires an AppState instance.');
-    }
+    // appState is a required dependency; rely on typing and caller contract
     this.appState = appState;
   }
 
@@ -29,20 +27,17 @@ class ApiService {
 
     console.log(`ApiService: Fetching fresh job details for ${jobCiphertext}`);
     try {
-      const response = (await browser.runtime.sendMessage({
+      // Explicit return type to satisfy analyzer; browser runtime returns unknown-typed payload
+      const response = await browser.runtime.sendMessage({
         action: 'getJobDetails',
         jobCiphertext: jobCiphertext,
-      })) as { jobDetails: JobDetails | null };
+      });
 
-      if (response.jobDetails && typeof response.jobDetails !== 'undefined') {
-        if (response.jobDetails) {
-          this.appState.setCachedJobDetails(jobCiphertext, response.jobDetails);
-        }
-        return response.jobDetails;
-      } else {
-        // This case should ideally not be reached if the background script always returns a value or throws.
-        throw new Error('Invalid response from background script.');
+      const payload = response as { jobDetails: JobDetails | null };
+      if (payload.jobDetails) {
+        this.appState.setCachedJobDetails(jobCiphertext, payload.jobDetails);
       }
+      return payload.jobDetails;
     } catch (error) {
       console.error('ApiService: Failed to get job details from background:', error);
       throw error; // Re-throw the error to be handled by the UI
@@ -56,7 +51,12 @@ class ApiService {
    */
   async triggerCheck(queryToUse: string): Promise<TriggerCheckResponse> {
     console.log('ApiService: Triggering check with query:', queryToUse);
-    return browser.runtime.sendMessage({ action: 'manualCheck', userQuery: queryToUse });
+    // Explicit type for message response to avoid unnecessary assertion warnings
+    const resp = await browser.runtime.sendMessage({
+      action: 'manualCheck',
+      userQuery: queryToUse,
+    });
+    return resp as TriggerCheckResponse;
   }
 }
 

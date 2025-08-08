@@ -34,9 +34,6 @@ export const StorageManager = {
           return acc;
         }, {});
       }
-      if (keyOrKeys === null || (typeof keyOrKeys === 'object' && !Array.isArray(keyOrKeys))) {
-        return {};
-      }
       return {};
     }
   },

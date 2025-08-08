@@ -138,10 +138,6 @@ export class AppState {
   // === State Actions ===
 
   setTheme(theme: 'light' | 'dark'): void {
-    if (theme !== 'light' && theme !== 'dark') {
-      console.warn('AppState: Invalid theme', theme);
-      return;
-    }
     this.setState({ theme });
   }
 
@@ -223,8 +219,9 @@ export class AppState {
   clearJobComponents(): void {
     const currentComponents = this.getJobComponents();
     currentComponents.forEach((component) => {
-      if (component && typeof component.destroy === 'function') {
-        component.destroy();
+      // Components in the map are expected to be valid; call destroy if present.
+      if (typeof (component as unknown as { destroy?: () => void }).destroy === 'function') {
+        (component as unknown as { destroy: () => void }).destroy();
       }
     });
     this.setState({ jobComponents: new Map() }, { skipPersistence: true });
@@ -349,12 +346,13 @@ export class AppState {
     }
   }
 
-  private _debounce(func: (...args: unknown[]) => void, wait: number): () => void {
+  // THE FIX: Use generics to make this debounce function fully type-safe.
+  private _debounce<T extends (...args: unknown[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {
     let timeout: ReturnType<typeof setTimeout>;
-    return function executedFunction(...args: unknown[]) {
-      const later = () => {
+    return function executedFunction(this: ThisParameterType<T>, ...args: Parameters<T>) {
+      const later = (): void => {
         clearTimeout(timeout);
-        func(...args);
+        Reflect.apply(func, this, args);
       };
       clearTimeout(timeout);
       timeout = setTimeout(later, wait);

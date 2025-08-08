@@ -51,7 +51,7 @@ export class JobItem {
 
   render(): HTMLElement {
     try {
-      if (!this._element) {
+      if (this._element === null) {
         this._element = this._createElement();
         this._attachEventListeners();
       }
@@ -63,13 +63,26 @@ export class JobItem {
       }
       this._element.innerHTML = '<div class="job-item__error">Error displaying job</div>';
     }
-    return this._element as HTMLElement;
+    // _element is ensured non-null by the try/catch paths above
+    // Return with a precise type without assertion by narrowing via a local.
+    const el = this._element;
+    if (el === null) {
+      // Fallback defensive path; should not happen due to control flow above.
+      throw new Error('JobItem: element not initialized');
+    }
+    return el;
   }
 
   update(newJobData: Job, newOptions: Partial<JobItemOptions> = {}): void {
     this.jobData = newJobData;
     this.options = { ...this.options, ...newOptions };
-    if (this._element) {
+    // _element exists once rendered; use explicit non-null check (analyzer friendly)
+    if (this._element !== null) {
+      this._updateElement();
+    } else {
+      // Element isn't created yet; create and update now to satisfy invariant path
+      this._element = this._createElement();
+      this._attachEventListeners();
       this._updateElement();
     }
   }
@@ -83,18 +96,33 @@ export class JobItem {
   }
 
   destroy(): void {
-    this._element?.remove();
+    const el = this._element;
+    if (el !== null) {
+      el.remove();
+    }
     this._element = null;
     this.viewModel = null;
   }
 
   private _createElement(): HTMLElement {
-    const template = document.getElementById('job-item-template') as HTMLTemplateElement;
-    if (!template) {
+    // 1. Get the element. TypeScript correctly infers its type as `HTMLElement | null`.
+    const templateEl = document.getElementById('job-item-template');
+
+    // 2. Perform the runtime null check (the bot's suggestion).
+    if (!templateEl) {
       throw new Error('JobItem: job-item-template not found');
     }
-    const clone = template.content.cloneNode(true) as DocumentFragment;
-    const element = clone.querySelector('.job-item') as HTMLElement;
+
+    // 3. Check if it's the correct type of element.
+    if (!(templateEl instanceof HTMLTemplateElement)) {
+        throw new Error('JobItem: Element with id "job-item-template" is not a template element.');
+    }
+    
+    // 4. Now, TypeScript knows `templateEl` is an `HTMLTemplateElement` and not null.
+    // No type assertion is needed.
+    const clone = templateEl.content.cloneNode(true) as DocumentFragment;
+    const element = clone.querySelector<HTMLElement>('.job-item');
+
     if (!element) {
       throw new Error('JobItem: .job-item not found in template');
     }
@@ -163,7 +191,7 @@ export class JobItem {
     const priorityTagText = this._getPriorityTagText(job);
 
     const postedOnDate = job.postedOn ? new Date(job.postedOn) : null;
-    const hasSkills = job.skills && job.skills.length > 0;
+    const hasSkills = Array.isArray(job.skills) && job.skills.length > 0;
 
     return {
       id: job.id,
@@ -180,8 +208,8 @@ export class JobItem {
           })}, ${postedOnDate.toLocaleDateString()}`
         : 'N/A',
       timeAgo: postedOnDate ? timeAgo(postedOnDate) : 'N/A',
-      hasSkills: hasSkills,
-      priorityTagText: priorityTagText,
+      hasSkills,
+      priorityTagText,
       hasPriorityTag: !!priorityTagText,
       isLowPriority: !!isLowPriority,
       isExcludedByTitleFilter: !!job.isExcludedByTitleFilter,
@@ -192,7 +220,7 @@ export class JobItem {
   }
 
   private _populateFromViewModel(): void {
-    if (!this._element || !this.viewModel) {
+    if (this._element === null || this.viewModel === null) {
       return;
     }
 
@@ -200,7 +228,7 @@ export class JobItem {
 
     const budgetField = this._element.querySelector('[data-field="budget"]');
     if (budgetField) {
-      const budgetMeta = budgetField.closest('.job-item__meta');
+      const budgetMeta = budgetField.closest('.job-item__meta'); // This can return null, so optional chaining is appropriate.
       if (vm.budget && vm.budget !== 'N/A') {
         budgetField.textContent = vm.budget;
         if (budgetMeta) {

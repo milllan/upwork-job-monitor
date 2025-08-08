@@ -55,8 +55,12 @@ function constructUpworkSearchURL(userQuery: string, contractorTiersGraphQL: Tie
  * @param {string|Date|number} dateInput The date to convert.
  * @returns {string} A string representing the time ago.
  */
+function isNilOrEmpty(s: unknown): boolean {
+  return s === null || s === undefined || s === '';
+}
+
 function timeAgo(dateInput: string | Date | number): string {
-  if (!dateInput) {
+  if (isNilOrEmpty(dateInput)) {
     return 'N/A';
   }
   const date =
@@ -140,7 +144,7 @@ function formatClientInfo(client: Job['client'] | undefined): DocumentFragment {
  * @returns {string} The formatted skills string (e.g., "Skills: Skill1, Skill2, Skill3...").
  */
 function formatSkills(skills: { name: string }[]): string {
-  if (!skills || skills.length === 0) {
+  if (skills.length === 0) {
     return '';
   }
   const skillNames = skills.map((s) => s.name);
@@ -163,7 +167,7 @@ function formatSkills(skills: { name: string }[]): string {
  * @param {number|string} [budget.maxAmount] The maximum budget amount.
  * @returns {string} The formatted budget string (e.g., "$20 - $40/hr", "$500").
  */
-function formatBudget(budget: { type?: string; minAmount?: number | string; maxAmount?: number | string }): string {
+function formatBudget(budget?: { type?: string; minAmount?: number | string; maxAmount?: number | string }): string {
   if (!budget) {
     return 'N/A';
   }
@@ -182,7 +186,7 @@ return n.toLocaleString('en-US', {
 });
   };
 
-  if (type?.toLowerCase().includes('hourly')) {
+  if (type && type.toLowerCase().includes('hourly')) {
     // Always both min and max present for hourly jobs, but check for missing/invalid
     const min = formatNumber(minAmount);
     const max = formatNumber(maxAmount);
@@ -201,11 +205,11 @@ return n.toLocaleString('en-US', {
     const max = formatNumber(maxAmount);
     if (min && max && min !== max) {
       return `$${min} - $${max}`;
-    } else if (min) {
-      return `$${min}`;
-    } else {
-      return 'N/A';
     }
+    if (min) {
+      return `$${min}`;
+    }
+    return 'N/A';
   }
 }
 
@@ -216,11 +220,6 @@ return n.toLocaleString('en-US', {
  * @param {HTMLElement} listEl The scrollable list element inside the container.
  */
 function initializeScrollHints(containerEl: HTMLElement, listEl: HTMLElement) {
-  if (!containerEl || !listEl) {
-    console.warn('Scroll hints not initialized: container or list element not found.');
-    return;
-  }
-
   const updateHints = () => {
     // Top shadow: visible only if scrolled down from the top
     const isScrolledFromTop = listEl.scrollTop > 10;

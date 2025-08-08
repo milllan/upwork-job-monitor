@@ -26,6 +26,12 @@ export const AudioService = (() => {
           }
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- document.body can be null in some offscreen/early-init cases
+        if (!document.body) {
+          reject(new Error('AudioService: Cannot initialize, document.body is not available.'));
+          return;
+        }
+
         const player = document.createElement('audio');
         player.id = 'notification-sound-player';
         player.src = browser.runtime.getURL('audio/notification.mp3');
@@ -37,11 +43,7 @@ export const AudioService = (() => {
         resolve(player);
       };
 
-      if (document.body) {
-        createPlayer();
-      } else {
-        document.addEventListener('DOMContentLoaded', createPlayer);
-      }
+      createPlayer();
     });
 
     audioPlayerPromise.catch((error) =>
@@ -54,6 +56,7 @@ export const AudioService = (() => {
    */
   async function playSound() {
     // MV3 implementation (for the future)
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- chrome.offscreen may be undefined; runtime check is intentional
     if (chrome.offscreen) {
       console.warn('AudioService: MV3 playSound() not yet implemented.');
       return;
@@ -62,10 +65,12 @@ export const AudioService = (() => {
     // MV2 implementation
     try {
       const audioPlayer = await audioPlayerPromise;
-      if (audioPlayer) {
-        audioPlayer.currentTime = 0;
-        await audioPlayer.play();
+      // Guard for strict null checks in case initialization was rejected
+      if (!audioPlayer) {
+        throw new Error('AudioService: audio player not initialized');
       }
+      audioPlayer.currentTime = 0;
+      await audioPlayer.play();
     } catch (error) {
       console.warn('AudioService: Error playing notification sound:', error);
     }

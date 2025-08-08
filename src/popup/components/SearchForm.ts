@@ -5,7 +5,8 @@ export class SearchForm {
   private buttonEl: HTMLButtonElement;
 
   constructor(containerElement: HTMLElement, onSearch: (query: string) => void) {
-    if (!containerElement) {
+    const validContainer = containerElement instanceof HTMLElement;
+    if (!validContainer) {
       throw new Error('SearchForm component requires a container element.');
     }
     this.container = containerElement;
@@ -25,7 +26,8 @@ export class SearchForm {
   }
 
   setQuery(query: string): void {
-    this.inputEl.value = query || '';
+    // query is a string by signature; normalize via trim pipeline upstream
+    this.inputEl.value = query.toString();
   }
 
   getQuery(): string {
@@ -52,7 +54,7 @@ export class SearchForm {
     const query = this.getQuery();
     if (query) {
       this.onSearch(query);
-    } else if (!query) {
+    } else {
       alert('Please enter a search query.');
     }
   }
