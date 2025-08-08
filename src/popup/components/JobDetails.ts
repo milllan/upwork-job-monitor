@@ -39,6 +39,24 @@ export class JobDetails {
     const errorMessage = error instanceof Error ? error.message : String(error);
     this.container.innerHTML = `<p class="details-panel__error">Failed to load job details: ${errorMessage}. Please try again later.</p>`;
   }
+  showCloudflareError(jobCiphertext: string): void {
+    this.container.innerHTML = `
+      <div class="details-panel__error">
+        <p>Job details blocked by Cloudflare protection.</p>
+        <button id="open-in-browser-button" class="btn">Open in Browser</button>
+      </div>
+    `;
+
+    const button = this.container.querySelector('#open-in-browser-button');
+    if (button) {
+      button.addEventListener('click', () => {
+        // This is a bit of a hack, but it's the simplest way to get the job URL
+        // without a major refactor.
+        const jobUrl = `https://www.upwork.com/jobs/${jobCiphertext}`;
+        browser.tabs.create({ url: jobUrl });
+      });
+    }
+  }
 
   showInitialMessage(message = 'Select a job to see details.'): void {
     this.container.innerHTML = `<p class="details-panel__no-jobs">${message}</p>`;

@@ -4,12 +4,12 @@
     <title>Upwork Monitor</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link id="theme-stylesheet" rel="stylesheet" href="/popup/popup.css" />
+    <link id="theme-stylesheet" rel="stylesheet" href="popup.css" />
     <!-- Default to light theme -->
     <!-- Pre-emptive theme loader to prevent FOUC -->
     <!-- Load polyfill FIRST -->
-    <script src="/lib/browser-polyfill.min.js"></script>
-    <script type="module" src="/popup/theme-loader.js"></script>
+    <script src="../lib/browser-polyfill.min.js"></script>
+    <script type="module" src="../theme-loader.js"></script>
   </head>
   <body>
     <header class="app-header">
@@ -61,16 +61,16 @@
         aria-atomic="true"
       ></div>
     </div>
-    <script type="module" src="/utils/utils.js"></script>
-    <script type="module" src="/background/config.js"></script>
-    <script type="module" src="/storage/storage-manager.js"></script>
-    <script type="module" src="/popup/components/JobItem.js"></script>
-    <script type="module" src="/popup/components/JobDetails.js"></script>
-    <script type="module" src="/popup/components/StatusHeader.js"></script>
-    <script type="module" src="/popup/components/SearchForm.js"></script>
-    <script type="module" src="/popup/services/ApiService.js"></script>
-    <script type="module" src="/popup/state/AppState.js"></script>
-    <script type="module" src="/popup/popup.js"></script>
+    <script type="module" src="../utils.js"></script>
+    <script type="module" src="../background-config.js"></script>
+    <script type="module" src="../storage-manager.js"></script>
+    <script type="module" src="../job-item.js"></script>
+    <script type="module" src="../job-details.js"></script>
+    <script type="module" src="../status-header.js"></script>
+    <script type="module" src="../search-form.js"></script>
+    <script type="module" src="../api-service.js"></script>
+    <script type="module" src="../app-state.js"></script>
+    <script type="module" src="../popup.js"></script>
 
     <!-- Job Item Template -->
     <template id="job-item-template">

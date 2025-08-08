@@ -2,9 +2,18 @@ import {
   Job,
   JobDetails,
   TalentProfile,
-  GraphQLResponse,
-  isGraphQLResponse,
-} from '../types.js';
+  safeParseJobSearchResponse,
+  safeParseJobDetailsResponse,
+  safeParseTalentProfileResponse,
+  JobSearchResponse,
+  JobDetailsResponse,
+  TalentProfileResponse,
+  CleanJobSchema,
+  CleanJobDetailsSchema,
+  CleanTalentProfileSchema,
+} from '../schemas.js';
+import { GraphQLResponse, isGraphQLResponse } from '../types.js';
+import { z } from 'zod';
 
 import { config } from '../background/config.js';
 import { StorageManager } from '../storage/storage-manager.js';
@@ -118,7 +127,7 @@ async function _executeGraphQLQuery<T>(
       if (data.errors) {
         return { error: true, type: 'graphql', details: { errors: data.errors } };
       }
-      return data; // Success
+      return { data }; // Success
     } catch (parsingError: unknown) {
       const message = parsingError instanceof Error ? parsingError.message : 'Unknown parsing error';
       console.warn(`Response text that failed parsing: ${responseBodyText.substring(0, 500)}`);
@@ -134,67 +143,10 @@ async function _executeGraphQLQuery<T>(
   }
 }
 
-/**
- * Helper to determine the budget amount from a raw job object.
- * @param job The raw job data from the API.
- * @param isMin True to get the minimum amount, false for the maximum.
- * @returns The budget amount.
- */
-function getBudgetAmount(job: RawUpworkJob, isMin: boolean): number {
-  const isHourly = job.jobTile.job.jobType.toLowerCase().includes('hourly');
-  if (isHourly) {
-    return (isMin ? job.jobTile.job.hourlyBudgetMin : job.jobTile.job.hourlyBudgetMax) || 0;
-  }
-  return job.jobTile.job.fixedPriceAmount?.amount || 0;
-}
-
-/**
- * Internal-only function to fetch Upwork jobs.
- * @private
- */
-
-interface RawUpworkJob {
-  id: string;
-  title: string;
-  description: string;
-  applied: boolean;
-  ontologySkills?: { prettyName?: string; prefLabel?: string }[];
-  jobTile: {
-    job: {
-      id: string;
-      ciphertext: string;
-      publishTime: string;
-      createTime: string;
-      jobType: string;
-      hourlyBudgetMin?: number;
-      hourlyBudgetMax?: number;
-      fixedPriceAmount?: { amount: number; isoCurrencyCode: string };
-    };
-  };
-  upworkHistoryData?: {
-    client?: {
-      paymentVerificationStatus: string;
-      country: string;
-      totalSpent?: { amount: number };
-      totalFeedback: number;
-    };
-  };
-}
-
-interface UserJobSearchResponse {
-  search: {
-    universalSearchNuxt: {
-      userJobSearchV1: {
-        results: RawUpworkJob[];
-      };
-    };
-  };
-}
-
 async function _fetchUpworkJobs(
   bearerToken: string,
   userQuery: string
-): Promise<Job[] | GraphQLResponse<unknown>> {
+): Promise<GraphQLResponse<Job[]>> {
   const endpointAlias = 'userJobSearch';
   const fullRawQueryString = `
   query UserJobSearch($requestVariables: UserJobSearchV1Request!) {
@@ -225,56 +177,59 @@ async function _fetchUpworkJobs(
       paging: { offset: 0, count: config.API_FETCH_COUNT },
     },
   };
-  const responseData = await _executeGraphQLQuery<UserJobSearchResponse>(
+  const responseData = await _executeGraphQLQuery<JobSearchResponse>(
     bearerToken,
     endpointAlias,
     fullRawQueryString,
     variables
   );
 
-  // If the helper returned an error, just pass it up.
   if (responseData.error) {
     return responseData;
   }
 
-  const results = responseData.data?.search.universalSearchNuxt?.userJobSearchV1?.results;
-  if (!results) {
-    return [];
+  const validationResult = safeParseJobSearchResponse(responseData.data);
+  if (!validationResult.success) {
+    console.error('API: Zod validation failed for Job Search response:', validationResult.error.issues);
+    return {
+      error: true,
+      type: 'validation',
+      details: {
+        message: 'Job Search response failed schema validation.',
+        zodIssues: validationResult.error.issues,
+      },
+    };
   }
 
-  return results.map((job: RawUpworkJob): Job => ({
-    id: job.jobTile.job.ciphertext || job.jobTile.job.id,
-    ciphertext: job.jobTile.job.ciphertext,
-    title: job.title,
-    description: job.description,
-    postedOn: job.jobTile.job.publishTime || job.jobTile.job.createTime,
-    applied: job.applied,
-    budget: {
-      type: job.jobTile.job.jobType,
-      currencyCode: job.jobTile.job.fixedPriceAmount?.isoCurrencyCode || 'USD',
-      minAmount: getBudgetAmount(job, true),
-      maxAmount: getBudgetAmount(job, false),
-    },
-    client: {
-      paymentVerificationStatus: job.upworkHistoryData?.client?.paymentVerificationStatus || 'N/A',
-      country: job.upworkHistoryData?.client?.country || 'N/A',
-      totalSpent: job.upworkHistoryData?.client?.totalSpent?.amount || 0,
-      rating: job.upworkHistoryData?.client?.totalFeedback || null,
-    },
-    skills:
-      job.ontologySkills?.map((skill) => ({ name: skill.prettyName || skill.prefLabel || '' })) || [],
-    _fullJobData: job as unknown as Record<string, unknown>, // Keep this for debugging if needed
-  }));
+  const results = validationResult.data.data?.search.universalSearchNuxt?.userJobSearchV1?.results;
+  if (!results) {
+    return { data: [] };
+  }
+
+  try {
+    const cleanedJobs = CleanJobSchema.array().parse(results);
+    return { data: cleanedJobs };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.error('API: Zod parsing failed after validation for Job Search:', error.issues);
+    } else {
+      console.error('API: An unknown error occurred during job search parsing:', error);
+    }
+    return {
+      error: true,
+      type: 'validation',
+      details: {
+        message: 'Failed to transform validated job search data.',
+        zodIssues: error instanceof z.ZodError ? error.issues : [],
+      },
+    };
+  }
 }
 
-/**
- * Internal-only function to fetch job details.
- * @private
- */
 async function _fetchJobDetails(
   bearerToken: string,
   jobCiphertext: string
-): Promise<JobDetails | null | GraphQLResponse<unknown>> {
+): Promise<GraphQLResponse<JobDetails | null>> {
   const endpointAlias = 'gql-query-get-auth-job-details';
   const graphqlQuery = `
   query JobAuthDetailsQuery($id: ID!) {
@@ -331,7 +286,7 @@ async function _fetchJobDetails(
     id: jobCiphertext,
     isLoggedIn: true,
   };
-  const responseData = await _executeGraphQLQuery<{ jobAuthDetails: JobDetails }>(
+  const responseData = await _executeGraphQLQuery<JobDetailsResponse>(
     bearerToken,
     endpointAlias,
     graphqlQuery,
@@ -341,17 +296,49 @@ async function _fetchJobDetails(
   if (responseData.error) {
     return responseData;
   }
-  return responseData.data?.jobAuthDetails || null;
+
+  const validationResult = safeParseJobDetailsResponse(responseData.data);
+  if (!validationResult.success) {
+    console.error('API: Zod validation failed for Job Details response:', validationResult.error.issues);
+    return {
+      error: true,
+      type: 'validation',
+      details: {
+        message: 'Job Details response failed schema validation.',
+        zodIssues: validationResult.error.issues,
+      },
+    };
+  }
+
+  const details = validationResult.data.data?.jobAuthDetails;
+  if (!details) {
+    return { data: null };
+  }
+
+  try {
+    const cleanedDetails = CleanJobDetailsSchema.parse(details);
+    return { data: cleanedDetails };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.error('API: Zod parsing failed after validation for Job Details:', error.issues);
+    } else {
+      console.error('API: An unknown error occurred during job details parsing:', error);
+    }
+    return {
+      error: true,
+      type: 'validation',
+      details: {
+        message: 'Failed to transform validated job details data.',
+        zodIssues: error instanceof z.ZodError ? error.issues : [],
+      },
+    };
+  }
 }
 
-/**
- * Internal-only function to fetch talent profile details.
- * @private
- */
 async function _fetchTalentProfile(
   bearerToken: string,
   profileCiphertext: string
-): Promise<TalentProfile | null | GraphQLResponse<unknown>> {
+): Promise<GraphQLResponse<TalentProfile | null>> {
   const endpointAlias = 'getDetails';
   const graphqlQuery = `
     query GetTalentProfile($profileUrl: String) {
@@ -362,38 +349,74 @@ async function _fetchTalentProfile(
       }
     }`;
   const variables = { profileUrl: profileCiphertext };
-  const responseData = await _executeGraphQLQuery<{ talentVPDAuthProfile: TalentProfile }>(
+  const responseData = await _executeGraphQLQuery<TalentProfileResponse>(
     bearerToken,
     endpointAlias,
     graphqlQuery,
     variables
   );
 
-  if (responseData.error) {return responseData;}
-  return responseData.data?.talentVPDAuthProfile || null;
+  if (responseData.error) {
+    return responseData;
+  }
+
+  const validationResult = safeParseTalentProfileResponse(responseData.data);
+  if (!validationResult.success) {
+    console.error(
+      'API: Zod validation failed for Talent Profile response:',
+      validationResult.error.issues
+    );
+    return {
+      error: true,
+      type: 'validation',
+      details: {
+        message: 'Talent Profile response failed schema validation.',
+        zodIssues: validationResult.error.issues,
+      },
+    };
+  }
+
+  const profile = validationResult.data.data?.talentVPDAuthProfile;
+  if (!profile) {
+    return { data: null };
+  }
+
+  try {
+    const cleanedProfile = CleanTalentProfileSchema.parse(profile);
+    return { data: cleanedProfile };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.error('API: Zod parsing failed after validation for Talent Profile:', error.issues);
+    } else {
+      console.error('API: An unknown error occurred during talent profile parsing:', error);
+    }
+    return {
+      error: true,
+      type: 'validation',
+      details: {
+        message: 'Failed to transform validated talent profile data.',
+        zodIssues: error instanceof z.ZodError ? error.issues : [],
+      },
+    };
+  }
 }
 
-/**
- * Internal helper to manage API calls with sticky token and rotation logic.
- * This version MERGES the robust error handling from the old function
- * with the new refactored structure.
- * @private
- */
-async function _executeApiCallWithTokenRotation<T>(
+type ApiResult<T> = { result: T; token: string };
+type ApiError = GraphQLResponse<never>;
+
+async function _executeApiCallWithTokenRotation<T, Params extends unknown[]>(
   apiIdentifier: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  apiCallFunction: (bearerToken: string, ...args: any[]) => Promise<T>,
-  ...params: unknown[]
-): Promise<{ result: T; token: string } | GraphQLResponse<unknown>> {
+  apiCallFunction: (bearerToken: string, ...args: Params) => Promise<GraphQLResponse<T>>,
+  ...params: Params
+): Promise<ApiResult<T> | ApiError> {
   const operationName = apiCallFunction.name;
   const lastKnownGoodToken = await StorageManager.getApiEndpointToken(apiIdentifier);
 
   if (lastKnownGoodToken) {
-    const result = await apiCallFunction(lastKnownGoodToken, ...params);
-    if (result && !isGraphQLResponse(result)) {
-      return { result, token: lastKnownGoodToken }; // Return consistent object
+    const response = await apiCallFunction(lastKnownGoodToken, ...params);
+    if (!response.error) {
+      return { result: response.data, token: lastKnownGoodToken };
     }
-    // If the sticky token failed, clear it and proceed to full rotation.
     await StorageManager.setApiEndpointToken(apiIdentifier, null);
   }
 
@@ -402,53 +425,18 @@ async function _executeApiCallWithTokenRotation<T>(
     return { error: true, type: 'auth', details: { message: 'No candidate API tokens found.' } };
   }
 
-  let lastError: GraphQLResponse<unknown> | null = null; // <<<< IMPORTANT: Keep track of the last error
+  let lastError: ApiError | null = null;
   for (const token of candidateTokens) {
-    const result = await apiCallFunction(token, ...params);
-    if (result && !isGraphQLResponse(result)) {
+    const response = await apiCallFunction(token, ...params);
+    if (response.error) {
+      lastError = response;
+    } else {
       await StorageManager.setApiEndpointToken(apiIdentifier, token);
-      return { result, token }; // Return consistent object
-    }
-
-    else if (isGraphQLResponse(result)) {
-      lastError = result; // Keep track of the specific error from the failed attempt
-      const tokenSnippet = `token ${token.substring(0, 15)}`;
-      const { type, details = {} } = lastError;
-      switch (type) {
-        case 'graphql':
-          console.warn(
-            `API: GraphQL error with ${tokenSnippet} for ${operationName} - ${JSON.stringify(
-              details.errors
-            )}`
-          );
-          break;
-        case 'http':
-          console.warn(
-            `API: HTTP error ${details.status} with ${tokenSnippet} for ${operationName}`
-          );
-          break;
-        case 'network':
-          console.warn(
-            `API: Network error with ${tokenSnippet} for ${operationName}: ${details.message}`
-          );
-          break;
-        case 'parsing':
-          console.warn(
-            `API: JSON parsing error with ${tokenSnippet} for ${operationName}: ${
-              details.message
-            }`
-          );
-          break;
-        default:
-          console.warn(
-            `API: An unknown error occurred with ${tokenSnippet} for ${operationName}`
-          );
-        }
+      return { result: response.data, token };
     }
   }
 
   console.error(`API: All candidate tokens failed for ${operationName} (${apiIdentifier}).`);
-  // Return the *last specific error* we encountered, which is much more useful than a generic message.
   return (
     lastError || { error: true, type: 'auth', details: { message: 'All candidate tokens failed.' } }
   );
@@ -458,57 +446,46 @@ async function _executeApiCallWithTokenRotation<T>(
 // PUBLIC API INTERFACE
 // =================================================================================
 const UpworkAPI = {
-  /**
-   * Fetches a list of jobs, handling token rotation automatically.
-   * @returns {Promise<{jobs: Job[]}|GraphQLResponse<any>>}
-   */
-  fetchJobs: async (userQuery: string): Promise<{ jobs: Job[] } | GraphQLResponse<unknown>> => {
+  fetchJobs: async (
+    userQuery: string
+  ): Promise<{ jobs?: Job[]; error?: ApiError }> => {
     const response = await _executeApiCallWithTokenRotation(
       API_IDENTIFIERS.JOB_SEARCH,
       _fetchUpworkJobs,
       userQuery
     );
     if ('result' in response) {
-      return { jobs: response.result as Job[] };
+      return { jobs: response.result };
     }
-    return response;
+    return { error: response };
   },
 
-  /**
-   * Fetches the details for a specific job, handling token rotation automatically.
-   * @returns {Promise<{jobDetails: JobDetails | null}|GraphQLResponse<any>>}
-   */
   fetchJobDetails: async (
     jobCiphertext: string
-  ): Promise<{ jobDetails: JobDetails | null } | GraphQLResponse<unknown>> => {
+  ): Promise<{ jobDetails?: JobDetails | null; error?: ApiError }> => {
     const response = await _executeApiCallWithTokenRotation(
       API_IDENTIFIERS.JOB_DETAILS,
       _fetchJobDetails,
       jobCiphertext
     );
     if ('result' in response) {
-      return { jobDetails: response.result as JobDetails | null };
+      return { jobDetails: response.result };
     }
-    return response;
+    return { error: response };
   },
 
-  /**
-   * Fetches the profile for a specific freelancer, handling token rotation automatically.
-   * @param {string} profileCiphertext The freelancer's ciphertext ID.
-   * @returns {Promise<{profileDetails: TalentProfile | null}|GraphQLResponse<any>>}
-   */
   fetchTalentProfile: async (
     profileCiphertext: string
-  ): Promise<{ profileDetails: TalentProfile | null } | GraphQLResponse<unknown>> => {
+  ): Promise<{ profileDetails?: TalentProfile | null; error?: ApiError }> => {
     const response = await _executeApiCallWithTokenRotation(
       API_IDENTIFIERS.TALENT_PROFILE,
       _fetchTalentProfile,
       profileCiphertext
     );
     if ('result' in response) {
-      return { profileDetails: response.result as TalentProfile | null };
+      return { profileDetails: response.result };
     }
-    return response;
+    return { error: response };
   },
 };
 
