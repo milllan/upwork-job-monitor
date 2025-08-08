@@ -12,7 +12,7 @@ import {
   CleanJobDetailsSchema,
   CleanTalentProfileSchema,
 } from '../schemas.js';
-import { GraphQLResponse, isGraphQLResponse } from '../types.js';
+import { GraphQLResponse } from '../types.js';
 import { z } from 'zod';
 
 import { config } from '../background/config.js';
@@ -122,7 +122,7 @@ async function _executeGraphQLQuery<T>(
 
     const responseBodyText = await response.text();
     try {
-      const data = JSON.parse(responseBodyText);
+      const data: unknown = JSON.parse(responseBodyText);
       // Check for application-level GraphQL errors, which come with a 200 OK status
       if (data.errors) {
         return { error: true, type: 'graphql', details: { errors: data.errors } };
@@ -201,7 +201,7 @@ async function _fetchUpworkJobs(
     };
   }
 
-  const results = validationResult.data.data?.search.universalSearchNuxt?.userJobSearchV1?.results;
+  const results = validationResult.data.data.search.universalSearchNuxt.userJobSearchV1.results;
   if (!results) {
     return { data: [] };
   }
@@ -448,44 +448,44 @@ async function _executeApiCallWithTokenRotation<T, Params extends unknown[]>(
 const UpworkAPI = {
   fetchJobs: async (
     userQuery: string
-  ): Promise<{ jobs?: Job[]; error?: ApiError }> => {
+  ): Promise<{ ok: true; jobs: Job[] } | { ok: false; error: ApiError }> => {
     const response = await _executeApiCallWithTokenRotation(
       API_IDENTIFIERS.JOB_SEARCH,
       _fetchUpworkJobs,
       userQuery
     );
     if ('result' in response) {
-      return { jobs: response.result };
+      return { ok: true, jobs: response.result };
     }
-    return { error: response };
+    return { ok: false, error: response };
   },
 
   fetchJobDetails: async (
     jobCiphertext: string
-  ): Promise<{ jobDetails?: JobDetails | null; error?: ApiError }> => {
+  ): Promise<{ ok: true; jobDetails: JobDetails | null } | { ok: false; error: ApiError }> => {
     const response = await _executeApiCallWithTokenRotation(
       API_IDENTIFIERS.JOB_DETAILS,
       _fetchJobDetails,
       jobCiphertext
     );
     if ('result' in response) {
-      return { jobDetails: response.result };
+      return { ok: true, jobDetails: response.result };
     }
-    return { error: response };
+    return { ok: false, error: response };
   },
 
   fetchTalentProfile: async (
     profileCiphertext: string
-  ): Promise<{ profileDetails?: TalentProfile | null; error?: ApiError }> => {
+  ): Promise<{ ok: true; profileDetails: TalentProfile | null } | { ok: false; error: ApiError }> => {
     const response = await _executeApiCallWithTokenRotation(
       API_IDENTIFIERS.TALENT_PROFILE,
       _fetchTalentProfile,
       profileCiphertext
     );
     if ('result' in response) {
-      return { profileDetails: response.result };
+      return { ok: true, profileDetails: response.result };
     }
-    return { error: response };
+    return { ok: false, error: response };
   },
 };
 

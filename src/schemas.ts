@@ -252,7 +252,7 @@ const getBudgetAmount = (
   isMin: boolean,
 ): number => {
   const { jobType, hourlyBudgetMin, hourlyBudgetMax, fixedPriceAmount } = t.jobTile.job;
-  if (jobType === 'Hourly') {
+  if (jobType?.toLowerCase() === 'hourly') {
     return isMin ? hourlyBudgetMin || 0 : hourlyBudgetMax || 0;
   }
   return fixedPriceAmount?.amount || 0;
