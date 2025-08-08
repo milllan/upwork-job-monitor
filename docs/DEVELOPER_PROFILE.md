@@ -7,7 +7,8 @@ This document outlines the development environment, tools, and conventions used 
 **Upwork Job Monitor** is a browser extension that automatically monitors Upwork for new job opportunities matching user-defined criteria. It helps freelancers stay on top of new job postings without constantly refreshing the Upwork website.
 
 ### Key Features
-- **Automatic Monitoring**: Checks for new jobs every 3 minutes using Upwork's GraphQL API
+
+- **Automatic Monitoring**: Checks for new jobs every 4 minutes using Upwork's GraphQL API
 - **Direct API Integration**: Bypasses Cloudflare protection by operating within authenticated browser sessions
 - **Smart Filtering**: User-defined search queries with priority tagging
 - **Real-time Notifications**: Audio alerts and visual indicators for new jobs
@@ -26,12 +27,14 @@ This document outlines the development environment, tools, and conventions used 
 ## Technology Stack
 
 ### Core Technologies
+
 - **TypeScript**: Primary language for type safety and better development experience
 - **ES6 Modules**: Modern JavaScript module system
 - **Browser Extension APIs**: Chrome and Firefox extension APIs
 - **GraphQL**: Direct API integration with Upwork
 
 ### Build Tools
+
 - **esbuild**: Fast TypeScript compilation and bundling
 - **ESLint**: Code linting and style enforcement
 - **Jest**: Unit testing framework
@@ -98,6 +101,7 @@ npm run package        # Package the extension into a ZIP file
 ## Coding Standards
 
 ### TypeScript Guidelines
+
 - **Strict Mode**: Always use strict TypeScript configuration
 - **No `any` Type**: Avoid using `any` type - define proper interfaces
 - **No Non-null Assertion**: Avoid `!` operator - use proper null checks
@@ -106,6 +110,7 @@ npm run package        # Package the extension into a ZIP file
 - **Template Literals**: Use string templates instead of concatenation
 
 ### Code Style
+
 - **Consistent Indentation**: 2 spaces
 - **Semicolons**: Always use semicolons
 - **Trailing Commas**: Use trailing commas in objects and arrays
@@ -130,15 +135,29 @@ upwork-job-monitor/
 └── llm_context/                  # AI/LLM context files
 ```
 
+## Branching Strategy
+
+- **main**: The stable, production-ready branch. All pull requests are merged into `main`.
+- **feat/...**: For new features (e.g., `feat/add-dark-mode`).
+- **fix/...**: For bug fixes (e.g., `fix/resolve-api-issue`).
+- **docs/...**: For documentation changes (e.g., `docs/update-readme`).
+- **refactor/...**: For code refactoring without changing functionality.
+
+## Versioning
+
+This project uses a custom versioning scheme: `YYYY.MM.DD.HHMM`. This ensures that each build has a unique, timestamped version, making it easy to track changes and releases.
+
 ## Contributing Guidelines
 
 ### Before Contributing
+
 1. **Read Documentation**: Understand the project structure
 2. **Check Issues**: Look for existing issues or discussions
 3. **Follow Standards**: Adhere to coding and style guidelines
 4. **Test Thoroughly**: Ensure changes work as expected
 
 ### Code Review Checklist
+
 - [ ] Code follows TypeScript standards
 - [ ] No linting errors
 - [ ] Tests pass
@@ -148,4 +167,4 @@ upwork-job-monitor/
 
 ---
 
-*This document is maintained by the project maintainers and should be updated as the project evolves.*
+_This document is maintained by the project maintainers and should be updated as the project evolves._
