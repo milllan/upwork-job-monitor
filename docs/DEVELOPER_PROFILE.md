@@ -16,13 +16,14 @@ This document outlines the development environment, tools, and conventions used 
 
 ## Environment and Tooling
 
-- **OS**: Windows 11
+- **OS**: Windows 11 (macOS and Linux are also supported)
 - **Default Shell**: PowerShell (PS)
 - **Node.js**: v20.11.1
 - **npm**: v10.2.4
 - **Editor**: Visual Studio Code
 
 **Note**: All `npm` scripts in `package.json` are PowerShell-friendly and tested for compatibility.
+On macOS/Linux, the same scripts work in bash/zsh. Consider using a Node version manager (e.g., nvm or fnm) to install Node v20.11.1 and npm v10.2.4.
 
 ## Technology Stack
 
@@ -69,6 +70,7 @@ npm run lint && npm run build && npm run test
 ### Line Continuation
 
 For long commands, use the backtick (`` ` ``) to improve readability by splitting the command across multiple lines.
+Note: Ensure the backtick is the final character on the line (no trailing spaces), or continuation will fail.
 
 ```powershell
 npm run lint `
@@ -81,7 +83,7 @@ npm run lint `
 Chain `gh` commands to quickly get a snapshot of a repository and pull request:
 
 ```powershell
-gh repo view --json name,owner,url,defaultBranchRef; gh pr status; gh pr view 56 --json number,title,state,headRefName,baseRefName,url
+gh repo view --json name,owner,url,defaultBranchRef; gh pr status; gh pr view <PR_NUMBER> --json number,title,state,headRefName,baseRefName,url
 ```
 
 ## VS Code Extensions
@@ -125,7 +127,7 @@ npm run package        # Package the extension into a ZIP file
 
 ## Project Structure
 
-```
+```text
 upwork-job-monitor/
 ├── src/                          # Source code
 │   ├── background/               # Service worker and background logic
