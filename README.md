@@ -10,7 +10,7 @@ The Upwork Job Monitor is a browser extension (Chrome/Firefox) that monitors Upw
 
 ## Key Features
 
-- **Automatic Monitoring:** Checks for new Upwork jobs every **3 minutes**.
+- **Automatic Monitoring:** Checks for new Upwork jobs every **4 minutes**.
 - **Direct API Fetching:** Uses Upwork's GraphQL API to fetch jobs directly from the background script.
 - **Persistent Authentication:** Authenticates using OAuth tokens automatically extracted from your browser cookies.
 - **Customizable Filtering:** Supports user-defined search queries and client-side filtering to prioritize jobs.
