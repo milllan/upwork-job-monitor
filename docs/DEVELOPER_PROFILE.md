@@ -88,7 +88,7 @@ gh repo view --json name,owner,url,defaultBranchRef; gh pr status; gh pr view 56
 
 ## Development Commands
 
-```bash
+```powershell
 npm run build          # Build the extension
 npm run clean          # Clean build artifacts
 npm run type-check     # TypeScript type checking
