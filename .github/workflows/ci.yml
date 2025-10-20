@@ -34,7 +34,7 @@ jobs:
       # --- Step 2: Set up Node.js ---
       # This action sets up a Node.js environment for us to use.
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           # Specify the Node.js version. '20' is a good, stable LTS choice.
           node-version: '20'
