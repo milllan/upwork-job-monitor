@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run Codacy Analysis
-        uses: codacy/codacy-analysis-cli-action@d28ce580f19309cd493628eba4641f745822082c
+        uses: codacy/codacy-analysis-cli-action@30783d03e758713bb5ed7b79292cfb14b9dd9a4a
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           verbose: true
