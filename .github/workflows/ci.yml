@@ -29,7 +29,7 @@ jobs:
       # --- Step 1: Check out the code ---
       # This action checks out your repository under $GITHUB_WORKSPACE, so your job can access it.
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # --- Step 2: Set up Node.js ---
       # This action sets up a Node.js environment for us to use.
